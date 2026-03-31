@@ -23,6 +23,7 @@ const methodColor: Record<string, string> = {
 
 const ApiTab = () => {
   const { user } = useAuth();
+  const gate = useFeatureGate("api_access");
   const [tokens, setTokens] = useState<any[]>([]);
   const [generating, setGenerating] = useState(false);
 
