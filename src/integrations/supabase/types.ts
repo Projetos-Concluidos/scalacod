@@ -14,6 +14,966 @@ export type Database = {
   }
   public: {
     Tables: {
+      api_tokens: {
+        Row: {
+          created_at: string | null
+          expires_at: string | null
+          id: string
+          is_active: boolean | null
+          last_used_at: string | null
+          name: string
+          token: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_used_at?: string | null
+          name: string
+          token?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_used_at?: string | null
+          name?: string
+          token?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_tokens_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      campaigns: {
+        Row: {
+          completed_at: string | null
+          created_at: string | null
+          failed_count: number | null
+          flow_id: string | null
+          id: string
+          name: string
+          scheduled_at: string | null
+          sent_count: number | null
+          started_at: string | null
+          status: string | null
+          total_recipients: number | null
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string | null
+          failed_count?: number | null
+          flow_id?: string | null
+          id?: string
+          name: string
+          scheduled_at?: string | null
+          sent_count?: number | null
+          started_at?: string | null
+          status?: string | null
+          total_recipients?: number | null
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string | null
+          failed_count?: number | null
+          flow_id?: string | null
+          id?: string
+          name?: string
+          scheduled_at?: string | null
+          sent_count?: number | null
+          started_at?: string | null
+          status?: string | null
+          total_recipients?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaigns_flow_id_fkey"
+            columns: ["flow_id"]
+            isOneToOne: false
+            referencedRelation: "flows"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaigns_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      checkouts: {
+        Row: {
+          config: Json | null
+          created_at: string | null
+          custom_css: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          offer_id: string | null
+          order_bump_enabled: boolean | null
+          pixel_id: string | null
+          slug: string | null
+          type: string | null
+          updated_at: string | null
+          upsell_enabled: boolean | null
+          user_id: string
+        }
+        Insert: {
+          config?: Json | null
+          created_at?: string | null
+          custom_css?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          offer_id?: string | null
+          order_bump_enabled?: boolean | null
+          pixel_id?: string | null
+          slug?: string | null
+          type?: string | null
+          updated_at?: string | null
+          upsell_enabled?: boolean | null
+          user_id: string
+        }
+        Update: {
+          config?: Json | null
+          created_at?: string | null
+          custom_css?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          offer_id?: string | null
+          order_bump_enabled?: boolean | null
+          pixel_id?: string | null
+          slug?: string | null
+          type?: string | null
+          updated_at?: string | null
+          upsell_enabled?: boolean | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "checkouts_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "offers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "checkouts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      conversations: {
+        Row: {
+          assigned_agent: string | null
+          contact_avatar: string | null
+          contact_name: string | null
+          contact_phone: string
+          created_at: string | null
+          id: string
+          labels: Json | null
+          last_message: string | null
+          last_message_at: string | null
+          lead_id: string | null
+          status: string | null
+          unread_count: number | null
+          updated_at: string | null
+          user_id: string
+          whatsapp_instance: string | null
+        }
+        Insert: {
+          assigned_agent?: string | null
+          contact_avatar?: string | null
+          contact_name?: string | null
+          contact_phone: string
+          created_at?: string | null
+          id?: string
+          labels?: Json | null
+          last_message?: string | null
+          last_message_at?: string | null
+          lead_id?: string | null
+          status?: string | null
+          unread_count?: number | null
+          updated_at?: string | null
+          user_id: string
+          whatsapp_instance?: string | null
+        }
+        Update: {
+          assigned_agent?: string | null
+          contact_avatar?: string | null
+          contact_name?: string | null
+          contact_phone?: string
+          created_at?: string | null
+          id?: string
+          labels?: Json | null
+          last_message?: string | null
+          last_message_at?: string | null
+          lead_id?: string | null
+          status?: string | null
+          unread_count?: number | null
+          updated_at?: string | null
+          user_id?: string
+          whatsapp_instance?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversations_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversations_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      flow_templates: {
+        Row: {
+          category: string | null
+          components: Json | null
+          created_at: string | null
+          flow_id: string
+          id: string
+          language: string | null
+          status: string | null
+          template_id_meta: string | null
+          template_name: string
+        }
+        Insert: {
+          category?: string | null
+          components?: Json | null
+          created_at?: string | null
+          flow_id: string
+          id?: string
+          language?: string | null
+          status?: string | null
+          template_id_meta?: string | null
+          template_name: string
+        }
+        Update: {
+          category?: string | null
+          components?: Json | null
+          created_at?: string | null
+          flow_id?: string
+          id?: string
+          language?: string | null
+          status?: string | null
+          template_id_meta?: string | null
+          template_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "flow_templates_flow_id_fkey"
+            columns: ["flow_id"]
+            isOneToOne: false
+            referencedRelation: "flows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      flows: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          edges: Json | null
+          flow_type: string | null
+          folder_id: string | null
+          id: string
+          is_active: boolean | null
+          is_official: boolean | null
+          message_count: number | null
+          name: string
+          node_count: number | null
+          nodes: Json | null
+          template_status: string | null
+          trigger_event: string | null
+          trigger_status: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          edges?: Json | null
+          flow_type?: string | null
+          folder_id?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_official?: boolean | null
+          message_count?: number | null
+          name: string
+          node_count?: number | null
+          nodes?: Json | null
+          template_status?: string | null
+          trigger_event?: string | null
+          trigger_status?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          edges?: Json | null
+          flow_type?: string | null
+          folder_id?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_official?: boolean | null
+          message_count?: number | null
+          name?: string
+          node_count?: number | null
+          nodes?: Json | null
+          template_status?: string | null
+          trigger_event?: string | null
+          trigger_status?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "flows_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      integrations: {
+        Row: {
+          config: Json
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          type: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          config?: Json
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          type: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          config?: Json
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          type?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "integrations_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leads: {
+        Row: {
+          accumulated_revenue: number | null
+          created_at: string | null
+          document: string | null
+          email: string | null
+          id: string
+          name: string
+          order_id: string | null
+          phone: string
+          status: string | null
+          tags: Json | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          accumulated_revenue?: number | null
+          created_at?: string | null
+          document?: string | null
+          email?: string | null
+          id?: string
+          name: string
+          order_id?: string | null
+          phone: string
+          status?: string | null
+          tags?: Json | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          accumulated_revenue?: number | null
+          created_at?: string | null
+          document?: string | null
+          email?: string | null
+          id?: string
+          name?: string
+          order_id?: string | null
+          phone?: string
+          status?: string | null
+          tags?: Json | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leads_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      messages: {
+        Row: {
+          content: string | null
+          conversation_id: string
+          created_at: string | null
+          direction: string | null
+          id: string
+          media_url: string | null
+          message_id_whatsapp: string | null
+          status: string | null
+          timestamp: string
+          type: string | null
+        }
+        Insert: {
+          content?: string | null
+          conversation_id: string
+          created_at?: string | null
+          direction?: string | null
+          id?: string
+          media_url?: string | null
+          message_id_whatsapp?: string | null
+          status?: string | null
+          timestamp: string
+          type?: string | null
+        }
+        Update: {
+          content?: string | null
+          conversation_id?: string
+          created_at?: string | null
+          direction?: string | null
+          id?: string
+          media_url?: string | null
+          message_id_whatsapp?: string | null
+          status?: string | null
+          timestamp?: string
+          type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      offers: {
+        Row: {
+          checkout_type: string | null
+          created_at: string | null
+          expedition_checkout_url: string | null
+          hash: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          original_price: number | null
+          price: number
+          product_id: string
+          scheduling_checkout_url: string | null
+          user_id: string
+        }
+        Insert: {
+          checkout_type?: string | null
+          created_at?: string | null
+          expedition_checkout_url?: string | null
+          hash?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          original_price?: number | null
+          price: number
+          product_id: string
+          scheduling_checkout_url?: string | null
+          user_id: string
+        }
+        Update: {
+          checkout_type?: string | null
+          created_at?: string | null
+          expedition_checkout_url?: string | null
+          hash?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          original_price?: number | null
+          price?: number
+          product_id?: string
+          scheduling_checkout_url?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "offers_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offers_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      order_bumps: {
+        Row: {
+          created_at: string | null
+          current_price: number | null
+          description: string | null
+          hash: string | null
+          id: string
+          is_active: boolean | null
+          label_bump: string | null
+          name: string
+          offer_id: string
+          price: number | null
+          product_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          current_price?: number | null
+          description?: string | null
+          hash?: string | null
+          id?: string
+          is_active?: boolean | null
+          label_bump?: string | null
+          name: string
+          offer_id: string
+          price?: number | null
+          product_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          current_price?: number | null
+          description?: string | null
+          hash?: string | null
+          id?: string
+          is_active?: boolean | null
+          label_bump?: string | null
+          name?: string
+          offer_id?: string
+          price?: number | null
+          product_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_bumps_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "offers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_bumps_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      orders: {
+        Row: {
+          affiliate_commission: number | null
+          affiliate_email: string | null
+          affiliate_name: string | null
+          checkout_id: string | null
+          client_address: string
+          client_address_city: string
+          client_address_comp: string | null
+          client_address_country: string | null
+          client_address_district: string
+          client_address_number: string
+          client_address_state: string
+          client_document: string | null
+          client_email: string | null
+          client_name: string
+          client_phone: string
+          client_zip_code: string
+          coinzz_order_hash: string | null
+          created_at: string | null
+          delivery_date: string | null
+          delivery_man: string | null
+          delivery_type_code: string | null
+          delivery_type_name: string | null
+          first_order: boolean | null
+          id: string
+          label_a4_url: string | null
+          label_thermal_url: string | null
+          logistic_operator: string | null
+          logistics_type: string | null
+          logzz_order_id: string | null
+          offer_id: string | null
+          order_final_price: number
+          order_number: string | null
+          order_quantity: number | null
+          payment_method: string | null
+          products: Json | null
+          second_order: boolean | null
+          shipping_value: number | null
+          status: string
+          status_description: string | null
+          tracking_code: string | null
+          updated_at: string | null
+          user_id: string
+          utm_campaign: string | null
+          utm_content: string | null
+          utm_id: string | null
+          utm_medium: string | null
+          utm_source: string | null
+          utm_term: string | null
+        }
+        Insert: {
+          affiliate_commission?: number | null
+          affiliate_email?: string | null
+          affiliate_name?: string | null
+          checkout_id?: string | null
+          client_address: string
+          client_address_city: string
+          client_address_comp?: string | null
+          client_address_country?: string | null
+          client_address_district: string
+          client_address_number: string
+          client_address_state: string
+          client_document?: string | null
+          client_email?: string | null
+          client_name: string
+          client_phone: string
+          client_zip_code: string
+          coinzz_order_hash?: string | null
+          created_at?: string | null
+          delivery_date?: string | null
+          delivery_man?: string | null
+          delivery_type_code?: string | null
+          delivery_type_name?: string | null
+          first_order?: boolean | null
+          id?: string
+          label_a4_url?: string | null
+          label_thermal_url?: string | null
+          logistic_operator?: string | null
+          logistics_type?: string | null
+          logzz_order_id?: string | null
+          offer_id?: string | null
+          order_final_price: number
+          order_number?: string | null
+          order_quantity?: number | null
+          payment_method?: string | null
+          products?: Json | null
+          second_order?: boolean | null
+          shipping_value?: number | null
+          status?: string
+          status_description?: string | null
+          tracking_code?: string | null
+          updated_at?: string | null
+          user_id: string
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_id?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+        }
+        Update: {
+          affiliate_commission?: number | null
+          affiliate_email?: string | null
+          affiliate_name?: string | null
+          checkout_id?: string | null
+          client_address?: string
+          client_address_city?: string
+          client_address_comp?: string | null
+          client_address_country?: string | null
+          client_address_district?: string
+          client_address_number?: string
+          client_address_state?: string
+          client_document?: string | null
+          client_email?: string | null
+          client_name?: string
+          client_phone?: string
+          client_zip_code?: string
+          coinzz_order_hash?: string | null
+          created_at?: string | null
+          delivery_date?: string | null
+          delivery_man?: string | null
+          delivery_type_code?: string | null
+          delivery_type_name?: string | null
+          first_order?: boolean | null
+          id?: string
+          label_a4_url?: string | null
+          label_thermal_url?: string | null
+          logistic_operator?: string | null
+          logistics_type?: string | null
+          logzz_order_id?: string | null
+          offer_id?: string | null
+          order_final_price?: number
+          order_number?: string | null
+          order_quantity?: number | null
+          payment_method?: string | null
+          products?: Json | null
+          second_order?: boolean | null
+          shipping_value?: number | null
+          status?: string
+          status_description?: string | null
+          tracking_code?: string | null
+          updated_at?: string | null
+          user_id?: string
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_id?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orders_checkout_id_fkey"
+            columns: ["checkout_id"]
+            isOneToOne: false
+            referencedRelation: "checkouts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "offers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pixel_events: {
+        Row: {
+          checkout_id: string | null
+          created_at: string | null
+          event_type: string
+          id: string
+          ip_address: string | null
+          metadata: Json | null
+          session_id: string | null
+          user_agent: string | null
+          user_id: string
+          utm_campaign: string | null
+          utm_medium: string | null
+          utm_source: string | null
+        }
+        Insert: {
+          checkout_id?: string | null
+          created_at?: string | null
+          event_type: string
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          session_id?: string | null
+          user_agent?: string | null
+          user_id: string
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+        }
+        Update: {
+          checkout_id?: string | null
+          created_at?: string | null
+          event_type?: string
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          session_id?: string | null
+          user_agent?: string | null
+          user_id?: string
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pixel_events_checkout_id_fkey"
+            columns: ["checkout_id"]
+            isOneToOne: false
+            referencedRelation: "checkouts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pixel_events_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_variations: {
+        Row: {
+          created_at: string | null
+          hash: string | null
+          height: number | null
+          id: string
+          is_active: boolean | null
+          length: number | null
+          name: string
+          product_id: string
+          sku: string | null
+          stock_qty: number | null
+          weight: number | null
+          width: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          hash?: string | null
+          height?: number | null
+          id?: string
+          is_active?: boolean | null
+          length?: number | null
+          name: string
+          product_id: string
+          sku?: string | null
+          stock_qty?: number | null
+          weight?: number | null
+          width?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          hash?: string | null
+          height?: number | null
+          id?: string
+          is_active?: boolean | null
+          length?: number | null
+          name?: string
+          product_id?: string
+          sku?: string | null
+          stock_qty?: number | null
+          weight?: number | null
+          width?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_variations_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      products: {
+        Row: {
+          categories: Json | null
+          created_at: string | null
+          description: string | null
+          hash: string | null
+          height: number | null
+          id: string
+          is_active: boolean | null
+          length: number | null
+          main_image_url: string | null
+          name: string
+          updated_at: string | null
+          user_id: string
+          warranty_days: number | null
+          weight: number | null
+          width: number | null
+        }
+        Insert: {
+          categories?: Json | null
+          created_at?: string | null
+          description?: string | null
+          hash?: string | null
+          height?: number | null
+          id?: string
+          is_active?: boolean | null
+          length?: number | null
+          main_image_url?: string | null
+          name: string
+          updated_at?: string | null
+          user_id: string
+          warranty_days?: number | null
+          weight?: number | null
+          width?: number | null
+        }
+        Update: {
+          categories?: Json | null
+          created_at?: string | null
+          description?: string | null
+          hash?: string | null
+          height?: number | null
+          id?: string
+          is_active?: boolean | null
+          length?: number | null
+          main_image_url?: string | null
+          name?: string
+          updated_at?: string | null
+          user_id?: string
+          warranty_days?: number | null
+          weight?: number | null
+          width?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "products_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -46,6 +1006,226 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      stores: {
+        Row: {
+          business_hours: Json | null
+          business_hours_enabled: boolean | null
+          created_at: string | null
+          id: string
+          name: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          business_hours?: Json | null
+          business_hours_enabled?: boolean | null
+          created_at?: string | null
+          id?: string
+          name: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          business_hours?: Json | null
+          business_hours_enabled?: boolean | null
+          created_at?: string | null
+          id?: string
+          name?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stores_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      voice_tokens: {
+        Row: {
+          balance: number | null
+          id: string
+          total_purchased: number | null
+          total_used: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          balance?: number | null
+          id?: string
+          total_purchased?: number | null
+          total_used?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          balance?: number | null
+          id?: string
+          total_purchased?: number | null
+          total_used?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "voice_tokens_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      voices: {
+        Row: {
+          created_at: string | null
+          elevenlabs_voice_id: string | null
+          id: string
+          is_cloned: boolean | null
+          is_favorite: boolean | null
+          name: string
+          preview_url: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          elevenlabs_voice_id?: string | null
+          id?: string
+          is_cloned?: boolean | null
+          is_favorite?: boolean | null
+          name: string
+          preview_url?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          elevenlabs_voice_id?: string | null
+          id?: string
+          is_cloned?: boolean | null
+          is_favorite?: boolean | null
+          name?: string
+          preview_url?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "voices_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      webhooks_config: {
+        Row: {
+          created_at: string | null
+          events: Json | null
+          id: string
+          is_active: boolean | null
+          secret_key: string | null
+          url: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          events?: Json | null
+          id?: string
+          is_active?: boolean | null
+          secret_key?: string | null
+          url: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          events?: Json | null
+          id?: string
+          is_active?: boolean | null
+          secret_key?: string | null
+          url?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "webhooks_config_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whatsapp_instances: {
+        Row: {
+          api_key: string | null
+          config: Json | null
+          created_at: string | null
+          evolution_server_url: string | null
+          id: string
+          instance_name: string | null
+          meta_access_token: string | null
+          phone_number: string | null
+          phone_number_id: string | null
+          provider: string
+          qr_code: string | null
+          status: string | null
+          updated_at: string | null
+          user_id: string
+          waba_id: string | null
+          webhook_url: string | null
+          ycloud_api_key: string | null
+        }
+        Insert: {
+          api_key?: string | null
+          config?: Json | null
+          created_at?: string | null
+          evolution_server_url?: string | null
+          id?: string
+          instance_name?: string | null
+          meta_access_token?: string | null
+          phone_number?: string | null
+          phone_number_id?: string | null
+          provider: string
+          qr_code?: string | null
+          status?: string | null
+          updated_at?: string | null
+          user_id: string
+          waba_id?: string | null
+          webhook_url?: string | null
+          ycloud_api_key?: string | null
+        }
+        Update: {
+          api_key?: string | null
+          config?: Json | null
+          created_at?: string | null
+          evolution_server_url?: string | null
+          id?: string
+          instance_name?: string | null
+          meta_access_token?: string | null
+          phone_number?: string | null
+          phone_number_id?: string | null
+          provider?: string
+          qr_code?: string | null
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string
+          waba_id?: string | null
+          webhook_url?: string | null
+          ycloud_api_key?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_instances_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
