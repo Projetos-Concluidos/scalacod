@@ -509,6 +509,125 @@ const Vozes = () => {
         </>
       )}
 
+      {/* Purchase Modal */}
+      <Dialog open={purchaseOpen} onOpenChange={v => { if (!v) { setPurchaseOpen(false); setPixData(null); setPurchaseSuccess(false); } }}>
+        <DialogContent className="max-w-md bg-card border-border">
+          <DialogHeader>
+            <DialogTitle className="text-foreground">
+              {purchaseSuccess ? "Pagamento Confirmado!" : `Comprar ${selectedPack?.display || ""} Tokens`}
+            </DialogTitle>
+          </DialogHeader>
+
+          {purchaseSuccess ? (
+            <div className="text-center py-8 space-y-4">
+              <div className="h-14 w-14 mx-auto rounded-full bg-success/10 flex items-center justify-center">
+                <CheckCircle className="h-7 w-7 text-success" />
+              </div>
+              <p className="text-lg font-bold text-foreground">{selectedPack?.display} tokens creditados!</p>
+              <p className="text-sm text-muted-foreground">Seus tokens já estão disponíveis para gerar áudios.</p>
+              <Button onClick={() => setPurchaseOpen(false)} className="gradient-primary text-primary-foreground">
+                Fechar
+              </Button>
+            </div>
+          ) : pixData ? (
+            <div className="space-y-4">
+              <div className="text-center">
+                <p className="text-sm text-muted-foreground mb-3">Escaneie o QR Code ou copie o código PIX</p>
+                <div className="bg-white p-4 rounded-xl inline-block mx-auto">
+                  <img
+                    src={`data:image/png;base64,${pixData.qrCode}`}
+                    alt="QR Code PIX"
+                    className="h-48 w-48 mx-auto"
+                  />
+                </div>
+              </div>
+              {pixData.copyPaste && (
+                <div className="flex items-center gap-2">
+                  <Input
+                    value={pixData.copyPaste}
+                    readOnly
+                    className="text-xs font-mono"
+                  />
+                  <Button size="sm" variant="outline" onClick={copyPixCode}>
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+              <div className="rounded-lg bg-primary/5 border border-primary/10 p-3">
+                <p className="text-xs text-muted-foreground">
+                  Após o pagamento, seus tokens serão creditados automaticamente em até 1 minuto.
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => { setPixData(null); }} className="flex-1">
+                  Voltar
+                </Button>
+                <Button onClick={() => { setPurchaseOpen(false); fetchData(); }} className="flex-1">
+                  Já Paguei
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-5">
+              <div className="rounded-xl bg-muted/50 p-4 text-center">
+                <p className="text-2xl font-bold text-foreground">{selectedPack?.display} tokens</p>
+                <p className="text-lg font-bold text-primary">{selectedPack?.price}</p>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold">Método de Pagamento</Label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    onClick={() => setPaymentMethod("pix")}
+                    className={`flex items-center gap-2 rounded-xl border-2 p-3 text-sm font-medium transition-all ${
+                      paymentMethod === "pix"
+                        ? "border-primary bg-primary/5 text-foreground"
+                        : "border-border text-muted-foreground hover:border-muted-foreground"
+                    }`}
+                  >
+                    <QrCode className="h-5 w-5" />
+                    PIX
+                  </button>
+                  <button
+                    onClick={() => setPaymentMethod("credit_card")}
+                    className={`flex items-center gap-2 rounded-xl border-2 p-3 text-sm font-medium transition-all ${
+                      paymentMethod === "credit_card"
+                        ? "border-primary bg-primary/5 text-foreground"
+                        : "border-border text-muted-foreground hover:border-muted-foreground"
+                    }`}
+                  >
+                    <CreditCard className="h-5 w-5" />
+                    Cartão
+                  </button>
+                </div>
+              </div>
+
+              {paymentMethod === "credit_card" && (
+                <div className="rounded-lg bg-warning/5 border border-warning/20 p-3">
+                  <p className="text-xs text-muted-foreground">
+                    ⚠️ Pagamento com cartão de crédito em breve. Use PIX por enquanto.
+                  </p>
+                </div>
+              )}
+
+              <Button
+                onClick={handlePurchase}
+                disabled={purchasing || paymentMethod === "credit_card"}
+                className="w-full gradient-primary text-primary-foreground"
+              >
+                {purchasing ? (
+                  <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Processando...</>
+                ) : paymentMethod === "pix" ? (
+                  <><QrCode className="h-4 w-4 mr-2" /> Gerar QR Code PIX</>
+                ) : (
+                  <><CreditCard className="h-4 w-4 mr-2" /> Pagar com Cartão</>
+                )}
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       {/* Clone Modal */}
       <Dialog open={cloneOpen} onOpenChange={v => !v && resetClone()}>
         <DialogContent className="max-w-md bg-card border-border">
