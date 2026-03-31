@@ -98,7 +98,7 @@ const Fluxos = () => {
           message_count: data.message_count || 0,
           is_active: true,
         };
-        console.log("Inserting flow:", JSON.stringify(insertPayload).substring(0, 300));
+        if (import.meta.env.DEV) console.log("Inserting flow:", JSON.stringify(insertPayload).substring(0, 300));
         const { error } = await supabase.from("flows").insert(insertPayload);
         if (error) {
           console.error("Insert flow error:", error);
