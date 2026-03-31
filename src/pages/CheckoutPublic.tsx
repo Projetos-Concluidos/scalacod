@@ -277,7 +277,7 @@ const CheckoutPublic = () => {
     setSubmitting(false);
   };
 
-  const processPayment = async () => {
+  const processPayment = async (bricksCardToken?: string, bricksInstallments?: number) => {
     if (!checkout || !offer) return;
     setPaymentLoading(true);
     try {
@@ -292,8 +292,8 @@ const CheckoutPublic = () => {
         body: JSON.stringify({
           orderId: oid,
           method: paymentMethod,
-          cardToken: paymentMethod === "credit_card" ? cardForm.number : undefined,
-          installments: cardForm.installments,
+          cardToken: paymentMethod === "credit_card" ? bricksCardToken : undefined,
+          installments: bricksInstallments || 1,
           payerEmail: form.email,
           payerDocument: form.cpf,
           payerName: form.name,
