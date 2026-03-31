@@ -1,24 +1,45 @@
 
 
-# Plano: Busca com Filtro no Dropdown de Ofertas Logzz
+# Plano: Dark Mode Toggle no TopBar
 
-## Problema
-O dropdown atual usa `Select` simples do shadcn/ui, que não permite busca/filtro. Com muitas ofertas, é difícil encontrar a desejada.
-
-## Solução
-Substituir o `Select` por um **Combobox** usando os componentes `Command` + `Popover` (já existem no projeto em `src/components/ui/command.tsx` e `popover.tsx`). Isso permite digitar para filtrar ofertas por nome, descrição, preço ou hash.
+## Resumo
+Adicionar um botão toggle no TopBar que alterna entre modo claro (Sol) e escuro (Lua), persistindo a preferência no `localStorage`. O Tailwind já está configurado com `darkMode: ["class"]`.
 
 ## Mudanças
 
-### `src/pages/Checkouts.tsx`
-1. Adicionar state `logzzSearch` (string) e `logzzPopoverOpen` (boolean)
-2. Substituir o bloco `<Select>` (linhas 353-370) por um `Popover` + `Command`:
-   - `CommandInput` com placeholder "Buscar por nome, preço, hash..."
-   - `CommandList` com `CommandEmpty` ("Nenhuma oferta encontrada")
-   - `CommandItem` para cada oferta, exibindo `Nome — Oferta (R$ preço) [role]`
-   - O `cmdk` já faz fuzzy search nativo no texto de cada item
-3. Ao selecionar um item, executar a mesma lógica atual (preencher nome, slug, toast)
-4. Mostrar a oferta selecionada no botão trigger do Popover
+### 1. `src/index.css` — Adicionar variáveis dark mode
+Adicionar bloco `.dark` com paleta escura emerald:
+```css
+.dark {
+  --background: 210 29% 8%;
+  --foreground: 150 10% 92%;
+  --card: 210 25% 12%;
+  --card-foreground: 150 10% 92%;
+  --popover: 210 25% 12%;
+  --popover-foreground: 150 10% 92%;
+  --primary: 160 84% 39%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 210 20% 16%;
+  --secondary-foreground: 150 10% 90%;
+  --muted: 210 20% 18%;
+  --muted-foreground: 220 9% 55%;
+  --accent: 160 84% 39%;
+  --accent-foreground: 0 0% 100%;
+  --border: 210 20% 20%;
+  --input: 210 20% 20%;
+  --ring: 160 84% 39%;
+  /* shadows, gradients, sidebar — same */
+}
+```
 
-Nenhum outro arquivo precisa ser alterado. Os componentes `Command` e `Popover` já estão disponíveis.
+### 2. `src/components/TopBar.tsx` — Toggle com ícone dinâmico
+- Importar `Sun` de lucide-react
+- Ler tema inicial de `localStorage` e classe `dark` no `<html>`
+- State `isDark` controlando toggle
+- Ao clicar: toggle classe `dark` no `document.documentElement`, salvar em `localStorage`
+- Ícone: `isDark ? Sun : Moon`
+
+### Arquivos
+- `src/index.css` — adicionar bloco `.dark`
+- `src/components/TopBar.tsx` — lógica de toggle + ícone dinâmico
 
