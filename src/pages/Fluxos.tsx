@@ -43,6 +43,23 @@ const Fluxos = () => {
 
   useEffect(() => { fetchFlows(); }, [user]);
 
+  const fetchExecutions = async () => {
+    if (!user) return;
+    setExecLoading(true);
+    const { data } = await supabase
+      .from("flow_executions")
+      .select("*, flows(name), orders(order_number, client_name, status)")
+      .eq("user_id", user.id)
+      .order("executed_at", { ascending: false })
+      .limit(50);
+    setExecutions(data || []);
+    setExecLoading(false);
+  };
+
+  useEffect(() => {
+    if (subTab === "executions") fetchExecutions();
+  }, [subTab, user]);
+
   const activeFlows = flows.filter(f => f.is_active);
 
   const handleSaveFlow = async (data: any) => {
