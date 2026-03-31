@@ -67,8 +67,13 @@ const Vozes = () => {
   const [libraryVoices, setLibraryVoices] = useState<LibraryVoice[]>(FALLBACK_LIBRARY);
   const [libLoading, setLibLoading] = useState(false);
 
-  // Audio generation state per voice
-  const [generateText, setGenerateText] = useState<Record<string, string>>({});
+  // Purchase modal state
+  const [purchaseOpen, setPurchaseOpen] = useState(false);
+  const [selectedPack, setSelectedPack] = useState<typeof packs[0] | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<"pix" | "credit_card">("pix");
+  const [purchasing, setPurchasing] = useState(false);
+  const [pixData, setPixData] = useState<{ qrCode: string; copyPaste: string } | null>(null);
+  const [purchaseSuccess, setPurchaseSuccess] = useState(false);
   const [generating, setGenerating] = useState<Record<string, boolean>>({});
   const [generatedAudio, setGeneratedAudio] = useState<Record<string, string>>({});
 
