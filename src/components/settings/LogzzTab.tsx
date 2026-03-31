@@ -17,6 +17,7 @@ interface CepResult {
 const LogzzTab = () => {
   const { user } = useAuth();
   const [token, setToken] = useState("");
+  const [logzzWebhookUrl, setLogzzWebhookUrl] = useState("");
   const [showToken, setShowToken] = useState(false);
   const [isActive, setIsActive] = useState(false);
   const [testing, setTesting] = useState(false);
