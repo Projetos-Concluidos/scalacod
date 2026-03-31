@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Mic, Info, Upload, Globe, Play, Pause, Heart, Trash2, Loader2, AlertTriangle, Music, X, Check, Star, Volume2, Send } from "lucide-react";
+import { Mic, Info, Upload, Globe, Play, Pause, Heart, Trash2, Loader2, AlertTriangle, Music, X, Check, Star, Volume2, Send, CreditCard, QrCode, Copy, CheckCircle } from "lucide-react";
 import { useFeatureGate, UpgradePrompt } from "@/hooks/useFeatureGate";
 import PageHeader from "@/components/PageHeader";
 import EmptyState from "@/components/EmptyState";
