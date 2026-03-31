@@ -65,6 +65,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setUser(session?.user ?? null);
         if (session?.user) {
           setTimeout(() => fetchProfile(session.user.id), 0);
+          // Seed default flows on first sign-in/sign-up
+          if (event === "SIGNED_IN") {
+            supabase.functions.invoke("seed-default-flows").catch(() => {});
+          }
         } else {
           setProfile(null);
         }

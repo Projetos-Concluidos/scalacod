@@ -304,6 +304,70 @@ export type Database = {
           },
         ]
       }
+      flow_executions: {
+        Row: {
+          completed_at: string | null
+          created_at: string | null
+          error_message: string | null
+          executed_at: string | null
+          flow_id: string
+          id: string
+          nodes_executed: number | null
+          order_id: string | null
+          status: string
+          user_id: string
+          variables: Json | null
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          executed_at?: string | null
+          flow_id: string
+          id?: string
+          nodes_executed?: number | null
+          order_id?: string | null
+          status?: string
+          user_id: string
+          variables?: Json | null
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          executed_at?: string | null
+          flow_id?: string
+          id?: string
+          nodes_executed?: number | null
+          order_id?: string | null
+          status?: string
+          user_id?: string
+          variables?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "flow_executions_flow_id_fkey"
+            columns: ["flow_id"]
+            isOneToOne: false
+            referencedRelation: "flows"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "flow_executions_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "flow_executions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       flow_templates: {
         Row: {
           category: string | null
