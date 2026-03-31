@@ -10,7 +10,7 @@ import {
   Lock, MessageCircle, FileText, AlertTriangle, XCircle,
 } from "lucide-react";
 import { toast } from "sonner";
-import { trackPixelEvent } from "@/lib/pixel";
+import { trackPixelEvent, FacebookPixel, GoogleAds, captureUTM, getUTM, getCookie } from "@/lib/pixel";
 
 declare global {
   interface Window {
