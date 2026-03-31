@@ -46,7 +46,7 @@ const Fluxos = () => {
   const handleSaveFlow = async (data: any) => {
     if (!user) return;
     try {
-      if (editingFlow) {
+      if (editingFlow && editingFlow.id) {
         await supabase.from("flows").update({
           name: data.name,
           trigger_event: data.trigger_event,
@@ -59,18 +59,24 @@ const Fluxos = () => {
         }).eq("id", editingFlow.id);
         toast.success("Fluxo atualizado!");
       } else {
-        await supabase.from("flows").insert({
+        const insertPayload = {
           user_id: user.id,
-          name: data.name,
-          trigger_event: data.trigger_event,
-          flow_type: data.flow_type,
-          is_official: data.is_official,
-          nodes: data.nodes,
-          edges: data.edges,
-          node_count: data.node_count,
-          message_count: data.message_count,
+          name: data.name || "Fluxo sem nome",
+          trigger_event: data.trigger_event || "pedido_criado",
+          flow_type: data.flow_type || "cod",
+          is_official: data.is_official ?? false,
+          nodes: data.nodes || [],
+          edges: data.edges || [],
+          node_count: data.nodes?.length || 0,
+          message_count: data.message_count || 0,
           is_active: true,
-        });
+        };
+        const { error } = await supabase.from("flows").insert(insertPayload);
+        if (error) {
+          console.error("Insert flow error:", error);
+          toast.error(`Erro ao criar fluxo: ${error.message}`);
+          return;
+        }
         toast.success("Fluxo criado!");
       }
       setBuilderOpen(false);

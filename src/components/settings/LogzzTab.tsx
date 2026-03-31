@@ -17,6 +17,7 @@ interface CepResult {
 const LogzzTab = () => {
   const { user } = useAuth();
   const [token, setToken] = useState("");
+  const [logzzWebhookUrl, setLogzzWebhookUrl] = useState("");
   const [showToken, setShowToken] = useState(false);
   const [isActive, setIsActive] = useState(false);
   const [testing, setTesting] = useState(false);
@@ -42,6 +43,7 @@ const LogzzTab = () => {
       if (data) {
         const config = data.config as any;
         setToken(config?.bearer_token || "");
+        setLogzzWebhookUrl(config?.logzz_webhook_url || "");
         setIsActive(data.is_active ?? false);
       }
     };
@@ -85,7 +87,7 @@ const LogzzTab = () => {
       const payload = {
         user_id: user.id,
         type: "logzz" as const,
-        config: { bearer_token: token } as any,
+        config: { bearer_token: token, logzz_webhook_url: logzzWebhookUrl } as any,
         is_active: isActive,
       };
 
@@ -188,6 +190,28 @@ const LogzzTab = () => {
               app.logzz.com.br
             </a>{" "}
             → Configurações → API
+          </p>
+        </div>
+
+        {/* URL de Importação Logzz */}
+        <div className="mb-4 max-w-xl">
+          <label className="text-sm font-medium text-foreground">URL de Importação de Pedidos (Logzz)</label>
+          <div className="relative mt-1.5 flex gap-2">
+            <input
+              type="text"
+              value={logzzWebhookUrl}
+              onChange={(e) => setLogzzWebhookUrl(e.target.value)}
+              placeholder="https://app.logzz.com.br/api/importacao-de-pedidos/webhook/..."
+              className="h-10 flex-1 rounded-lg border border-border bg-input px-4 text-sm text-foreground focus:border-primary focus:outline-none"
+            />
+            {logzzWebhookUrl && (
+              <Button variant="outline" size="icon" onClick={() => copyToClipboard(logzzWebhookUrl)}>
+                <Copy className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Cole a URL de importação/webhook da Logzz (Remapeamento → URL de webhook). Usada para enviar pedidos do ScalaNinja para a Logzz.
           </p>
         </div>
 
