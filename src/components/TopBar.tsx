@@ -1,9 +1,11 @@
-import { Moon, Sun, Bell, HelpCircle } from "lucide-react";
+import { Moon, Sun, Bell, HelpCircle, Menu } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useMobileSidebar } from "@/contexts/MobileSidebarContext";
 import { useState, useEffect } from "react";
 
 const TopBar = () => {
   const { profile } = useAuth();
+  const { open } = useMobileSidebar();
 
   const [isDark, setIsDark] = useState(() => {
     if (typeof window !== "undefined") {
@@ -37,27 +39,38 @@ const TopBar = () => {
     : "Free";
 
   return (
-    <div className="flex items-center justify-end gap-3 px-6 py-4 border-b border-border bg-card">
+    <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-border bg-card md:justify-end md:px-6 md:py-4">
+      {/* Hamburger — mobile only */}
       <button
-        onClick={toggleTheme}
-        className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-        title={isDark ? "Modo claro" : "Modo escuro"}
+        onClick={open}
+        className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground md:hidden"
+        aria-label="Abrir menu"
       >
-        {isDark ? <Sun className="h-[18px] w-[18px]" /> : <Moon className="h-[18px] w-[18px]" />}
+        <Menu className="h-5 w-5" />
       </button>
-      <button className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
-        <Bell className="h-[18px] w-[18px]" />
-      </button>
-      <button className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
-        <HelpCircle className="h-[18px] w-[18px]" />
-      </button>
-      <div className="ml-2 flex items-center gap-2">
-        <div className="text-right">
-          <p className="text-sm font-semibold text-foreground">{profile?.name || "Usuário"}</p>
-          <p className="text-[10px] font-bold uppercase tracking-wide text-primary">{planLabel}</p>
-        </div>
-        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-foreground">
-          {initials}
+
+      <div className="flex items-center gap-3">
+        <button
+          onClick={toggleTheme}
+          className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          title={isDark ? "Modo claro" : "Modo escuro"}
+        >
+          {isDark ? <Sun className="h-[18px] w-[18px]" /> : <Moon className="h-[18px] w-[18px]" />}
+        </button>
+        <button className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
+          <Bell className="h-[18px] w-[18px]" />
+        </button>
+        <button className="hidden h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground sm:flex">
+          <HelpCircle className="h-[18px] w-[18px]" />
+        </button>
+        <div className="ml-2 flex items-center gap-2">
+          <div className="hidden text-right sm:block">
+            <p className="text-sm font-semibold text-foreground">{profile?.name || "Usuário"}</p>
+            <p className="text-[10px] font-bold uppercase tracking-wide text-primary">{planLabel}</p>
+          </div>
+          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-foreground">
+            {initials}
+          </div>
         </div>
       </div>
     </div>
