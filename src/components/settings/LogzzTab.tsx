@@ -48,20 +48,29 @@ const LogzzTab = () => {
     load();
   }, [user]);
 
+  const callCheckoutApi = async (action: string, extra: any = {}) => {
+    const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+    const res = await fetch(`https://${projectId}.supabase.co/functions/v1/checkout-api`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action, user_id: user?.id, ...extra }),
+    });
+    return res.json();
+  };
+
   const handleTestConnection = async () => {
-    if (!token.trim()) {
-      toast.error("Insira o Bearer Token da Logzz");
-      return;
-    }
+    if (!token.trim()) { toast.error("Insira o Bearer Token da Logzz"); return; }
     setTesting(true);
     try {
-      // We simulate a test since we can't call Logzz directly from the browser (CORS)
-      // In production this would go through an edge function
-      toast.info("Testando conexão com a Logzz...");
-      // Simulate delay
-      await new Promise((r) => setTimeout(r, 1500));
-      toast.success("✅ Token salvo! A conexão será validada ao sincronizar produtos.");
-      setIsActive(true);
+      // Save first so edge function can read the token
+      await handleSave();
+      const data = await callCheckoutApi("test_connection");
+      if (data.connected) {
+        toast.success(`✅ Conexão OK! ${data.offers_count || 0} ofertas encontradas.`);
+        setIsActive(true);
+      } else {
+        toast.error(`❌ Falha: ${data.error || "Token inválido"}`);
+      }
     } catch {
       toast.error("❌ Erro ao testar conexão");
     } finally {
