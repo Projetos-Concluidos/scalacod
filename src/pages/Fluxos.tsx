@@ -233,7 +233,10 @@ const Fluxos = () => {
                           {flow.is_active ? "Ativo" : "Inativo"}
                         </span>
                         {flow.is_official && (
-                          <button className="gradient-primary rounded-lg px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:opacity-90">
+                          <button
+                            onClick={() => submitTemplateToMeta(flow)}
+                            className="gradient-primary rounded-lg px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:opacity-90"
+                          >
                             <Zap className="mr-1 inline h-3 w-3" /> Enviar p/ aprovação
                           </button>
                         )}
