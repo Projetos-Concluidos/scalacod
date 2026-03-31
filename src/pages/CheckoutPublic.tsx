@@ -93,7 +93,10 @@ const CheckoutPublic = () => {
   const [pixData, setPixData] = useState<{ pixQrCode: string; pixQrCodeBase64: string; paymentId: string } | null>(null);
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState<string | null>(null);
-  const [cardForm, setCardForm] = useState({ number: "", expiry: "", cvv: "", holderName: "", installments: 1 });
+  const [mpPublicKey, setMpPublicKey] = useState<string | null>(null);
+  const [bricksReady, setBricksReady] = useState(false);
+  const cardFormRef = useRef<HTMLDivElement>(null);
+  const bricksControllerRef = useRef<any>(null);
 
   const [form, setForm] = useState({
     name: "", cpf: "", email: "", phone: "",
