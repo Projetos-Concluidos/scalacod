@@ -122,13 +122,13 @@ const Dashboard = () => {
   }, [user, loadData]);
 
   const pixelStats = [
-    { label: "Visitantes", value: String(metrics.visitors), color: "#00FF88", icon: Eye },
-    { label: "Pageviews", value: String(metrics.pageviews), color: "#00D4FF", icon: FileText },
-    { label: "Interações", value: String(metrics.interactions), color: "#FFB020", icon: MousePointerClick },
-    { label: "Pedidos", value: String(metrics.orderCount), color: "#FF3D5A", icon: ShoppingCart },
-    { label: "Conversão", value: `${metrics.conversions}%`, color: "#00FF88", icon: TrendingUp },
-    { label: "Abandono", value: `${metrics.abandonment}%`, color: "#FFB020", icon: AlertTriangle },
-    { label: "Coinzz Pagos", value: String(metrics.coinzzPaid), color: "#8888AA", icon: Coins },
+    { label: "Visitantes", value: String(metrics.visitors), color: "#10B981", icon: Eye },
+    { label: "Pageviews", value: String(metrics.pageviews), color: "#059669", icon: FileText },
+    { label: "Interações", value: String(metrics.interactions), color: "#F59E0B", icon: MousePointerClick },
+    { label: "Pedidos", value: String(metrics.orderCount), color: "#EF4444", icon: ShoppingCart },
+    { label: "Conversão", value: `${metrics.conversions}%`, color: "#10B981", icon: TrendingUp },
+    { label: "Abandono", value: `${metrics.abandonment}%`, color: "#F59E0B", icon: AlertTriangle },
+    { label: "Coinzz Pagos", value: String(metrics.coinzzPaid), color: "#6B7280", icon: Coins },
   ];
 
   return (
