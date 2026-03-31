@@ -127,22 +127,44 @@ const Disparos = () => {
         ? new Date(`${format(scheduleDate, "yyyy-MM-dd")}T${scheduleTime}:00`).toISOString()
         : null;
 
-      await supabase.from("campaigns").insert({
+      const segmentFilter: any = {};
+      if (segmentation === "status") segmentFilter.status = segmentStatus;
+      if (segmentation === "tag" && segmentTag) segmentFilter.tag = segmentTag;
+
+      const { data: newCampaign, error } = await supabase.from("campaigns").insert({
         user_id: user.id,
         name: campaignName,
         flow_id: selectedFlowId || null,
-        status: scheduleType === "now" ? "running" : "scheduled",
+        status: scheduleType === "now" ? "draft" : "scheduled",
         total_recipients: estimatedReach,
         scheduled_at: scheduledAt,
-        started_at: scheduleType === "now" ? new Date().toISOString() : null,
-      });
+        segment_filter: segmentFilter,
+        message_template: messageTemplate,
+      }).select().single();
 
-      toast.success(scheduleType === "now" ? "Campanha iniciada!" : "Campanha agendada!");
+      if (error) throw error;
+
+      // If sending now, invoke the edge function
+      if (scheduleType === "now" && newCampaign) {
+        setRunningCampaignId(newCampaign.id);
+        supabase.functions.invoke("execute-campaign", {
+          body: { campaignId: newCampaign.id },
+        }).then(({ error: execErr }) => {
+          if (execErr) {
+            toast.error("Erro ao executar campanha: " + execErr.message);
+            setRunningCampaignId(null);
+          }
+        });
+        toast.success("Campanha iniciada! Acompanhe o progresso em tempo real.");
+      } else {
+        toast.success("Campanha agendada com sucesso!");
+      }
+
       setModalOpen(false);
       resetModal();
       fetchData();
-    } catch {
-      toast.error("Erro ao criar campanha");
+    } catch (err: any) {
+      toast.error("Erro ao criar campanha: " + (err.message || ""));
     } finally {
       setCreating(false);
     }
