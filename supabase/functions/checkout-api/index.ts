@@ -692,6 +692,28 @@ Deno.serve(async (req) => {
       );
     }
 
+    // ─── ACTION: get_mp_public_key ───────────────────────
+    if (action === "get_mp_public_key") {
+      const mp = getIntegration("mercadopago");
+      if (!mp?.config) {
+        return new Response(
+          JSON.stringify({ error: "MercadoPago não configurado" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      const publicKey = (mp.config as any)?.public_key;
+      if (!publicKey) {
+        return new Response(
+          JSON.stringify({ error: "Public Key não configurada" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      return new Response(
+        JSON.stringify({ public_key: publicKey }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     return new Response(
       JSON.stringify({ error: "Invalid action" }),
       { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }

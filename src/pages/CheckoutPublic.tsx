@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
@@ -11,6 +11,12 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { trackPixelEvent } from "@/lib/pixel";
+
+declare global {
+  interface Window {
+    MercadoPago: any;
+  }
+}
 
 interface CheckoutData {
   id: string; name: string; slug: string; type: string; offer_id: string;
@@ -87,7 +93,10 @@ const CheckoutPublic = () => {
   const [pixData, setPixData] = useState<{ pixQrCode: string; pixQrCodeBase64: string; paymentId: string } | null>(null);
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState<string | null>(null);
-  const [cardForm, setCardForm] = useState({ number: "", expiry: "", cvv: "", holderName: "", installments: 1 });
+  const [mpPublicKey, setMpPublicKey] = useState<string | null>(null);
+  const [bricksReady, setBricksReady] = useState(false);
+  const cardFormRef = useRef<HTMLDivElement>(null);
+  const bricksControllerRef = useRef<any>(null);
 
   const [form, setForm] = useState({
     name: "", cpf: "", email: "", phone: "",
@@ -154,6 +163,26 @@ const CheckoutPublic = () => {
     })();
   }, [slug]);
 
+  // Fetch MP public key when checkout loads (for coinzz card payments)
+  useEffect(() => {
+    if (!checkout) return;
+    const fetchKey = async () => {
+      try {
+        const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+        const res = await fetch(`https://${projectId}.supabase.co/functions/v1/checkout-api`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "get_mp_public_key", user_id: checkout.user_id }),
+        });
+        const data = await res.json();
+        if (data.public_key) setMpPublicKey(data.public_key);
+      } catch { /* no MP configured */ }
+    };
+    fetchKey();
+  }, [checkout]);
+
+  
+
   const [interactionTracked, setInteractionTracked] = useState(false);
   const trackInteraction = () => {
     if (!interactionTracked && checkout) { track("interaction"); setInteractionTracked(true); }
@@ -204,6 +233,72 @@ const CheckoutPublic = () => {
   const bumpsTotal = orderBumps.filter((b) => selectedBumps.has(b.id)).reduce((sum, b) => sum + (b.current_price || b.price || 0), 0);
   const shippingPrice = provider === "logzz" && selectedDate ? selectedDate.price : 0;
   const totalPrice = (offer?.price || 0) + bumpsTotal + shippingPrice;
+
+  // Initialize MercadoPago Bricks when credit_card is selected on step 3
+  useEffect(() => {
+    if (step !== 3 || provider !== "coinzz" || paymentMethod !== "credit_card" || !mpPublicKey || !offer) return;
+    if (!window.MercadoPago) return;
+
+    setBricksReady(false);
+
+    const initBricks = async () => {
+      try {
+        if (bricksControllerRef.current) {
+          try { bricksControllerRef.current.unmount(); } catch {}
+          bricksControllerRef.current = null;
+        }
+        const container = document.getElementById("cardPaymentBrick_container");
+        if (container) container.innerHTML = "";
+
+        const mp = new window.MercadoPago(mpPublicKey, { locale: "pt-BR" });
+        const bricksBuilder = mp.bricks();
+
+        const controller = await bricksBuilder.create("cardPayment", "cardPaymentBrick_container", {
+          initialization: {
+            amount: totalPrice,
+            payer: {
+              email: form.email || "",
+              firstName: form.name.split(" ")[0] || "",
+              lastName: form.name.split(" ").slice(1).join(" ") || "",
+              identification: { type: "CPF", number: form.cpf.replace(/\D/g, "") },
+            },
+          },
+          customization: {
+            paymentMethods: { minInstallments: 1, maxInstallments: 12 },
+            visual: {
+              style: {
+                theme: "default",
+                customVariables: { formBackgroundColor: "#ffffff", baseColor: "#10B981" },
+              },
+            },
+          },
+          callbacks: {
+            onReady: () => setBricksReady(true),
+            onSubmit: async (cardFormData: any) => {
+              await processPayment(cardFormData.token, cardFormData.installments);
+            },
+            onError: (error: any) => {
+              console.error("Bricks error:", error);
+              toast.error("Erro no formulário de pagamento");
+            },
+          },
+        });
+
+        bricksControllerRef.current = controller;
+      } catch (err) {
+        console.error("Failed to init Bricks:", err);
+      }
+    };
+
+    const timer = setTimeout(initBricks, 300);
+    return () => {
+      clearTimeout(timer);
+      if (bricksControllerRef.current) {
+        try { bricksControllerRef.current.unmount(); } catch {}
+        bricksControllerRef.current = null;
+      }
+    };
+  }, [step, provider, paymentMethod, mpPublicKey, totalPrice]);
 
   const totalSteps = provider === "logzz" ? 3 : 4;
   const progressPercent = provider === "logzz"
@@ -268,7 +363,7 @@ const CheckoutPublic = () => {
     setSubmitting(false);
   };
 
-  const processPayment = async () => {
+  const processPayment = async (bricksCardToken?: string, bricksInstallments?: number) => {
     if (!checkout || !offer) return;
     setPaymentLoading(true);
     try {
@@ -283,8 +378,8 @@ const CheckoutPublic = () => {
         body: JSON.stringify({
           orderId: oid,
           method: paymentMethod,
-          cardToken: paymentMethod === "credit_card" ? cardForm.number : undefined,
-          installments: cardForm.installments,
+          cardToken: paymentMethod === "credit_card" ? bricksCardToken : undefined,
+          installments: bricksInstallments || 1,
           payerEmail: form.email,
           payerDocument: form.cpf,
           payerName: form.name,
@@ -912,19 +1007,20 @@ const CheckoutPublic = () => {
 
                     {paymentMethod === "credit_card" && (
                       <motion.div key="card" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-3">
-                        <div><Label className="text-xs text-gray-600">Número do Cartão</Label><Input value={cardForm.number} onChange={(e) => setCardForm(p => ({ ...p, number: e.target.value }))} placeholder="0000 0000 0000 0000" className="mt-1 border-gray-200" /></div>
-                        <div className="grid grid-cols-2 gap-3">
-                          <div><Label className="text-xs text-gray-600">Validade</Label><Input value={cardForm.expiry} onChange={(e) => setCardForm(p => ({ ...p, expiry: e.target.value }))} placeholder="MM/AA" className="mt-1 border-gray-200" /></div>
-                          <div><Label className="text-xs text-gray-600">CVV</Label><Input value={cardForm.cvv} onChange={(e) => setCardForm(p => ({ ...p, cvv: e.target.value }))} placeholder="000" className="mt-1 border-gray-200" /></div>
-                        </div>
-                        <div><Label className="text-xs text-gray-600">Nome no Cartão</Label><Input value={cardForm.holderName} onChange={(e) => setCardForm(p => ({ ...p, holderName: e.target.value }))} placeholder="Como impresso no cartão" className="mt-1 border-gray-200" /></div>
-                        <div><Label className="text-xs text-gray-600">Parcelas</Label>
-                          <select value={cardForm.installments} onChange={(e) => setCardForm(p => ({ ...p, installments: Number(e.target.value) }))} className="mt-1 w-full h-10 rounded-lg border border-gray-200 bg-white px-3 text-sm">
-                            {[1,2,3,4,5,6,7,8,9,10,11,12].map(i => (
-                              <option key={i} value={i}>{i}x de R$ {(totalPrice / i).toFixed(2)}{i === 1 ? " (à vista)" : ""}</option>
-                            ))}
-                          </select>
-                        </div>
+                        {!mpPublicKey ? (
+                          <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 text-center">
+                            <Loader2 className="h-6 w-6 animate-spin text-emerald-500 mx-auto mb-2" />
+                            <p className="text-xs text-gray-500">Carregando formulário de pagamento...</p>
+                          </div>
+                        ) : (
+                          <div id="cardPaymentBrick_container" ref={cardFormRef} />
+                        )}
+                        {!bricksReady && mpPublicKey && (
+                          <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 text-center">
+                            <Loader2 className="h-6 w-6 animate-spin text-emerald-500 mx-auto mb-2" />
+                            <p className="text-xs text-gray-500">Inicializando pagamento seguro...</p>
+                          </div>
+                        )}
                       </motion.div>
                     )}
 
@@ -938,13 +1034,13 @@ const CheckoutPublic = () => {
                     )}
                   </AnimatePresence>
 
-                  {/* Only show pay button if not already showing PIX QR */}
-                  {!(paymentMethod === "pix" && pixData) && (
-                    <button onClick={processPayment} disabled={paymentLoading || submitting}
+                  {/* Only show pay button if not already showing PIX QR and not credit_card (Bricks handles its own submit) */}
+                  {!(paymentMethod === "pix" && pixData) && paymentMethod !== "credit_card" && (
+                    <button onClick={() => processPayment()} disabled={paymentLoading || submitting}
                       className="mt-5 w-full rounded-xl bg-emerald-500 py-3 text-sm font-semibold text-white hover:bg-emerald-600 shadow-md shadow-emerald-500/20 transition-all disabled:opacity-50"
                     >
                       {paymentLoading ? <Loader2 className="inline h-4 w-4 animate-spin mr-2" /> : null}
-                      {paymentMethod === "pix" ? "Gerar QR Code PIX" : paymentMethod === "boleto" ? "Gerar Boleto" : "Pagar"} → R$ {totalPrice.toFixed(2)}
+                      {paymentMethod === "pix" ? "Gerar QR Code PIX" : "Gerar Boleto"} → R$ {totalPrice.toFixed(2)}
                     </button>
                   )}
 
