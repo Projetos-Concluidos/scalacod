@@ -238,188 +238,114 @@ Deno.serve(async (req) => {
     }
 
     // ─── ACTION: sync_logzz_products ──────────────────
+    // Logzz does NOT have a public REST API for fetching offers.
+    // This action returns existing offers from the local database instead.
     if (action === "sync_logzz_products") {
       const logzz = getIntegration("logzz");
       if (!logzz?.config) {
         return new Response(
-          JSON.stringify({ error: "Logzz não configurado" }),
+          JSON.stringify({ error: "Logzz não configurado. Salve o token e a URL de webhook primeiro." }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
-      const token = (logzz.config as any).bearer_token;
-      if (!token) {
+      // Return existing offers from the database for this user
+      const { data: existingOffers, error: offErr } = await supabase
+        .from("offers")
+        .select("id, name, price, hash, product_id, products(name)")
+        .eq("user_id", user_id)
+        .eq("is_active", true);
+
+      if (offErr) {
         return new Response(
-          JSON.stringify({ error: "Token Logzz ausente" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          JSON.stringify({ error: "Erro ao buscar ofertas: " + offErr.message }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
-      try {
-        const res = await fetch("https://app.logzz.com.br/api/offers", {
-          method: "GET",
-          headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
-          redirect: "manual",
-        });
-        
-        // Handle redirects (token invalid → login page)
-        if (res.status >= 300 && res.status < 400) {
-          const loc = res.headers.get("location") || "unknown";
-          console.error("Logzz redirected to:", loc);
-          throw new Error(`Token Logzz inválido (redirecionado para login). Gere um novo token.`);
-        }
-        
-        const raw = await res.text();
-        console.log("Logzz response status:", res.status, "length:", raw.length, "preview:", raw.substring(0, 100));
-        
-        let data: any;
-        try {
-          data = JSON.parse(raw);
-        } catch {
-          console.error("Logzz non-JSON body:", raw.substring(0, 300));
-          throw new Error(`Logzz retornou HTML em vez de JSON (status ${res.status}). Token pode estar expirado.`);
-        }
-
-        if (!data.success && !data.data) {
-          throw new Error(data.message || "Erro ao buscar ofertas da Logzz");
-        }
-
-        const offers = data.data || data;
-        const results = { synced: 0, products: 0, offers: 0 };
-
-        for (const item of (Array.isArray(offers) ? offers : [])) {
-          // Upsert product
-          const productPayload = {
-            user_id,
-            name: item.product_name || item.name || "Produto Logzz",
-            hash: item.product_hash || item.hash || null,
-            weight: item.weight || null,
-            width: item.width || null,
-            height: item.height || null,
-            length: item.length || null,
-            is_active: true,
-          };
-
-          let productId: string;
-          if (item.product_hash) {
-            const { data: existingProduct } = await supabase
-              .from("products")
-              .select("id")
-              .eq("user_id", user_id)
-              .eq("hash", item.product_hash)
-              .maybeSingle();
-
-            if (existingProduct) {
-              productId = existingProduct.id;
-              await supabase.from("products").update(productPayload).eq("id", productId);
-            } else {
-              const { data: newProduct } = await supabase
-                .from("products")
-                .insert(productPayload)
-                .select("id")
-                .single();
-              productId = newProduct!.id;
-              results.products++;
-            }
-          } else {
-            const { data: newProduct } = await supabase
-              .from("products")
-              .insert(productPayload)
-              .select("id")
-              .single();
-            productId = newProduct!.id;
-            results.products++;
-          }
-
-          // Upsert offer
-          const offerPayload = {
-            user_id,
-            product_id: productId,
-            name: item.offer_name || item.name || "Oferta Logzz",
-            price: item.price || 0,
-            original_price: item.original_price || null,
-            hash: item.offer_hash || item.hash || null,
-            checkout_type: "hybrid",
-            is_active: true,
-            expedition_checkout_url: item.expedition_checkout_url || null,
-            scheduling_checkout_url: item.scheduling_checkout_url || null,
-          };
-
-          const offerHash = item.offer_hash || item.hash;
-          if (offerHash) {
-            const { data: existingOffer } = await supabase
-              .from("offers")
-              .select("id")
-              .eq("user_id", user_id)
-              .eq("hash", offerHash)
-              .maybeSingle();
-
-            if (existingOffer) {
-              await supabase.from("offers").update(offerPayload).eq("id", existingOffer.id);
-            } else {
-              await supabase.from("offers").insert(offerPayload);
-              results.offers++;
-            }
-          } else {
-            await supabase.from("offers").insert(offerPayload);
-            results.offers++;
-          }
-
-          results.synced++;
-        }
-
-        return new Response(
-          JSON.stringify({ success: true, ...results }),
-          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      } catch (e) {
-        const isAuthError = e.message?.includes("Token") || e.message?.includes("HTML") || e.message?.includes("login");
-        return new Response(
-          JSON.stringify({ error: e.message }),
-          { status: isAuthError ? 400 : 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
+      return new Response(
+        JSON.stringify({
+          success: true,
+          synced: existingOffers?.length || 0,
+          products: 0,
+          offers: existingOffers?.length || 0,
+          items: existingOffers || [],
+          message: "Ofertas carregadas do banco de dados. Para adicionar novas ofertas, crie-as manualmente ou importe via webhook da Logzz.",
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
-    // ─── ACTION: test_logzz_connection ────────────────
+    // ─── ACTION: test_connection ──────────────────────
+    // Tests the Logzz webhook URL by sending a test order payload
     if (action === "test_connection") {
       const logzz = getIntegration("logzz");
       if (!logzz?.config) {
         return new Response(
-          JSON.stringify({ connected: false, error: "Logzz não configurado" }),
-          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          JSON.stringify({ connected: false, error: "Logzz não configurado. Salve o token e a URL primeiro." }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
-      const token = (logzz.config as any).bearer_token;
-      try {
-        const res = await fetch("https://app.logzz.com.br/api/offers", {
-          method: "GET",
-          headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
-          redirect: "manual",
-        });
-        if (res.status >= 300 && res.status < 400) {
-          return new Response(
-            JSON.stringify({ connected: false, error: "Token Logzz expirado (redirecionado para login)." }),
-            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        }
-        const rawTest = await res.text();
-        let data: any;
-        try { data = JSON.parse(rawTest); } catch {
-          return new Response(
-            JSON.stringify({ connected: false, error: `Logzz retornou resposta inválida. Token pode estar inválido.` }),
-            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        }
+      const config = logzz.config as any;
+      const webhookUrl = config.logzz_webhook_url;
+      const bearerToken = config.bearer_token;
+
+      if (!webhookUrl) {
         return new Response(
-          JSON.stringify({ connected: res.ok, offers_count: Array.isArray(data.data) ? data.data.length : 0 }),
+          JSON.stringify({ connected: false, error: "URL de Importação de Pedidos não configurada." }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      try {
+        const testPayload = {
+          external_id: `test-scalaninja-${Date.now()}`,
+          full_name: "Teste ScalaNinja",
+          phone: "11999999999",
+          customer_document: "00000000000",
+          postal_code: "01310100",
+          street: "Av Paulista",
+          neighborhood: "Bela Vista",
+          city: "São Paulo",
+          state: "sp",
+          house_number: "1000",
+          complement: "",
+          delivery_date: new Date().toISOString().split("T")[0],
+          offer: "test_validation",
+          affiliate_email: "",
+        };
+
+        const headers: Record<string, string> = { "Content-Type": "application/json" };
+        if (bearerToken) headers["Authorization"] = `Bearer ${bearerToken}`;
+
+        console.log("Testing Logzz webhook:", webhookUrl);
+        const res = await fetch(webhookUrl, {
+          method: "POST",
+          headers,
+          body: JSON.stringify(testPayload),
+        });
+
+        const status = res.status;
+        const bodyText = await res.text();
+        console.log("Logzz webhook test response:", status, bodyText.substring(0, 200));
+
+        const connected = status === 200 || status === 201 || status === 422 || status === 400;
+        return new Response(
+          JSON.stringify({
+            connected,
+            status,
+            message: connected
+              ? `Webhook Logzz respondeu (status ${status}). Conexão funcionando!`
+              : `Logzz respondeu com status ${status}. Verifique a URL e o token.`,
+          }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       } catch (e) {
+        console.error("Logzz webhook test error:", e.message);
         return new Response(
-          JSON.stringify({ connected: false, error: e.message }),
-          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          JSON.stringify({ connected: false, error: "Erro ao conectar: " + e.message }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
     }
