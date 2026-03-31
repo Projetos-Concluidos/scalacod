@@ -175,9 +175,13 @@ const Disparos = () => {
     setCampaignName("");
     setSelectedFlowId("");
     setSegmentation("all");
+    setSegmentTag("");
     setScheduleType("now");
     setScheduleDate(undefined);
     setScheduleTime("09:00");
+    setEstimatedReach(leadsCount);
+    setMessageTemplate("Olá {{nome}}! Confira nossas novidades 🔥");
+  };
     setEstimatedReach(leadsCount);
   };
 
