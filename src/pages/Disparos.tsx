@@ -40,11 +40,14 @@ const Disparos = () => {
   const [selectedFlowId, setSelectedFlowId] = useState("");
   const [segmentation, setSegmentation] = useState<"all" | "status" | "tag">("all");
   const [segmentStatus, setSegmentStatus] = useState("Confirmado");
+  const [segmentTag, setSegmentTag] = useState("");
   const [scheduleType, setScheduleType] = useState<"now" | "scheduled">("now");
   const [scheduleDate, setScheduleDate] = useState<Date>();
   const [scheduleTime, setScheduleTime] = useState("09:00");
   const [estimatedReach, setEstimatedReach] = useState(0);
   const [creating, setCreating] = useState(false);
+  const [messageTemplate, setMessageTemplate] = useState("Olá {{nome}}! Confira nossas novidades 🔥");
+  const [runningCampaignId, setRunningCampaignId] = useState<string | null>(null);
 
   const fetchData = async () => {
     if (!user) return;
