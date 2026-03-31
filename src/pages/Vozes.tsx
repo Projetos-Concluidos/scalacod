@@ -343,7 +343,7 @@ const Vozes = () => {
             <p className="text-3xl font-bold text-foreground">{pack.display}</p>
             <p className="text-xs font-semibold text-primary mb-1">Tokens</p>
             <p className="text-lg font-bold text-foreground mb-4">{pack.price}</p>
-            <button onClick={() => handleBuyTokens(pack)} className={`w-full rounded-lg py-2.5 text-sm font-semibold transition-all ${
+            <button onClick={() => openPurchaseModal(pack)} className={`w-full rounded-lg py-2.5 text-sm font-semibold transition-all ${
               pack.popular
                 ? "gradient-primary text-primary-foreground hover:opacity-90"
                 : "border border-border text-foreground hover:bg-muted"
