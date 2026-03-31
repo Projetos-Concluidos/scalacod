@@ -859,6 +859,57 @@ export type Database = {
           },
         ]
       }
+      plans: {
+        Row: {
+          created_at: string | null
+          features: Json | null
+          id: string
+          is_active: boolean | null
+          is_featured: boolean | null
+          limits: Json | null
+          mp_plan_id: string | null
+          name: string
+          price_monthly: number
+          price_yearly: number | null
+          slug: string
+          sort_order: number | null
+          trial_days: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          features?: Json | null
+          id?: string
+          is_active?: boolean | null
+          is_featured?: boolean | null
+          limits?: Json | null
+          mp_plan_id?: string | null
+          name: string
+          price_monthly: number
+          price_yearly?: number | null
+          slug: string
+          sort_order?: number | null
+          trial_days?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          features?: Json | null
+          id?: string
+          is_active?: boolean | null
+          is_featured?: boolean | null
+          limits?: Json | null
+          mp_plan_id?: string | null
+          name?: string
+          price_monthly?: number
+          price_yearly?: number | null
+          slug?: string
+          sort_order?: number | null
+          trial_days?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       product_variations: {
         Row: {
           created_at: string | null
@@ -982,7 +1033,13 @@ export type Database = {
           id: string
           name: string
           plan: string | null
+          plan_id: string | null
           store_name: string | null
+          subscription_ends_at: string | null
+          subscription_id: string | null
+          subscription_status: string | null
+          token_balance: number | null
+          trial_ends_at: string | null
           updated_at: string | null
         }
         Insert: {
@@ -992,7 +1049,13 @@ export type Database = {
           id: string
           name: string
           plan?: string | null
+          plan_id?: string | null
           store_name?: string | null
+          subscription_ends_at?: string | null
+          subscription_id?: string | null
+          subscription_status?: string | null
+          token_balance?: number | null
+          trial_ends_at?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -1002,10 +1065,24 @@ export type Database = {
           id?: string
           name?: string
           plan?: string | null
+          plan_id?: string | null
           store_name?: string | null
+          subscription_ends_at?: string | null
+          subscription_id?: string | null
+          subscription_status?: string | null
+          token_balance?: number | null
+          trial_ends_at?: string | null
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       stores: {
         Row: {
@@ -1038,6 +1115,190 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "stores_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscription_invoices: {
+        Row: {
+          amount: number
+          created_at: string | null
+          due_date: string | null
+          id: string
+          mp_payment_id: string | null
+          paid_at: string | null
+          status: string | null
+          subscription_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          due_date?: string | null
+          id?: string
+          mp_payment_id?: string | null
+          paid_at?: string | null
+          status?: string | null
+          subscription_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          due_date?: string | null
+          id?: string
+          mp_payment_id?: string | null
+          paid_at?: string | null
+          status?: string | null
+          subscription_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_invoices_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "subscriptions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscription_invoices_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscriptions: {
+        Row: {
+          amount: number
+          billing_cycle: string | null
+          cancelled_at: string | null
+          created_at: string | null
+          current_period_end: string | null
+          current_period_start: string | null
+          id: string
+          mp_card_last4: string | null
+          mp_payer_email: string | null
+          mp_preapproval_id: string | null
+          mp_preapproval_plan_id: string | null
+          plan_id: string | null
+          status: string | null
+          trial_end: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          amount: number
+          billing_cycle?: string | null
+          cancelled_at?: string | null
+          created_at?: string | null
+          current_period_end?: string | null
+          current_period_start?: string | null
+          id?: string
+          mp_card_last4?: string | null
+          mp_payer_email?: string | null
+          mp_preapproval_id?: string | null
+          mp_preapproval_plan_id?: string | null
+          plan_id?: string | null
+          status?: string | null
+          trial_end?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          amount?: number
+          billing_cycle?: string | null
+          cancelled_at?: string | null
+          created_at?: string | null
+          current_period_end?: string | null
+          current_period_start?: string | null
+          id?: string
+          mp_card_last4?: string | null
+          mp_payer_email?: string | null
+          mp_preapproval_id?: string | null
+          mp_preapproval_plan_id?: string | null
+          plan_id?: string | null
+          status?: string | null
+          trial_end?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscriptions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscriptions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      usage_limits: {
+        Row: {
+          campaigns_this_month: number | null
+          id: string
+          month_year: string | null
+          orders_this_month: number | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          campaigns_this_month?: number | null
+          id?: string
+          month_year?: string | null
+          orders_this_month?: number | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          campaigns_this_month?: number | null
+          id?: string
+          month_year?: string | null
+          orders_this_month?: number | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "usage_limits_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_roles_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -1232,10 +1493,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_user_plan_limit: { Args: { feature: string }; Returns: number }
+      has_active_subscription: { Args: never; Returns: boolean }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "superadmin" | "tenant" | "tenant_admin" | "tenant_agent"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1362,6 +1631,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["superadmin", "tenant", "tenant_admin", "tenant_agent"],
+    },
   },
 } as const
