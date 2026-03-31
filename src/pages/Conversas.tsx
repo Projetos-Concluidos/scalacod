@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import {
   MessageSquare, Search, SlidersHorizontal, RefreshCw, Tag, Send, Paperclip,
   Smile, Mic, Info, Phone, Mail, FileText, X, Plus, Check, CheckCheck,
-  Image as ImageIcon, File, ChevronDown
+  Image as ImageIcon, File, ChevronDown, Layout
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils";
 import type { Tables } from "@/integrations/supabase/types";
 import EmojiStickerPicker from "@/components/chat/EmojiStickerPicker";
 import { useNotificationSound } from "@/hooks/useNotificationSound";
+import { useQuery } from "@tanstack/react-query";
 
 type Conversation = Tables<"conversations">;
 type Message = Tables<"messages">;
