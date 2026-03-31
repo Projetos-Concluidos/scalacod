@@ -310,7 +310,7 @@ const CheckoutPublic = () => {
           <p className="mt-6 text-center text-[10px] text-gray-400 flex items-center justify-center gap-1">
             <ShieldCheck className="h-3 w-3" /> Compra 100% segura • ScalaNinja
           </p>
-        </div>
+        </motion.div>
       </div>
     );
   }
