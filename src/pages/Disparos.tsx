@@ -40,11 +40,14 @@ const Disparos = () => {
   const [selectedFlowId, setSelectedFlowId] = useState("");
   const [segmentation, setSegmentation] = useState<"all" | "status" | "tag">("all");
   const [segmentStatus, setSegmentStatus] = useState("Confirmado");
+  const [segmentTag, setSegmentTag] = useState("");
   const [scheduleType, setScheduleType] = useState<"now" | "scheduled">("now");
   const [scheduleDate, setScheduleDate] = useState<Date>();
   const [scheduleTime, setScheduleTime] = useState("09:00");
   const [estimatedReach, setEstimatedReach] = useState(0);
   const [creating, setCreating] = useState(false);
+  const [messageTemplate, setMessageTemplate] = useState("Olá {{nome}}! Confira nossas novidades 🔥");
+  const [runningCampaignId, setRunningCampaignId] = useState<string | null>(null);
 
   const fetchData = async () => {
     if (!user) return;
@@ -64,6 +67,22 @@ const Disparos = () => {
   };
 
   useEffect(() => { fetchData(); }, [user]);
+
+  // Realtime progress for running campaigns
+  useEffect(() => {
+    const channel = supabase
+      .channel("campaigns-realtime")
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "campaigns" }, (payload) => {
+        const updated = payload.new as Campaign;
+        setCampaigns(prev => prev.map(c => c.id === updated.id ? { ...updated } : c));
+        if (updated.status === "completed" && runningCampaignId === updated.id) {
+          setRunningCampaignId(null);
+          toast.success(`Campanha concluída! ${updated.sent_count || 0} enviados, ${updated.failed_count || 0} falhas`);
+        }
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [runningCampaignId]);
 
   const hasOfficialApi = whatsappInstances.some(i => i.provider === "meta" || i.provider === "ycloud");
   const approvedFlows = flows.filter(f => f.template_status === "approved");
@@ -108,22 +127,44 @@ const Disparos = () => {
         ? new Date(`${format(scheduleDate, "yyyy-MM-dd")}T${scheduleTime}:00`).toISOString()
         : null;
 
-      await supabase.from("campaigns").insert({
+      const segmentFilter: any = {};
+      if (segmentation === "status") segmentFilter.status = segmentStatus;
+      if (segmentation === "tag" && segmentTag) segmentFilter.tag = segmentTag;
+
+      const { data: newCampaign, error } = await supabase.from("campaigns").insert({
         user_id: user.id,
         name: campaignName,
         flow_id: selectedFlowId || null,
-        status: scheduleType === "now" ? "running" : "scheduled",
+        status: scheduleType === "now" ? "draft" : "scheduled",
         total_recipients: estimatedReach,
         scheduled_at: scheduledAt,
-        started_at: scheduleType === "now" ? new Date().toISOString() : null,
-      });
+        segment_filter: segmentFilter as any,
+        message_template: messageTemplate,
+      } as any).select().single();
 
-      toast.success(scheduleType === "now" ? "Campanha iniciada!" : "Campanha agendada!");
+      if (error) throw error;
+
+      // If sending now, invoke the edge function
+      if (scheduleType === "now" && newCampaign) {
+        setRunningCampaignId(newCampaign.id);
+        supabase.functions.invoke("execute-campaign", {
+          body: { campaignId: newCampaign.id },
+        }).then(({ error: execErr }) => {
+          if (execErr) {
+            toast.error("Erro ao executar campanha: " + execErr.message);
+            setRunningCampaignId(null);
+          }
+        });
+        toast.success("Campanha iniciada! Acompanhe o progresso em tempo real.");
+      } else {
+        toast.success("Campanha agendada com sucesso!");
+      }
+
       setModalOpen(false);
       resetModal();
       fetchData();
-    } catch {
-      toast.error("Erro ao criar campanha");
+    } catch (err: any) {
+      toast.error("Erro ao criar campanha: " + (err.message || ""));
     } finally {
       setCreating(false);
     }
@@ -134,10 +175,12 @@ const Disparos = () => {
     setCampaignName("");
     setSelectedFlowId("");
     setSegmentation("all");
+    setSegmentTag("");
     setScheduleType("now");
     setScheduleDate(undefined);
     setScheduleTime("09:00");
     setEstimatedReach(leadsCount);
+    setMessageTemplate("Olá {{nome}}! Confira nossas novidades 🔥");
   };
 
   if (!gate.allowed) return <UpgradePrompt reason={gate.reason} />;
@@ -236,12 +279,30 @@ const Disparos = () => {
               <tbody>
                 {filteredCampaigns.map(campaign => {
                   const flow = flows.find(f => f.id === campaign.flow_id);
+                  const isRunning = campaign.status === "running";
+                  const progress = isRunning && (campaign.total_recipients || 0) > 0
+                    ? Math.round(((campaign.sent_count || 0) + (campaign.failed_count || 0)) / (campaign.total_recipients || 1) * 100)
+                    : 0;
                   return (
                     <tr key={campaign.id} className="border-b border-border/50 hover:bg-muted/20 transition-colors">
                       <td className="py-4">
                         <div>
                           <p className="font-medium text-foreground">{campaign.name}</p>
                           <p className="text-xs text-muted-foreground">{flow?.name || "—"}</p>
+                          {isRunning && (
+                            <div className="mt-2 space-y-1">
+                              <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+                                <span>Enviando...</span>
+                                <span>{campaign.sent_count || 0}/{campaign.total_recipients || 0} ({progress}%)</span>
+                              </div>
+                              <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+                                <div className="h-full rounded-full bg-primary transition-all duration-500" style={{ width: `${progress}%` }} />
+                              </div>
+                              {(campaign.failed_count || 0) > 0 && (
+                                <p className="text-[10px] text-destructive">{campaign.failed_count} falhas</p>
+                              )}
+                            </div>
+                          )}
                         </div>
                       </td>
                       <td className="py-4">{getStatusBadge(campaign.status)}</td>
@@ -300,6 +361,17 @@ const Disparos = () => {
                     </SelectContent>
                   </Select>
                   {approvedFlows.length === 0 && <p className="text-[11px] text-warning">Nenhum template aprovado. Selecione um fluxo pendente.</p>}
+                </div>
+                <div className="space-y-2">
+                  <Label>Mensagem personalizada</Label>
+                  <textarea
+                    value={messageTemplate}
+                    onChange={e => setMessageTemplate(e.target.value)}
+                    placeholder="Olá {{nome}}! Confira nossas novidades 🔥"
+                    rows={3}
+                    className="w-full rounded-lg border border-border bg-input px-4 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none resize-none"
+                  />
+                  <p className="text-[11px] text-muted-foreground">Variáveis: {"{{nome}}"}, {"{{telefone}}"}, {"{{email}}"}, {"{{status}}"}</p>
                 </div>
               </>
             )}

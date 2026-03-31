@@ -89,8 +89,10 @@ export type Database = {
           failed_count: number | null
           flow_id: string | null
           id: string
+          message_template: string | null
           name: string
           scheduled_at: string | null
+          segment_filter: Json | null
           sent_count: number | null
           started_at: string | null
           status: string | null
@@ -103,8 +105,10 @@ export type Database = {
           failed_count?: number | null
           flow_id?: string | null
           id?: string
+          message_template?: string | null
           name: string
           scheduled_at?: string | null
+          segment_filter?: Json | null
           sent_count?: number | null
           started_at?: string | null
           status?: string | null
@@ -117,8 +121,10 @@ export type Database = {
           failed_count?: number | null
           flow_id?: string | null
           id?: string
+          message_template?: string | null
           name?: string
           scheduled_at?: string | null
+          segment_filter?: Json | null
           sent_count?: number | null
           started_at?: string | null
           status?: string | null
