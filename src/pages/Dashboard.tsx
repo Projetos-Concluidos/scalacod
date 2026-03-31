@@ -333,9 +333,9 @@ const Dashboard = () => {
             <div className="flex items-center gap-2 mb-2">
               <svg width="20" height="20" viewBox="0 0 32 32" fill="none" className="shrink-0">
                 <defs>
-                  <linearGradient id="shuriken-tip" x1="0" y1="0" x2="32" y2="32">
-                    <stop offset="0%" stopColor="#00D4FF" />
-                    <stop offset="100%" stopColor="#0066FF" />
+              <linearGradient id="shuriken-tip" x1="0" y1="0" x2="32" y2="32">
+                    <stop offset="0%" stopColor="#10B981" />
+                    <stop offset="100%" stopColor="#059669" />
                   </linearGradient>
                 </defs>
                 <path d="M16 2L20 12L30 16L20 20L16 30L12 20L2 16L12 12Z" fill="url(#shuriken-tip)" />
