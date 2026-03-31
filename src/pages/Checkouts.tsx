@@ -253,8 +253,8 @@ const Checkouts = () => {
             icon={<Plus className="h-12 w-12" />}
             title="Criar Primeiro Checkout"
             description="Crie seu primeiro checkout para começar a vender."
-            className="border border-dashed border-border shadow-none cursor-pointer"
-            onClick={() => setWizardOpen(true)}
+            className="border border-dashed border-border shadow-none"
+            action={<button onClick={() => setWizardOpen(true)} className="gradient-primary rounded-lg px-5 py-2.5 text-sm font-semibold text-primary-foreground">+ Criar Checkout</button>}
           />
         ) : (
           <div className="space-y-3">
