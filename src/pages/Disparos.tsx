@@ -140,6 +140,8 @@ const Disparos = () => {
     setEstimatedReach(leadsCount);
   };
 
+  if (!gate.allowed) return <UpgradePrompt reason={gate.reason} />;
+
   return (
     <div>
       <PageHeader

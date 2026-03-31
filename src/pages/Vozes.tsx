@@ -168,6 +168,8 @@ const Vozes = () => {
     setCloneFiles([]);
   };
 
+  if (!gate.allowed) return <UpgradePrompt reason={gate.reason} />;
+
   return (
     <div>
       <PageHeader

@@ -85,6 +85,8 @@ const ApiTab = () => {
 
   const activeToken = tokens[0];
 
+  if (!gate.allowed) return <UpgradePrompt reason={gate.reason} />;
+
   return (
     <div className="space-y-6">
       {/* Token */}
