@@ -297,17 +297,41 @@ const Conversas = () => {
     reader.readAsDataURL(file);
   };
 
-  const sendTemplateMessage = async (flow: any) => {
+  // Extract variable count from template components
+  const getTemplateVarCount = (flow: any): number => {
+    const tmpl = flow.flow_templates?.find((t: any) => t.status === "APPROVED" || t.status === "approved") || flow.flow_templates?.[0];
+    if (!tmpl?.components) return 0;
+    const comps = tmpl.components as any[];
+    const bodyComp = comps.find((c: any) => c.type === "BODY");
+    if (!bodyComp?.text) return 0;
+    const matches = bodyComp.text.match(/\{\{\d+\}\}/g);
+    return matches ? matches.length : 0;
+  };
+
+  const selectTemplateFlow = (flow: any) => {
+    const varCount = getTemplateVarCount(flow);
+    if (varCount === 0) {
+      // No variables, send directly
+      sendTemplateMessage(flow, []);
+    } else {
+      setSelectedTemplateFlow(flow);
+      setTemplateVars(new Array(varCount).fill(""));
+      setShowTemplates(false);
+    }
+  };
+
+  const sendTemplateMessage = async (flow: any, variables: string[]) => {
     if (!selectedConv || !user || sendingTemplate) return;
     setSendingTemplate(true);
     setShowTemplates(false);
+    setSelectedTemplateFlow(null);
 
     try {
       const { data, error } = await supabase.functions.invoke("send-template-message", {
         body: {
           conversationId: selectedConv.id,
           flowId: flow.id,
-          variables: [], // Can be extended with variable input UI
+          variables: variables.filter(v => v.trim()),
         },
       });
 
