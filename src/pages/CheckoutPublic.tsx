@@ -207,7 +207,8 @@ const CheckoutPublic = () => {
     : (step / totalSteps) * 100;
 
   const cpfValid = validateCpf(form.cpf);
-  const step1Valid = form.name.length >= 2 && form.phone.replace(/\D/g, "").length >= 10 && cpfValid;
+  const cpfApproved = cpfValid && cpfResult?.valid === true && cpfResult?.status !== "blocked";
+  const step1Valid = form.name.length >= 2 && form.phone.replace(/\D/g, "").length >= 10 && cpfApproved && !cpfValidating;
   const step2Valid = form.cep.replace(/\D/g, "").length === 8 && form.street && form.number && form.district && form.city && form.state && deliveryChecked;
 
   const goToStep = (s: number) => {
