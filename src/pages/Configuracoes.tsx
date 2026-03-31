@@ -3,6 +3,9 @@ import { Store, Clock, Save, Globe, Key, Webhook, Bell, Info } from "lucide-reac
 import LogzzTab from "@/components/settings/LogzzTab";
 import CoinzzTab from "@/components/settings/CoinzzTab";
 import MercadoPagoTab from "@/components/settings/MercadoPagoTab";
+import ApiTab from "@/components/settings/ApiTab";
+import WebhooksTab from "@/components/settings/WebhooksTab";
+import NotificacoesTab from "@/components/settings/NotificacoesTab";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -252,25 +255,13 @@ const Configuracoes = () => {
           <MercadoPagoTab />
         </TabsContent>
         <TabsContent value="api">
-          <div className="ninja-card flex flex-col items-center justify-center py-16 text-center">
-            <Key className="mb-3 h-10 w-10 text-muted-foreground/40" />
-            <h3 className="text-lg font-semibold text-foreground">API Tokens</h3>
-            <p className="text-sm text-muted-foreground">Em breve — gerencie seus tokens de acesso.</p>
-          </div>
+          <ApiTab />
         </TabsContent>
         <TabsContent value="webhooks">
-          <div className="ninja-card flex flex-col items-center justify-center py-16 text-center">
-            <Webhook className="mb-3 h-10 w-10 text-muted-foreground/40" />
-            <h3 className="text-lg font-semibold text-foreground">Webhooks</h3>
-            <p className="text-sm text-muted-foreground">Em breve — configure endpoints para eventos.</p>
-          </div>
+          <WebhooksTab />
         </TabsContent>
         <TabsContent value="notificacoes">
-          <div className="ninja-card flex flex-col items-center justify-center py-16 text-center">
-            <Bell className="mb-3 h-10 w-10 text-muted-foreground/40" />
-            <h3 className="text-lg font-semibold text-foreground">Notificações</h3>
-            <p className="text-sm text-muted-foreground">Em breve — configure alertas e notificações.</p>
-          </div>
+          <NotificacoesTab />
         </TabsContent>
       </Tabs>
     </div>
