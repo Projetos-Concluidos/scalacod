@@ -28,6 +28,10 @@ const sections: IntegrationSection[] = [
       { label: "URL do Servidor", key: "evolution_url", placeholder: "https://evolution.seudominio.com" },
       { label: "API Key Global", key: "evolution_api_key", placeholder: "Sua API Key" },
     ],
+    tutorial: {
+      title: "Como configurar a Evolution API:",
+      steps: ["Acesse o painel do seu servidor Evolution API", "Copie a URL base e a API Key Global", "Cole nos campos abaixo e salve"],
+    },
   },
   {
     title: "MercadoPago (Plataforma)",
@@ -35,6 +39,11 @@ const sections: IntegrationSection[] = [
     fields: [
       { label: "Access Token Produção", key: "mp_access_token", placeholder: "APP_USR-..." },
     ],
+    tutorial: {
+      title: "Como configurar o MercadoPago:",
+      steps: ["Acesse mercadopago.com.br/developers", "Crie uma aplicação e vá em Credenciais de Produção", "Copie o Access Token e cole abaixo"],
+      warning: "⚠️ Use credenciais de produção (APP_USR-...)",
+    },
   },
   {
     title: "ElevenLabs",
@@ -42,6 +51,10 @@ const sections: IntegrationSection[] = [
     fields: [
       { label: "API Key", key: "elevenlabs_api_key", placeholder: "Sua API Key" },
     ],
+    tutorial: {
+      title: "Como configurar a ElevenLabs:",
+      steps: ["Acesse elevenlabs.io e faça login", "Vá em Profile → API Keys", "Gere uma nova chave e cole abaixo"],
+    },
   },
   {
     title: "OpenAI",
@@ -49,6 +62,11 @@ const sections: IntegrationSection[] = [
     fields: [
       { label: "API Key", key: "openai_api_key", placeholder: "sk-..." },
     ],
+    tutorial: {
+      title: "Como configurar a OpenAI:",
+      steps: ["Acesse platform.openai.com/api-keys", "Crie uma nova API Key", "Cole no campo abaixo e salve"],
+      warning: "⚠️ A chave começa com sk-...",
+    },
   },
 ];
 
