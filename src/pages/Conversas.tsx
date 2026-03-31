@@ -915,6 +915,85 @@ const Conversas = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Template Variables Modal */}
+      <Dialog open={!!selectedTemplateFlow} onOpenChange={(open) => { if (!open) setSelectedTemplateFlow(null); }}>
+        <DialogContent className="bg-card border-border max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-foreground flex items-center gap-2">
+              <FileText className="h-5 w-5 text-primary" />
+              Preencher variáveis do template
+            </DialogTitle>
+          </DialogHeader>
+          {selectedTemplateFlow && (() => {
+            const tmpl = selectedTemplateFlow.flow_templates?.find((t: any) => t.status === "APPROVED" || t.status === "approved") || selectedTemplateFlow.flow_templates?.[0];
+            const bodyComp = (tmpl?.components as any[])?.find((c: any) => c.type === "BODY");
+            const bodyText = bodyComp?.text || "";
+
+            // Build preview with filled variables
+            let preview = bodyText;
+            templateVars.forEach((v, i) => {
+              preview = preview.replace(`{{${i + 1}}}`, v || `{{${i + 1}}}`);
+            });
+
+            return (
+              <div className="space-y-4">
+                <div className="space-y-1">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Template</p>
+                  <p className="text-sm font-medium text-foreground">{selectedTemplateFlow.name}</p>
+                  <p className="text-xs text-muted-foreground">{tmpl?.template_name} • {tmpl?.language || "pt_BR"}</p>
+                </div>
+
+                {/* Preview */}
+                <div className="rounded-lg border border-border bg-muted/30 p-3">
+                  <p className="text-xs font-semibold text-muted-foreground mb-1.5 uppercase tracking-wider">Pré-visualização</p>
+                  <p className="text-sm text-foreground whitespace-pre-wrap">{preview}</p>
+                </div>
+
+                {/* Variable inputs */}
+                <div className="space-y-2.5">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Variáveis</p>
+                  {templateVars.map((val, idx) => (
+                    <div key={idx}>
+                      <label className="text-xs text-muted-foreground mb-1 block">
+                        {`{{${idx + 1}}}`}
+                      </label>
+                      <input
+                        value={val}
+                        onChange={e => {
+                          const updated = [...templateVars];
+                          updated[idx] = e.target.value;
+                          setTemplateVars(updated);
+                        }}
+                        placeholder={`Valor para {{${idx + 1}}}...`}
+                        className="h-9 w-full rounded-lg border border-border bg-input px-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
+                      />
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex gap-2 pt-1">
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => setSelectedTemplateFlow(null)}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    className="flex-1 bg-primary text-primary-foreground"
+                    disabled={sendingTemplate || templateVars.some(v => !v.trim())}
+                    onClick={() => sendTemplateMessage(selectedTemplateFlow, templateVars)}
+                  >
+                    {sendingTemplate ? "Enviando..." : "Enviar Template"}
+                    {!sendingTemplate && <Send className="h-4 w-4 ml-1.5" />}
+                  </Button>
+                </div>
+              </div>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
