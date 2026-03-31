@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { CreditCard, Eye, EyeOff, CheckCircle, Loader2, ExternalLink, Info } from "lucide-react";
+import { CreditCard, Eye, EyeOff, CheckCircle, Loader2, ExternalLink } from "lucide-react";
+import InfoTooltip from "@/components/InfoTooltip";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
@@ -104,7 +105,19 @@ const MercadoPagoTab = () => {
             <CreditCard className="h-5 w-5 text-[hsl(210,100%,50%)]" />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-foreground">MercadoPago</h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg font-bold text-foreground">MercadoPago</h2>
+              <InfoTooltip
+                title="Como configurar o MercadoPago:"
+                steps={[
+                  <>Acesse <a href="https://www.mercadopago.com.br/developers/panel/app" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-medium">mercadopago.com.br/developers <ExternalLink className="inline h-3 w-3" /></a></>,
+                  "Vá em Suas Integrações → Crie ou selecione uma aplicação",
+                  "Em Credenciais de Produção, copie o Access Token e a Public Key",
+                  "Cole os valores nos campos abaixo e clique em Salvar",
+                ]}
+                warning="⚠️ Use credenciais de produção, não de teste. O Access Token começa com APP_USR-"
+              />
+            </div>
             <p className="text-xs text-muted-foreground">Processador de pagamentos para pedidos Coinzz</p>
           </div>
         </div>
@@ -113,25 +126,6 @@ const MercadoPagoTab = () => {
           <Badge variant={isActive ? "default" : "secondary"} className={isActive ? "bg-success/10 text-success border-success/20" : ""}>
             {isActive ? "ATIVO" : "INATIVO"}
           </Badge>
-        </div>
-      </div>
-
-      {/* Mini Tutorial */}
-      <div className="mb-6 rounded-lg border border-primary/10 bg-primary/5 p-4">
-        <div className="flex items-start gap-2">
-          <Info className="h-4 w-4 text-primary mt-0.5 shrink-0" />
-          <div className="text-xs text-muted-foreground space-y-1.5">
-            <p className="font-semibold text-foreground">Como configurar o MercadoPago:</p>
-            <ol className="list-decimal list-inside space-y-1">
-              <li>Acesse <a href="https://www.mercadopago.com.br/developers/panel/app" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-medium">mercadopago.com.br/developers <ExternalLink className="inline h-3 w-3" /></a></li>
-              <li>Vá em <strong className="text-foreground">Suas Integrações</strong> → Crie ou selecione uma aplicação</li>
-              <li>Em <strong className="text-foreground">Credenciais de Produção</strong>, copie o <strong className="text-foreground">Access Token</strong> e a <strong className="text-foreground">Public Key</strong></li>
-              <li>Cole os valores nos campos abaixo e clique em Salvar</li>
-            </ol>
-            <p className="text-[10px] text-muted-foreground/70 mt-2">
-              ⚠️ Use credenciais de <strong>produção</strong>, não de teste. O Access Token começa com <code className="bg-muted px-1 rounded">APP_USR-</code>
-            </p>
-          </div>
         </div>
       </div>
 

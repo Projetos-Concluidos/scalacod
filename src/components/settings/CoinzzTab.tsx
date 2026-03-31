@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { Package, Eye, EyeOff, Copy, CheckCircle, Loader2, ExternalLink, Info } from "lucide-react";
+import { Package, Eye, EyeOff, Copy, CheckCircle, Loader2, ExternalLink } from "lucide-react";
+import InfoTooltip from "@/components/InfoTooltip";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
@@ -112,7 +113,18 @@ const CoinzzTab = () => {
               <Package className="h-5 w-5 text-success" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-foreground">Coinzz</h2>
+              <div className="flex items-center gap-2">
+                <h2 className="text-lg font-bold text-foreground">Coinzz</h2>
+                <InfoTooltip
+                  title="Como configurar a Coinzz:"
+                  steps={[
+                    <>Acesse <a href="https://app.coinzz.com.br" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-medium">app.coinzz.com.br <ExternalLink className="inline h-3 w-3" /></a></>,
+                    "Vá em Configurações → API → Token",
+                    "Copie o Bearer Token e cole no campo abaixo",
+                    "Clique em Salvar — pedidos sem Logzz são roteados automaticamente",
+                  ]}
+                />
+              </div>
               <p className="text-xs text-muted-foreground">Fallback logístico via Correios + pagamento online</p>
             </div>
           </div>
@@ -121,22 +133,6 @@ const CoinzzTab = () => {
             <Badge variant={isActive ? "default" : "secondary"} className={isActive ? "bg-success/10 text-success border-success/20" : ""}>
               {isActive ? "ATIVO" : "INATIVO"}
             </Badge>
-          </div>
-        </div>
-
-        {/* Mini Tutorial */}
-        <div className="mb-6 rounded-lg border border-primary/10 bg-primary/5 p-4">
-          <div className="flex items-start gap-2">
-            <Info className="h-4 w-4 text-primary mt-0.5 shrink-0" />
-            <div className="text-xs text-muted-foreground space-y-1.5">
-              <p className="font-semibold text-foreground">Como configurar a Coinzz:</p>
-              <ol className="list-decimal list-inside space-y-1">
-                <li>Acesse <a href="https://app.coinzz.com.br" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-medium">app.coinzz.com.br <ExternalLink className="inline h-3 w-3" /></a></li>
-                <li>Vá em <strong className="text-foreground">Configurações → API → Token</strong></li>
-                <li>Copie o <strong className="text-foreground">Bearer Token</strong> e cole no campo abaixo</li>
-                <li>Clique em Salvar — os pedidos de regiões sem Logzz serão roteados automaticamente</li>
-              </ol>
-            </div>
           </div>
         </div>
 

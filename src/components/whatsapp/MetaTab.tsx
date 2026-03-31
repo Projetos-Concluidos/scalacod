@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Eye, EyeOff, Copy, ExternalLink, Save, CheckCircle, Loader2, Send, Unplug, Facebook } from "lucide-react";
+import InfoTooltip from "@/components/InfoTooltip";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -155,7 +156,18 @@ const MetaTab = () => {
             <Facebook className="h-5 w-5 text-[#1877F2]" />
           </div>
           <div className="flex-1">
-            <h3 className="font-semibold text-foreground">Embedded Signup (Recomendado)</h3>
+            <div className="flex items-center gap-2">
+              <h3 className="font-semibold text-foreground">Embedded Signup (Recomendado)</h3>
+              <InfoTooltip
+                title="Como configurar a Meta Cloud API:"
+                steps={[
+                  <>Acesse <a href="https://developers.facebook.com" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-medium">developers.facebook.com <ExternalLink className="inline h-3 w-3" /></a></>,
+                  "Crie um app do tipo Business e adicione o produto WhatsApp",
+                  "Copie o Access Token permanente, Phone Number ID e WABA ID",
+                  "Cole nos campos de Configuração Manual abaixo",
+                ]}
+              />
+            </div>
             <p className="mt-1 text-xs text-muted-foreground">
               Conecte automaticamente via Facebook Business. Requer configuração do Meta App ID.
             </p>

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Eye, EyeOff, Copy, ExternalLink, CheckCircle, Loader2, Send, Unplug, AlertTriangle, RefreshCw, LogOut } from "lucide-react";
+import InfoTooltip from "@/components/InfoTooltip";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -205,7 +206,19 @@ const EvolutionTab = () => {
         <div className="flex items-start gap-3">
           <AlertTriangle className="h-5 w-5 text-destructive mt-0.5 shrink-0" />
           <div>
-            <h3 className="font-semibold text-destructive">Atenção — API Não Oficial</h3>
+            <div className="flex items-center gap-2">
+              <h3 className="font-semibold text-destructive">Atenção — API Não Oficial</h3>
+              <InfoTooltip
+                title="Como configurar a Evolution API:"
+                steps={[
+                  "Tenha um servidor Evolution API rodando (self-hosted ou cloud)",
+                  "Copie a URL do servidor e a API Key Global",
+                  "Defina um nome para a instância e clique em Conectar",
+                  "Escaneie o QR Code com o WhatsApp do celular",
+                ]}
+                warning="⚠️ API não oficial da Meta — risco de banimento do número"
+              />
+            </div>
             <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
               A Evolution API usa o protocolo WhatsApp Web (Baileys) e <strong className="text-foreground">não é uma solução oficial da Meta</strong>.
               O uso pode violar os termos de serviço do WhatsApp e resultar em <strong className="text-destructive">banimento do número</strong>.

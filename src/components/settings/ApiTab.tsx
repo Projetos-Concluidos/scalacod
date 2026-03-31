@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Key, Copy, RefreshCw, Loader2, ExternalLink, Clock } from "lucide-react";
+import InfoTooltip from "@/components/InfoTooltip";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
@@ -96,7 +97,17 @@ const ApiTab = () => {
             <Key className="h-5 w-5 text-primary" />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-foreground">Token de Autenticação</h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg font-bold text-foreground">Token de Autenticação</h2>
+              <InfoTooltip
+                title="Como usar a API:"
+                steps={[
+                  "Gere um token clicando no botão abaixo",
+                  "Copie o token e adicione no header Authorization: Bearer <token>",
+                  "Use os endpoints listados na documentação para integrar",
+                ]}
+              />
+            </div>
             <p className="text-xs text-muted-foreground">Use este token para autenticar requisições à API do ScalaNinja</p>
           </div>
         </div>

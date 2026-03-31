@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Eye, EyeOff, Save } from "lucide-react";
 import { useState } from "react";
+import InfoTooltip from "@/components/InfoTooltip";
 
 interface IntegrationField {
   label: string;
@@ -17,6 +18,11 @@ interface IntegrationSection {
   title: string;
   description: string;
   fields: IntegrationField[];
+  tutorial?: {
+    title: string;
+    steps: string[];
+    warning?: string;
+  };
 }
 
 const sections: IntegrationSection[] = [
@@ -27,6 +33,10 @@ const sections: IntegrationSection[] = [
       { label: "URL do Servidor", key: "evolution_url", placeholder: "https://evolution.seudominio.com" },
       { label: "API Key Global", key: "evolution_api_key", placeholder: "Sua API Key" },
     ],
+    tutorial: {
+      title: "Como configurar a Evolution API:",
+      steps: ["Acesse o painel do seu servidor Evolution API", "Copie a URL base e a API Key Global", "Cole nos campos abaixo e salve"],
+    },
   },
   {
     title: "MercadoPago (Plataforma)",
@@ -34,6 +44,11 @@ const sections: IntegrationSection[] = [
     fields: [
       { label: "Access Token Produção", key: "mp_access_token", placeholder: "APP_USR-..." },
     ],
+    tutorial: {
+      title: "Como configurar o MercadoPago:",
+      steps: ["Acesse mercadopago.com.br/developers", "Crie uma aplicação e vá em Credenciais de Produção", "Copie o Access Token e cole abaixo"],
+      warning: "⚠️ Use credenciais de produção (APP_USR-...)",
+    },
   },
   {
     title: "ElevenLabs",
@@ -41,6 +56,10 @@ const sections: IntegrationSection[] = [
     fields: [
       { label: "API Key", key: "elevenlabs_api_key", placeholder: "Sua API Key" },
     ],
+    tutorial: {
+      title: "Como configurar a ElevenLabs:",
+      steps: ["Acesse elevenlabs.io e faça login", "Vá em Profile → API Keys", "Gere uma nova chave e cole abaixo"],
+    },
   },
   {
     title: "OpenAI",
@@ -48,6 +67,11 @@ const sections: IntegrationSection[] = [
     fields: [
       { label: "API Key", key: "openai_api_key", placeholder: "sk-..." },
     ],
+    tutorial: {
+      title: "Como configurar a OpenAI:",
+      steps: ["Acesse platform.openai.com/api-keys", "Crie uma nova API Key", "Cole no campo abaixo e salve"],
+      warning: "⚠️ A chave começa com sk-...",
+    },
   },
 ];
 
@@ -68,7 +92,16 @@ const AdminIntegracoes = () => {
         {sections.map((section) => (
           <Card key={section.title}>
             <CardHeader>
-              <CardTitle className="text-base">{section.title}</CardTitle>
+              <div className="flex items-center gap-2">
+                <CardTitle className="text-base">{section.title}</CardTitle>
+                {section.tutorial && (
+                  <InfoTooltip
+                    title={section.tutorial.title}
+                    steps={section.tutorial.steps}
+                    warning={section.tutorial.warning}
+                  />
+                )}
+              </div>
               <p className="text-sm text-muted-foreground">{section.description}</p>
             </CardHeader>
             <CardContent className="space-y-4">
