@@ -141,6 +141,27 @@ const Leads = () => {
     fetchLeads();
   };
 
+  const exportCSV = useCallback(() => {
+    if (filtered.length === 0) { toast.error("Nenhum lead para exportar"); return; }
+    const headers = ["Nome", "Telefone", "Email", "Status", "Receita", "Tags", "Criado em"];
+    const rows = filtered.map(l => [
+      l.name,
+      l.phone,
+      l.email || "",
+      l.status || "",
+      String(l.accumulated_revenue || 0),
+      ((l.tags as string[]) || []).join("; "),
+      l.created_at ? format(new Date(l.created_at), "dd/MM/yyyy HH:mm") : "",
+    ]);
+    const csv = [headers, ...rows].map(r => r.map(c => `"${c.replace(/"/g, '""')}"`).join(",")).join("\n");
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `leads_${format(new Date(), "yyyyMMdd_HHmm")}.csv`;
+    a.click(); URL.revokeObjectURL(url);
+    toast.success(`${filtered.length} leads exportados!`);
+  }, [filtered]);
+
   const tabs = ["Todos", "Confirmados", "Em Aguardo", "Cancelados"];
 
   const StatusBadge = ({ status }: { status: string | null }) => {
