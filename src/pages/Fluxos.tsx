@@ -111,7 +111,7 @@ const Fluxos = () => {
       setEditingFlow(null);
       fetchFlows();
     } catch (e: any) {
-      console.error("Save flow exception:", e);
+      if (import.meta.env.DEV) console.error("Save flow exception:", e);
       toast.error("Erro ao salvar fluxo");
     }
   };
