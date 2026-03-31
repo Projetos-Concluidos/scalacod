@@ -259,14 +259,14 @@ Deno.serve(async (req) => {
           headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
         });
         
-        const contentType = res.headers.get("content-type") || "";
-        if (!contentType.includes("application/json")) {
-          const text = await res.text();
-          console.error("Logzz returned non-JSON:", res.status, text.substring(0, 200));
+        const raw = await res.text();
+        let data: any;
+        try {
+          data = JSON.parse(raw);
+        } catch {
+          console.error("Logzz returned non-JSON:", res.status, raw.substring(0, 200));
           throw new Error(`Logzz retornou resposta inválida (status ${res.status}). Verifique o token.`);
         }
-        
-        const data = await res.json();
 
         if (!data.success && !data.data) {
           throw new Error(data.message || "Erro ao buscar ofertas da Logzz");
