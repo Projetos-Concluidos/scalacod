@@ -204,8 +204,20 @@ const EvolutionTab = () => {
       {/* Disclaimer */}
       <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4">
         <div className="flex items-start gap-3">
-          <AlertTriangle className="h-5 w-5 text-destructive mt-0.5 shrink-0" />
-          <div>
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="h-5 w-5 text-destructive mt-0.5 shrink-0" />
+            <h3 className="font-semibold text-destructive">Atenção — API Não Oficial</h3>
+            <InfoTooltip
+              title="Como configurar a Evolution API:"
+              steps={[
+                "Tenha um servidor Evolution API rodando (self-hosted ou cloud)",
+                "Copie a URL do servidor e a API Key Global",
+                "Defina um nome para a instância e clique em Conectar",
+                "Escaneie o QR Code com o WhatsApp do celular",
+              ]}
+              warning="⚠️ API não oficial da Meta — risco de banimento do número"
+            />
+          </div>
             <h3 className="font-semibold text-destructive">Atenção — API Não Oficial</h3>
             <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
               A Evolution API usa o protocolo WhatsApp Web (Baileys) e <strong className="text-foreground">não é uma solução oficial da Meta</strong>.
