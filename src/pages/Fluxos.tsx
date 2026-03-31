@@ -46,7 +46,7 @@ const Fluxos = () => {
   const handleSaveFlow = async (data: any) => {
     if (!user) return;
     try {
-      if (editingFlow) {
+      if (editingFlow && editingFlow.id) {
         await supabase.from("flows").update({
           name: data.name,
           trigger_event: data.trigger_event,
