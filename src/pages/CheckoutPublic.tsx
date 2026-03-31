@@ -12,6 +12,12 @@ import {
 import { toast } from "sonner";
 import { trackPixelEvent } from "@/lib/pixel";
 
+declare global {
+  interface Window {
+    MercadoPago: any;
+  }
+}
+
 interface CheckoutData {
   id: string; name: string; slug: string; type: string; offer_id: string;
   order_bump_enabled: boolean; config: any; custom_css: string | null; user_id: string;
