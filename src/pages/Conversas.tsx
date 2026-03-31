@@ -72,10 +72,30 @@ const Conversas = () => {
   const [leadData, setLeadData] = useState<any>(null);
   const [orderData, setOrderData] = useState<any>(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [showTemplates, setShowTemplates] = useState(false);
+  const [sendingTemplate, setSendingTemplate] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { play: playNotification, requestPermission } = useNotificationSound();
+
+  // Fetch approved templates (flows with is_official + approved flow_templates)
+  const { data: approvedFlows } = useQuery({
+    queryKey: ["approved-templates", user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+      const { data } = await supabase
+        .from("flows")
+        .select("*, flow_templates(*)")
+        .eq("user_id", user.id)
+        .eq("is_official", true);
+      // Filter flows that have at least one approved template
+      return (data || []).filter((f: any) =>
+        f.flow_templates?.some((t: any) => t.status === "APPROVED" || t.status === "approved")
+      );
+    },
+    enabled: !!user,
+  });
 
   const fetchConversations = async () => {
     if (!user) return;
