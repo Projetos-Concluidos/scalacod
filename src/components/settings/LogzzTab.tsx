@@ -62,33 +62,82 @@ const LogzzTab = () => {
 
   const handleTestConnection = async () => {
     if (!token.trim()) { toast.error("Insira o Bearer Token da Logzz"); return; }
+    if (!logzzWebhookUrl.trim()) { toast.error("Insira a URL de Importação de Pedidos da Logzz"); return; }
     setTesting(true);
     try {
-      // Save first so edge function can read the token
-      await handleSave();
-      const data = await callCheckoutApi("test_connection");
-      if (data.connected) {
-        toast.success(`✅ Conexão OK! ${data.offers_count || 0} ofertas encontradas.`);
+      // Save first with is_active = true since we have token + webhook URL
+      await handleSave(true);
+      
+      // Test by sending a validation request to the Logzz webhook URL
+      const testPayload = {
+        external_id: `test-${Date.now()}`,
+        full_name: "Teste ScalaNinja",
+        phone: "11999999999",
+        customer_document: "00000000000",
+        postal_code: "01310100",
+        street: "Av Paulista",
+        neighborhood: "Bela Vista",
+        city: "São Paulo",
+        state: "sp",
+        house_number: "1000",
+        complement: "",
+        delivery_date: new Date().toISOString().split("T")[0],
+        offer: "test_validation",
+        affiliate_email: "",
+      };
+      
+      const res = await fetch(logzzWebhookUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(testPayload),
+      });
+      
+      if (res.ok || res.status === 422 || res.status === 400) {
+        // 200 = accepted, 422/400 = validation error (but connection works)
+        toast.success(`✅ Conexão OK! A Logzz respondeu (status ${res.status}).`);
         setIsActive(true);
+      } else if (res.status === 401 || res.status === 403) {
+        toast.error("❌ Token Logzz inválido ou expirado. Gere um novo token.");
+        setIsActive(false);
       } else {
-        toast.error(`❌ Falha: ${data.error || "Token inválido"}`);
+        toast.error(`❌ Logzz respondeu com status ${res.status}`);
       }
-    } catch {
-      toast.error("❌ Erro ao testar conexão");
+    } catch (e: any) {
+      // CORS error means the request was blocked by browser — test via edge function instead
+      toast.info("⚠️ Teste direto bloqueado pelo navegador. Validando via servidor...");
+      try {
+        const data = await callCheckoutApi("test_logzz_webhook", { webhook_url: logzzWebhookUrl, token });
+        if (data.success) {
+          toast.success(`✅ Conexão OK! Logzz respondeu (status ${data.status}).`);
+          setIsActive(true);
+        } else {
+          toast.error(`❌ Falha: ${data.error || "Erro ao testar webhook"}`);
+        }
+      } catch {
+        toast.error("❌ Erro ao testar conexão");
+      }
     } finally {
       setTesting(false);
     }
   };
 
-  const handleSave = async () => {
+  const handleSave = async (forceActive?: boolean) => {
     if (!user) return;
     setSaving(true);
     try {
+      const shouldBeActive = forceActive ?? isActive;
+      // Auto-activate if both token and webhook URL are provided
+      const autoActive = !!(token.trim() && logzzWebhookUrl.trim());
+      const finalActive = forceActive !== undefined ? forceActive : (autoActive || isActive);
+      
       const payload = {
         user_id: user.id,
         type: "logzz" as const,
         config: { bearer_token: token, logzz_webhook_url: logzzWebhookUrl } as any,
-        is_active: isActive,
+        is_active: finalActive,
       };
 
       const { data: existing } = await supabase
@@ -103,6 +152,8 @@ const LogzzTab = () => {
       } else {
         await supabase.from("integrations").insert(payload);
       }
+      
+      setIsActive(finalActive);
       toast.success("Integração Logzz salva!");
     } catch {
       toast.error("Erro ao salvar integração");
@@ -220,7 +271,7 @@ const LogzzTab = () => {
             {testing ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
             Testar Conexão
           </Button>
-          <Button onClick={handleSave} disabled={saving} className="gradient-primary text-primary-foreground">
+          <Button onClick={() => handleSave()} disabled={saving} className="gradient-primary text-primary-foreground">
             {saving ? "Salvando..." : "Salvar"}
           </Button>
         </div>

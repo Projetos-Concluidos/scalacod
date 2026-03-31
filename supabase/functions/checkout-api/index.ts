@@ -424,6 +424,63 @@ Deno.serve(async (req) => {
       }
     }
 
+    // ─── ACTION: test_logzz_webhook ─────────────────
+    if (action === "test_logzz_webhook") {
+      const webhookUrl = body.webhook_url;
+      const bearerToken = body.token;
+      if (!webhookUrl) {
+        return new Response(
+          JSON.stringify({ success: false, error: "URL do webhook não informada" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      try {
+        const testPayload = {
+          external_id: `test-${Date.now()}`,
+          full_name: "Teste ScalaNinja",
+          phone: "11999999999",
+          customer_document: "00000000000",
+          postal_code: "01310100",
+          street: "Av Paulista",
+          neighborhood: "Bela Vista",
+          city: "São Paulo",
+          state: "sp",
+          house_number: "1000",
+          complement: "",
+          delivery_date: new Date().toISOString().split("T")[0],
+          offer: "test_validation",
+          affiliate_email: "",
+        };
+
+        const headers: Record<string, string> = { "Content-Type": "application/json" };
+        if (bearerToken) headers["Authorization"] = `Bearer ${bearerToken}`;
+
+        const res = await fetch(webhookUrl, {
+          method: "POST",
+          headers,
+          body: JSON.stringify(testPayload),
+        });
+
+        const status = res.status;
+        console.log("Logzz webhook test response:", status);
+        
+        return new Response(
+          JSON.stringify({ 
+            success: status === 200 || status === 201 || status === 422 || status === 400,
+            status,
+            message: status === 200 || status === 201 ? "Webhook aceito" : `Resposta ${status} (conexão funcional)`
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      } catch (e) {
+        return new Response(
+          JSON.stringify({ success: false, error: e.message }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
     return new Response(
       JSON.stringify({ error: "Invalid action" }),
       { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
