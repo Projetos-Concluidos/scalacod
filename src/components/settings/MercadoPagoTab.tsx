@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { CreditCard, Eye, EyeOff, CheckCircle, Loader2, ExternalLink, Info } from "lucide-react";
+import { CreditCard, Eye, EyeOff, CheckCircle, Loader2, ExternalLink } from "lucide-react";
+import InfoTooltip from "@/components/InfoTooltip";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
