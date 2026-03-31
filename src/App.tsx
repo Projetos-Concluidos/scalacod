@@ -20,6 +20,7 @@ import Login from "@/pages/Login";
 import Register from "@/pages/Register";
 import ForgotPassword from "@/pages/ForgotPassword";
 import ResetPassword from "@/pages/ResetPassword";
+import CheckoutPublic from "@/pages/CheckoutPublic";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -36,6 +37,7 @@ const App = () => (
             <Route path="/register" element={<Register />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/c/:slug" element={<CheckoutPublic />} />
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route element={<AuthGuard><AppLayout /></AuthGuard>}>
               <Route path="/dashboard" element={<Dashboard />} />
