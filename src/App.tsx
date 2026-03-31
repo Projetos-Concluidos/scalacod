@@ -24,6 +24,8 @@ import ForgotPassword from "@/pages/ForgotPassword";
 import ResetPassword from "@/pages/ResetPassword";
 import CheckoutPublic from "@/pages/CheckoutPublic";
 import NotFound from "@/pages/NotFound";
+import Upgrade from "@/pages/Upgrade";
+import Subscription from "@/pages/Subscription";
 import AdminOverview from "@/pages/admin/AdminOverview";
 import AdminAssinantes from "@/pages/admin/AdminAssinantes";
 import AdminPlanos from "@/pages/admin/AdminPlanos";
