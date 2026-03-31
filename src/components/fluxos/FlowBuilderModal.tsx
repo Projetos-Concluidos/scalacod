@@ -65,7 +65,7 @@ export default function FlowBuilderModal({ open, onClose, onSave, initialData }:
   const [apiType, setApiType] = useState(initialData?.is_official ? "official" : "evolution");
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
 
-  const defaultStartNode: Node = { id: "start", position: { x: 250, y: 50 }, data: { label: "🚀 Início do Fluxo", type: "start" }, style: { background: "hsl(190 100% 50% / 0.15)", border: "1px solid hsl(190 100% 50% / 0.3)", borderRadius: 12, padding: 12, color: "hsl(190 100% 50%)", fontWeight: 600, fontSize: 13 } };
+  const defaultStartNode: Node = { id: "start", position: { x: 250, y: 50 }, data: { label: "🚀 Início do Fluxo", type: "start" }, style: { background: "hsl(160 84% 39% / 0.15)", border: "1px solid hsl(160 84% 39% / 0.3)", borderRadius: 12, padding: 12, color: "hsl(160 84% 39%)", fontWeight: 600, fontSize: 13 } };
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialData?.nodes?.length ? initialData.nodes : [defaultStartNode]);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialData?.edges?.length ? initialData.edges : []);
@@ -97,7 +97,7 @@ export default function FlowBuilderModal({ open, onClose, onSave, initialData }:
   }, [open, initialData]);
 
   const onConnect = useCallback((params: Connection) => {
-    setEdges((eds) => addEdge({ ...params, animated: true, style: { stroke: "hsl(190 100% 50%)" } }, eds));
+    setEdges((eds) => addEdge({ ...params, animated: true, style: { stroke: "hsl(160 84% 39%)" } }, eds));
   }, [setEdges]);
 
   const addNode = (type: string) => {
@@ -108,11 +108,11 @@ export default function FlowBuilderModal({ open, onClose, onSave, initialData }:
       position: { x: 250, y: 100 + nodes.length * 120 },
       data: { label: `${cfg?.label || type}`, type, content: "" },
       style: {
-        background: "hsl(240 20% 7%)",
-        border: "1px solid hsl(190 100% 50% / 0.2)",
+        background: "#FFFFFF",
+        border: "1px solid hsl(160 84% 39% / 0.2)",
         borderRadius: 12,
         padding: 12,
-        color: "hsl(240 20% 97%)",
+        color: "#111827",
         fontSize: 13,
         minWidth: 200,
       },
@@ -233,11 +233,11 @@ export default function FlowBuilderModal({ open, onClose, onSave, initialData }:
                   onNodeClick={(_, node) => setSelectedNode(node)}
                   fitView
                   proOptions={{ hideAttribution: true }}
-                  style={{ background: "hsl(240 25% 4%)" }}
+                  style={{ background: "#F8FFFE" }}
                 >
-                  <Controls style={{ background: "hsl(240 20% 7%)", borderColor: "hsl(190 100% 50% / 0.2)" }} />
-                  <MiniMap style={{ background: "hsl(240 20% 7%)" }} nodeColor="hsl(190 100% 50% / 0.3)" />
-                  <Background color="hsl(190 100% 50% / 0.05)" gap={20} />
+                  <Controls style={{ background: "#FFFFFF", borderColor: "hsl(160 84% 39% / 0.2)" }} />
+                  <MiniMap style={{ background: "#FFFFFF" }} nodeColor="hsl(160 84% 39% / 0.3)" />
+                  <Background color="hsl(160 84% 39% / 0.08)" gap={20} />
                 </ReactFlow>
               </div>
 

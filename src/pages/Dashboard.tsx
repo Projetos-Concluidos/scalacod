@@ -14,10 +14,10 @@ import { useAuth } from "@/contexts/AuthContext";
 const periods = ["Hoje", "Ontem", "7 dias", "15 dias", "30 dias", "Máximo"];
 
 const chartTooltipStyle = {
-  backgroundColor: "hsl(240,20%,7%)",
-  border: "1px solid hsla(190,100%,50%,0.12)",
+  backgroundColor: "#FFFFFF",
+  border: "1px solid #E5E7EB",
   borderRadius: "8px",
-  color: "hsl(240,20%,97%)",
+  color: "#111827",
   fontSize: "12px",
 };
 
@@ -122,13 +122,13 @@ const Dashboard = () => {
   }, [user, loadData]);
 
   const pixelStats = [
-    { label: "Visitantes", value: String(metrics.visitors), color: "#00FF88", icon: Eye },
-    { label: "Pageviews", value: String(metrics.pageviews), color: "#00D4FF", icon: FileText },
-    { label: "Interações", value: String(metrics.interactions), color: "#FFB020", icon: MousePointerClick },
-    { label: "Pedidos", value: String(metrics.orderCount), color: "#FF3D5A", icon: ShoppingCart },
-    { label: "Conversão", value: `${metrics.conversions}%`, color: "#00FF88", icon: TrendingUp },
-    { label: "Abandono", value: `${metrics.abandonment}%`, color: "#FFB020", icon: AlertTriangle },
-    { label: "Coinzz Pagos", value: String(metrics.coinzzPaid), color: "#8888AA", icon: Coins },
+    { label: "Visitantes", value: String(metrics.visitors), color: "#10B981", icon: Eye },
+    { label: "Pageviews", value: String(metrics.pageviews), color: "#059669", icon: FileText },
+    { label: "Interações", value: String(metrics.interactions), color: "#F59E0B", icon: MousePointerClick },
+    { label: "Pedidos", value: String(metrics.orderCount), color: "#EF4444", icon: ShoppingCart },
+    { label: "Conversão", value: `${metrics.conversions}%`, color: "#10B981", icon: TrendingUp },
+    { label: "Abandono", value: `${metrics.abandonment}%`, color: "#F59E0B", icon: AlertTriangle },
+    { label: "Coinzz Pagos", value: String(metrics.coinzzPaid), color: "#6B7280", icon: Coins },
   ];
 
   return (
@@ -174,7 +174,7 @@ const Dashboard = () => {
           <div className="mt-4 h-12">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={sparkData}>
-                <Line type="monotone" dataKey="v" stroke="#00D4FF" strokeWidth={2} dot={false} />
+                <Line type="monotone" dataKey="v" stroke="#10B981" strokeWidth={2} dot={false} />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -242,20 +242,20 @@ const Dashboard = () => {
               <AreaChart data={hourlyData}>
                 <defs>
                   <linearGradient id="gradVisitantes" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#00FF88" stopOpacity={0.2} />
-                    <stop offset="100%" stopColor="#00FF88" stopOpacity={0} />
+                    <stop offset="0%" stopColor="#10B981" stopOpacity={0.2} />
+                    <stop offset="100%" stopColor="#10B981" stopOpacity={0} />
                   </linearGradient>
                   <linearGradient id="gradPedidos" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#00D4FF" stopOpacity={0.2} />
-                    <stop offset="100%" stopColor="#00D4FF" stopOpacity={0} />
+                    <stop offset="0%" stopColor="#059669" stopOpacity={0.2} />
+                    <stop offset="100%" stopColor="#059669" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsla(240,15%,20%,0.5)" />
-                <XAxis dataKey="name" tick={{ fontSize: 10, fill: "#8888AA" }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 10, fill: "#8888AA" }} axisLine={false} tickLine={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                <XAxis dataKey="name" tick={{ fontSize: 10, fill: "#6B7280" }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 10, fill: "#6B7280" }} axisLine={false} tickLine={false} />
                 <Tooltip contentStyle={chartTooltipStyle} />
-                <Area type="monotone" dataKey="visitantes" stroke="#00FF88" strokeWidth={2} fill="url(#gradVisitantes)" />
-                <Area type="monotone" dataKey="pedidos" stroke="#00D4FF" strokeWidth={2} fill="url(#gradPedidos)" />
+                <Area type="monotone" dataKey="visitantes" stroke="#10B981" strokeWidth={2} fill="url(#gradVisitantes)" />
+                <Area type="monotone" dataKey="pedidos" stroke="#059669" strokeWidth={2} fill="url(#gradPedidos)" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -279,20 +279,20 @@ const Dashboard = () => {
               <AreaChart data={hourlyData}>
                 <defs>
                   <linearGradient id="gradViews" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#00FF88" stopOpacity={0.2} />
-                    <stop offset="100%" stopColor="#00FF88" stopOpacity={0} />
+                    <stop offset="0%" stopColor="#10B981" stopOpacity={0.2} />
+                    <stop offset="100%" stopColor="#10B981" stopOpacity={0} />
                   </linearGradient>
                   <linearGradient id="gradInteracoes" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#FFB020" stopOpacity={0.2} />
-                    <stop offset="100%" stopColor="#FFB020" stopOpacity={0} />
+                    <stop offset="0%" stopColor="#F59E0B" stopOpacity={0.2} />
+                    <stop offset="100%" stopColor="#F59E0B" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsla(240,15%,20%,0.5)" />
-                <XAxis dataKey="name" tick={{ fontSize: 10, fill: "#8888AA" }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 10, fill: "#8888AA" }} axisLine={false} tickLine={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                <XAxis dataKey="name" tick={{ fontSize: 10, fill: "#6B7280" }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 10, fill: "#6B7280" }} axisLine={false} tickLine={false} />
                 <Tooltip contentStyle={chartTooltipStyle} />
-                <Area type="monotone" dataKey="views" stroke="#00FF88" strokeWidth={2} fill="url(#gradViews)" />
-                <Area type="monotone" dataKey="interacoes" stroke="#FFB020" strokeWidth={2} fill="url(#gradInteracoes)" />
+                <Area type="monotone" dataKey="views" stroke="#10B981" strokeWidth={2} fill="url(#gradViews)" />
+                <Area type="monotone" dataKey="interacoes" stroke="#F59E0B" strokeWidth={2} fill="url(#gradInteracoes)" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -333,13 +333,13 @@ const Dashboard = () => {
             <div className="flex items-center gap-2 mb-2">
               <svg width="20" height="20" viewBox="0 0 32 32" fill="none" className="shrink-0">
                 <defs>
-                  <linearGradient id="shuriken-tip" x1="0" y1="0" x2="32" y2="32">
-                    <stop offset="0%" stopColor="#00D4FF" />
-                    <stop offset="100%" stopColor="#0066FF" />
+              <linearGradient id="shuriken-tip" x1="0" y1="0" x2="32" y2="32">
+                    <stop offset="0%" stopColor="#10B981" />
+                    <stop offset="100%" stopColor="#059669" />
                   </linearGradient>
                 </defs>
                 <path d="M16 2L20 12L30 16L20 20L16 30L12 20L2 16L12 12Z" fill="url(#shuriken-tip)" />
-                <circle cx="16" cy="16" r="3" fill="#0A0A0F" />
+                <circle cx="16" cy="16" r="3" fill="#F8FFFE" />
               </svg>
               <span className="text-sm font-bold text-foreground">Dica da ScalaNinja</span>
             </div>

@@ -22,12 +22,12 @@ const ShurikenLogo = () => (
   <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
     <defs>
       <linearGradient id="shuriken-grad-sb" x1="0" y1="0" x2="32" y2="32">
-        <stop offset="0%" stopColor="#00D4FF" />
-        <stop offset="100%" stopColor="#0066FF" />
+        <stop offset="0%" stopColor="#10B981" />
+        <stop offset="100%" stopColor="#059669" />
       </linearGradient>
     </defs>
     <path d="M16 2L20 12L30 16L20 20L16 30L12 20L2 16L12 12Z" fill="url(#shuriken-grad-sb)" />
-    <circle cx="16" cy="16" r="3" fill="#0A0A0F" />
+    <circle cx="16" cy="16" r="3" fill="#0F1923" />
   </svg>
 );
 
@@ -47,10 +47,10 @@ const AppSidebar = () => {
         <ShurikenLogo />
         <div>
           <h1 className="text-base font-bold leading-tight">
-            <span className="text-foreground">Scala</span>
-            <span className="text-primary">Ninja</span>
+            <span className="text-white">Scala</span>
+            <span className="text-sidebar-primary">Ninja</span>
           </h1>
-          <span className="text-[10px] font-medium uppercase tracking-[0.2em] text-muted-foreground">
+          <span className="text-[10px] font-medium uppercase tracking-[0.2em] text-sidebar-foreground">
             Obsidian Edition
           </span>
         </div>
@@ -66,8 +66,8 @@ const AppSidebar = () => {
               className={cn(
                 "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
                 isActive
-                  ? "border-l-[3px] border-primary bg-sidebar-accent text-primary"
-                  : "border-l-[3px] border-transparent text-sidebar-foreground hover:bg-muted hover:text-foreground"
+                  ? "border-l-[3px] border-sidebar-primary bg-sidebar-accent text-sidebar-accent-foreground"
+                  : "border-l-[3px] border-transparent text-sidebar-foreground hover:bg-white/5 hover:text-white"
               )}
             >
               <item.icon className="h-[18px] w-[18px] shrink-0" />
@@ -83,8 +83,8 @@ const AppSidebar = () => {
           className={cn(
             "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
             location.pathname === "/configuracoes"
-              ? "border-l-[3px] border-primary bg-sidebar-accent text-primary"
-              : "border-l-[3px] border-transparent text-sidebar-foreground hover:bg-muted hover:text-foreground"
+              ? "border-l-[3px] border-sidebar-primary bg-sidebar-accent text-sidebar-accent-foreground"
+              : "border-l-[3px] border-transparent text-sidebar-foreground hover:bg-white/5 hover:text-white"
           )}
         >
           <Settings className="h-[18px] w-[18px]" />
@@ -92,7 +92,7 @@ const AppSidebar = () => {
         </NavLink>
         <button
           onClick={handleSignOut}
-          className="flex w-full items-center gap-3 rounded-lg border-l-[3px] border-transparent px-3 py-2.5 text-sm font-medium text-destructive transition-all hover:bg-destructive/10"
+          className="flex w-full items-center gap-3 rounded-lg border-l-[3px] border-transparent px-3 py-2.5 text-sm font-medium text-red-400 transition-all hover:bg-red-500/10"
         >
           <LogOut className="h-[18px] w-[18px]" />
           <span>Sair da conta</span>

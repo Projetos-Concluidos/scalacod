@@ -14,7 +14,7 @@ const TopBar = () => {
     : "Free";
 
   return (
-    <div className="flex items-center justify-end gap-3 px-6 py-4">
+    <div className="flex items-center justify-end gap-3 px-6 py-4 border-b border-border bg-card">
       <button className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
         <Moon className="h-[18px] w-[18px]" />
       </button>
