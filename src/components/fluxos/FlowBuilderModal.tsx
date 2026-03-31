@@ -65,7 +65,7 @@ export default function FlowBuilderModal({ open, onClose, onSave, initialData }:
   const [apiType, setApiType] = useState(initialData?.is_official ? "official" : "evolution");
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
 
-  const defaultStartNode: Node = { id: "start", position: { x: 250, y: 50 }, data: { label: "🚀 Início do Fluxo", type: "start" }, style: { background: "hsl(190 100% 50% / 0.15)", border: "1px solid hsl(190 100% 50% / 0.3)", borderRadius: 12, padding: 12, color: "hsl(190 100% 50%)", fontWeight: 600, fontSize: 13 } };
+  const defaultStartNode: Node = { id: "start", position: { x: 250, y: 50 }, data: { label: "🚀 Início do Fluxo", type: "start" }, style: { background: "hsl(160 84% 39% / 0.15)", border: "1px solid hsl(160 84% 39% / 0.3)", borderRadius: 12, padding: 12, color: "hsl(160 84% 39%)", fontWeight: 600, fontSize: 13 } };
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialData?.nodes?.length ? initialData.nodes : [defaultStartNode]);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialData?.edges?.length ? initialData.edges : []);
