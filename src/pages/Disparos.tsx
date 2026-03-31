@@ -364,6 +364,17 @@ const Disparos = () => {
                   </Select>
                   {approvedFlows.length === 0 && <p className="text-[11px] text-warning">Nenhum template aprovado. Selecione um fluxo pendente.</p>}
                 </div>
+                <div className="space-y-2">
+                  <Label>Mensagem personalizada</Label>
+                  <textarea
+                    value={messageTemplate}
+                    onChange={e => setMessageTemplate(e.target.value)}
+                    placeholder="Olá {{nome}}! Confira nossas novidades 🔥"
+                    rows={3}
+                    className="w-full rounded-lg border border-border bg-input px-4 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none resize-none"
+                  />
+                  <p className="text-[11px] text-muted-foreground">Variáveis: {"{{nome}}"}, {"{{telefone}}"}, {"{{email}}"}, {"{{status}}"}</p>
+                </div>
               </>
             )}
 
