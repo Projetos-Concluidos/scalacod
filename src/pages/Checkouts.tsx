@@ -12,6 +12,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Check, ChevronsUpDown } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
@@ -58,6 +61,8 @@ const Checkouts = () => {
   const [formCustomCss, setFormCustomCss] = useState("");
   const [logzzOffers, setLogzzOffers] = useState<LogzzOffer[]>([]);
   const [syncingLogzz, setSyncingLogzz] = useState(false);
+  const [logzzPopoverOpen, setLogzzPopoverOpen] = useState(false);
+  const [selectedLogzzOffer, setSelectedLogzzOffer] = useState<LogzzOffer | null>(null);
 
   const { data: checkouts = [], isLoading } = useQuery({
     queryKey: ["checkouts"],
@@ -351,23 +356,45 @@ const Checkouts = () => {
                   </button>
                 </div>
                 {logzzOffers.length > 0 ? (
-                  <Select onValueChange={(hash) => {
-                    const o = logzzOffers.find((x) => x.offer_hash === hash);
-                    if (o) {
-                      setFormName(o.product_name);
-                      const slug = `${o.product_name.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "")}-${o.offer_hash}`;
-                      toast.success(`Produto "${o.product_name}" importado!`);
-                    }
-                  }}>
-                    <SelectTrigger className="bg-input border-border"><SelectValue placeholder="Selecione uma oferta da Logzz" /></SelectTrigger>
-                    <SelectContent>
-                      {logzzOffers.map((o, i) => (
-                        <SelectItem key={o.offer_hash || i} value={o.offer_hash || `idx-${i}`}>
-                          {o.product_name} — {o.offer_name} (R$ {o.price.toFixed(2)}) [{o.role}]
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Popover open={logzzPopoverOpen} onOpenChange={setLogzzPopoverOpen}>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" role="combobox" aria-expanded={logzzPopoverOpen} className="w-full justify-between bg-input border-border text-left font-normal h-10">
+                        {selectedLogzzOffer
+                          ? <span className="truncate">{selectedLogzzOffer.product_name} — {selectedLogzzOffer.offer_name} (R$ {selectedLogzzOffer.price.toFixed(2)})</span>
+                          : <span className="text-muted-foreground">Buscar oferta da Logzz...</span>
+                        }
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                      <Command>
+                        <CommandInput placeholder="Buscar por nome, preço, hash..." />
+                        <CommandList>
+                          <CommandEmpty>Nenhuma oferta encontrada.</CommandEmpty>
+                          <CommandGroup>
+                            {logzzOffers.map((o, i) => (
+                              <CommandItem
+                                key={o.offer_hash || i}
+                                value={`${o.product_name} ${o.offer_name} ${o.offer_hash} ${o.price} ${o.role}`}
+                                onSelect={() => {
+                                  setSelectedLogzzOffer(o);
+                                  setFormName(o.product_name);
+                                  setLogzzPopoverOpen(false);
+                                  toast.success(`Produto "${o.product_name}" importado!`);
+                                }}
+                              >
+                                <Check className={`mr-2 h-4 w-4 ${selectedLogzzOffer?.offer_hash === o.offer_hash ? "opacity-100" : "opacity-0"}`} />
+                                <div className="flex flex-col min-w-0">
+                                  <span className="text-sm font-medium truncate">{o.product_name} — {o.offer_name}</span>
+                                  <span className="text-xs text-muted-foreground">R$ {o.price.toFixed(2)} · {o.role} · {o.offer_hash}</span>
+                                </div>
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                 ) : (
                   <p className="text-xs text-muted-foreground">Clique em ↻ para buscar ofertas da Logzz (produtor, afiliado, coprodutor).</p>
                 )}
