@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Store, Clock, Save, Globe, Key, Webhook, Bell, Info } from "lucide-react";
+import LogzzTab from "@/components/settings/LogzzTab";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -244,11 +245,7 @@ const Configuracoes = () => {
 
         {/* Placeholder tabs */}
         <TabsContent value="integracoes">
-          <div className="ninja-card flex flex-col items-center justify-center py-16 text-center">
-            <Globe className="mb-3 h-10 w-10 text-muted-foreground/40" />
-            <h3 className="text-lg font-semibold text-foreground">Integrações</h3>
-            <p className="text-sm text-muted-foreground">Em breve — gerencie suas conexões externas.</p>
-          </div>
+          <LogzzTab />
         </TabsContent>
         <TabsContent value="api">
           <div className="ninja-card flex flex-col items-center justify-center py-16 text-center">

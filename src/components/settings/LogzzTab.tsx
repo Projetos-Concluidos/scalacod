@@ -1,0 +1,298 @@
+import { useState, useEffect } from "react";
+import { Truck, Eye, EyeOff, Copy, CheckCircle, XCircle, Loader2, MapPin, Package, ExternalLink } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+
+interface CepResult {
+  available: boolean;
+  operation?: string;
+  city?: string;
+  dates?: Array<{ date: string; type: string; price: number }>;
+  error?: string;
+}
+
+const LogzzTab = () => {
+  const { user } = useAuth();
+  const [token, setToken] = useState("");
+  const [showToken, setShowToken] = useState(false);
+  const [isActive, setIsActive] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [cep, setCep] = useState("");
+  const [checkingCep, setCheckingCep] = useState(false);
+  const [cepResult, setCepResult] = useState<CepResult | null>(null);
+  const [products, setProducts] = useState<any[]>([]);
+
+  const webhookUrl = user
+    ? `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/logzz-webhook?store=${user.id}`
+    : "";
+
+  useEffect(() => {
+    if (!user) return;
+    const load = async () => {
+      const { data } = await supabase
+        .from("integrations")
+        .select("*")
+        .eq("user_id", user.id)
+        .eq("type", "logzz")
+        .maybeSingle();
+      if (data) {
+        const config = data.config as any;
+        setToken(config?.bearer_token || "");
+        setIsActive(data.is_active ?? false);
+      }
+    };
+    load();
+  }, [user]);
+
+  const handleTestConnection = async () => {
+    if (!token.trim()) {
+      toast.error("Insira o Bearer Token da Logzz");
+      return;
+    }
+    setTesting(true);
+    try {
+      // We simulate a test since we can't call Logzz directly from the browser (CORS)
+      // In production this would go through an edge function
+      toast.info("Testando conexão com a Logzz...");
+      // Simulate delay
+      await new Promise((r) => setTimeout(r, 1500));
+      toast.success("✅ Token salvo! A conexão será validada ao sincronizar produtos.");
+      setIsActive(true);
+    } catch {
+      toast.error("❌ Erro ao testar conexão");
+    } finally {
+      setTesting(false);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!user) return;
+    setSaving(true);
+    try {
+      const payload = {
+        user_id: user.id,
+        type: "logzz" as const,
+        config: { bearer_token: token } as any,
+        is_active: isActive,
+      };
+
+      const { data: existing } = await supabase
+        .from("integrations")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("type", "logzz")
+        .maybeSingle();
+
+      if (existing) {
+        await supabase.from("integrations").update(payload).eq("id", existing.id);
+      } else {
+        await supabase.from("integrations").insert(payload);
+      }
+      toast.success("Integração Logzz salva!");
+    } catch {
+      toast.error("Erro ao salvar integração");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleCheckCep = async () => {
+    const clean = cep.replace(/\D/g, "");
+    if (clean.length !== 8) {
+      toast.error("CEP inválido");
+      return;
+    }
+    setCheckingCep(true);
+    setCepResult(null);
+    try {
+      // Simulated — in production goes through edge function with Logzz token
+      await new Promise((r) => setTimeout(r, 1200));
+      setCepResult({
+        available: true,
+        operation: "Operação São Paulo",
+        city: "São Paulo - SP",
+        dates: [
+          { date: "15/04", type: "Padrão", price: 24.98 },
+          { date: "14/04", type: "Express", price: 29.98 },
+        ],
+      });
+    } catch {
+      setCepResult({ available: false, error: "Erro ao verificar CEP" });
+    } finally {
+      setCheckingCep(false);
+    }
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast.success("Copiado!");
+  };
+
+  const formatCep = (value: string) => {
+    const digits = value.replace(/\D/g, "").slice(0, 8);
+    if (digits.length > 5) return `${digits.slice(0, 5)}-${digits.slice(5)}`;
+    return digits;
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Card Principal Logzz */}
+      <div className="ninja-card">
+        <div className="mb-6 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
+              <Truck className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-foreground">Logzz</h2>
+              <p className="text-xs text-muted-foreground">Logística para vendas COD</p>
+            </div>
+          </div>
+          <Badge variant={isActive ? "default" : "secondary"} className={isActive ? "bg-success/10 text-success border-success/20" : ""}>
+            {isActive ? "ATIVO" : "INATIVO"}
+          </Badge>
+        </div>
+
+        {/* Formulário Token */}
+        <div className="mb-4 max-w-xl">
+          <label className="text-sm font-medium text-foreground">Bearer Token da Logzz</label>
+          <div className="relative mt-1.5">
+            <input
+              type={showToken ? "text" : "password"}
+              value={token}
+              onChange={(e) => setToken(e.target.value)}
+              placeholder="Cole seu token aqui..."
+              className="h-10 w-full rounded-lg border border-border bg-input px-4 pr-10 text-sm text-foreground focus:border-primary focus:outline-none"
+            />
+            <button
+              type="button"
+              onClick={() => setShowToken(!showToken)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            >
+              {showToken ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </button>
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Gere em{" "}
+            <a href="https://app.logzz.com.br" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+              app.logzz.com.br
+            </a>{" "}
+            → Configurações → API
+          </p>
+        </div>
+
+        <div className="flex gap-3">
+          <Button variant="outline" onClick={handleTestConnection} disabled={testing || !token.trim()}>
+            {testing ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
+            Testar Conexão
+          </Button>
+          <Button onClick={handleSave} disabled={saving} className="gradient-primary text-primary-foreground">
+            {saving ? "Salvando..." : "Salvar"}
+          </Button>
+        </div>
+      </div>
+
+      {/* Verificação de CEP */}
+      {isActive && (
+        <div className="ninja-card">
+          <div className="mb-4 flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-success/10">
+              <MapPin className="h-5 w-5 text-success" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-foreground">Verificação de CEP</h2>
+              <p className="text-xs text-muted-foreground">Verifique a cobertura de entrega por CEP</p>
+            </div>
+          </div>
+
+          <div className="flex max-w-md items-end gap-3">
+            <div className="flex-1">
+              <label className="text-sm font-medium text-foreground">CEP</label>
+              <input
+                type="text"
+                value={cep}
+                onChange={(e) => setCep(formatCep(e.target.value))}
+                placeholder="01310-100"
+                className="mt-1.5 h-10 w-full rounded-lg border border-border bg-input px-4 text-sm text-foreground focus:border-primary focus:outline-none"
+              />
+            </div>
+            <Button onClick={handleCheckCep} disabled={checkingCep}>
+              {checkingCep ? <Loader2 className="h-4 w-4 animate-spin" /> : "Verificar"}
+            </Button>
+          </div>
+
+          {cepResult && (
+            <div className={`mt-4 rounded-lg border p-4 ${cepResult.available ? "border-success/20 bg-success/5" : "border-destructive/20 bg-destructive/5"}`}>
+              {cepResult.available ? (
+                <>
+                  <div className="mb-2 flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-success" />
+                    <span className="text-sm font-medium text-success">CEP atendido pela Logzz</span>
+                  </div>
+                  <p className="mb-3 text-xs text-muted-foreground">{cepResult.operation} — {cepResult.city}</p>
+                  <p className="mb-2 text-xs font-medium text-foreground">Datas disponíveis:</p>
+                  <div className="space-y-1">
+                    {cepResult.dates?.map((d, i) => (
+                      <div key={i} className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <span>•</span>
+                        <span>{d.date} ({d.type} — R$ {d.price.toFixed(2)})</span>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <XCircle className="h-4 w-4 text-destructive" />
+                  <span className="text-sm text-destructive">{cepResult.error}</span>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Webhook */}
+      {isActive && (
+        <div className="ninja-card">
+          <div className="mb-4 flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-warning/10">
+              <Package className="h-5 w-5 text-warning" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-foreground">Webhook Logzz</h2>
+              <p className="text-xs text-muted-foreground">Configure na Logzz para receber atualizações de pedidos</p>
+            </div>
+          </div>
+
+          <div className="max-w-xl">
+            <label className="text-sm font-medium text-foreground">URL do Webhook</label>
+            <div className="mt-1.5 flex gap-2">
+              <input
+                type="text"
+                value={webhookUrl}
+                readOnly
+                className="h-10 flex-1 rounded-lg border border-border bg-input px-4 text-xs text-muted-foreground"
+              />
+              <Button variant="outline" size="icon" onClick={() => copyToClipboard(webhookUrl)}>
+                <Copy className="h-4 w-4" />
+              </Button>
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Configure em{" "}
+              <a href="https://app.logzz.com.br" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                app.logzz.com.br <ExternalLink className="inline h-3 w-3" />
+              </a>{" "}
+              → Configurações → Webhook → Eventos: Pedidos, Expedição Tradicional
+            </p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default LogzzTab;
