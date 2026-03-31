@@ -261,6 +261,9 @@ const Fluxos = () => {
           <button onClick={() => setSubTab("templates")} className={`flex items-center gap-2 text-sm font-medium ${subTab === "templates" ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}>
             <GitBranch className="h-4 w-4" /> Templates (API Oficial)
           </button>
+          <button onClick={() => setSubTab("executions")} className={`flex items-center gap-2 text-sm font-medium ${subTab === "executions" ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}>
+            <History className="h-4 w-4" /> Execuções
+          </button>
           <button onClick={() => setSubTab("tags")} className={`flex items-center gap-2 text-sm font-medium ${subTab === "tags" ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}>
             <Tag className="h-4 w-4" /> Tags
           </button>
