@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
-import { Package, Eye, EyeOff, Copy, CheckCircle, Loader2, ExternalLink } from "lucide-react";
+import { Package, Eye, EyeOff, Copy, CheckCircle, Loader2, ExternalLink, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -35,6 +36,21 @@ const CoinzzTab = () => {
     };
     load();
   }, [user]);
+
+  const handleToggle = async (checked: boolean) => {
+    setIsActive(checked);
+    if (!user) return;
+    const { data: existing } = await supabase
+      .from("integrations")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("type", "coinzz")
+      .maybeSingle();
+    if (existing) {
+      await supabase.from("integrations").update({ is_active: checked }).eq("id", existing.id);
+      toast.success(checked ? "Coinzz ativada" : "Coinzz desativada");
+    }
+  };
 
   const handleTestConnection = async () => {
     if (!token.trim()) {
@@ -100,9 +116,28 @@ const CoinzzTab = () => {
               <p className="text-xs text-muted-foreground">Fallback logístico via Correios + pagamento online</p>
             </div>
           </div>
-          <Badge variant={isActive ? "default" : "secondary"} className={isActive ? "bg-success/10 text-success border-success/20" : ""}>
-            {isActive ? "ATIVO" : "INATIVO"}
-          </Badge>
+          <div className="flex items-center gap-3">
+            <Switch checked={isActive} onCheckedChange={handleToggle} />
+            <Badge variant={isActive ? "default" : "secondary"} className={isActive ? "bg-success/10 text-success border-success/20" : ""}>
+              {isActive ? "ATIVO" : "INATIVO"}
+            </Badge>
+          </div>
+        </div>
+
+        {/* Mini Tutorial */}
+        <div className="mb-6 rounded-lg border border-primary/10 bg-primary/5 p-4">
+          <div className="flex items-start gap-2">
+            <Info className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+            <div className="text-xs text-muted-foreground space-y-1.5">
+              <p className="font-semibold text-foreground">Como configurar a Coinzz:</p>
+              <ol className="list-decimal list-inside space-y-1">
+                <li>Acesse <a href="https://app.coinzz.com.br" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-medium">app.coinzz.com.br <ExternalLink className="inline h-3 w-3" /></a></li>
+                <li>Vá em <strong className="text-foreground">Configurações → API → Token</strong></li>
+                <li>Copie o <strong className="text-foreground">Bearer Token</strong> e cole no campo abaixo</li>
+                <li>Clique em Salvar — os pedidos de regiões sem Logzz serão roteados automaticamente</li>
+              </ol>
+            </div>
+          </div>
         </div>
 
         <div className="mb-4 max-w-xl">
@@ -123,13 +158,6 @@ const CoinzzTab = () => {
               {showToken ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             </button>
           </div>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Gere em{" "}
-            <a href="https://app.coinzz.com.br" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-              app.coinzz.com.br
-            </a>{" "}
-            → Configurações → API → Token
-          </p>
         </div>
 
         <div className="flex gap-3">

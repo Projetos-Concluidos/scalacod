@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
-import { CreditCard, Eye, EyeOff, CheckCircle, Loader2 } from "lucide-react";
+import { CreditCard, Eye, EyeOff, CheckCircle, Loader2, ExternalLink, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -33,6 +34,21 @@ const MercadoPagoTab = () => {
     };
     load();
   }, [user]);
+
+  const handleToggle = async (checked: boolean) => {
+    setIsActive(checked);
+    if (!user) return;
+    const { data: existing } = await supabase
+      .from("integrations")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("type", "mercadopago")
+      .maybeSingle();
+    if (existing) {
+      await supabase.from("integrations").update({ is_active: checked }).eq("id", existing.id);
+      toast.success(checked ? "MercadoPago ativado" : "MercadoPago desativado");
+    }
+  };
 
   const handleTestConnection = async () => {
     if (!accessToken.trim()) {
@@ -92,9 +108,31 @@ const MercadoPagoTab = () => {
             <p className="text-xs text-muted-foreground">Processador de pagamentos para pedidos Coinzz</p>
           </div>
         </div>
-        <Badge variant={isActive ? "default" : "secondary"} className={isActive ? "bg-success/10 text-success border-success/20" : ""}>
-          {isActive ? "ATIVO" : "INATIVO"}
-        </Badge>
+        <div className="flex items-center gap-3">
+          <Switch checked={isActive} onCheckedChange={handleToggle} />
+          <Badge variant={isActive ? "default" : "secondary"} className={isActive ? "bg-success/10 text-success border-success/20" : ""}>
+            {isActive ? "ATIVO" : "INATIVO"}
+          </Badge>
+        </div>
+      </div>
+
+      {/* Mini Tutorial */}
+      <div className="mb-6 rounded-lg border border-primary/10 bg-primary/5 p-4">
+        <div className="flex items-start gap-2">
+          <Info className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+          <div className="text-xs text-muted-foreground space-y-1.5">
+            <p className="font-semibold text-foreground">Como configurar o MercadoPago:</p>
+            <ol className="list-decimal list-inside space-y-1">
+              <li>Acesse <a href="https://www.mercadopago.com.br/developers/panel/app" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-medium">mercadopago.com.br/developers <ExternalLink className="inline h-3 w-3" /></a></li>
+              <li>Vá em <strong className="text-foreground">Suas Integrações</strong> → Crie ou selecione uma aplicação</li>
+              <li>Em <strong className="text-foreground">Credenciais de Produção</strong>, copie o <strong className="text-foreground">Access Token</strong> e a <strong className="text-foreground">Public Key</strong></li>
+              <li>Cole os valores nos campos abaixo e clique em Salvar</li>
+            </ol>
+            <p className="text-[10px] text-muted-foreground/70 mt-2">
+              ⚠️ Use credenciais de <strong>produção</strong>, não de teste. O Access Token começa com <code className="bg-muted px-1 rounded">APP_USR-</code>
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Access Token */}
@@ -117,7 +155,7 @@ const MercadoPagoTab = () => {
           </button>
         </div>
         <p className="mt-1 text-xs text-muted-foreground">
-          Encontre em mercadopago.com.br → Sua loja → Credenciais de produção
+          Encontre em <a href="https://www.mercadopago.com.br/developers/panel/app" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">mercadopago.com.br/developers</a> → Sua aplicação → Credenciais de produção
         </p>
       </div>
 
@@ -132,7 +170,7 @@ const MercadoPagoTab = () => {
           className="mt-1.5 h-10 w-full rounded-lg border border-border bg-input px-4 text-sm text-foreground focus:border-primary focus:outline-none"
         />
         <p className="mt-1 text-xs text-muted-foreground">
-          Usada no frontend para tokenizar o cartão de crédito do comprador.
+          Usada no frontend para tokenizar o cartão de crédito do comprador (Bricks SDK).
         </p>
       </div>
 
@@ -149,7 +187,7 @@ const MercadoPagoTab = () => {
       {/* Info sobre métodos */}
       <div className="rounded-lg border border-primary/10 bg-primary/5 px-4 py-3">
         <p className="mb-2 text-xs font-medium text-foreground">Métodos de pagamento disponíveis no checkout Coinzz:</p>
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           <div className="flex items-center gap-2 rounded-md border border-border bg-secondary/30 px-3 py-2">
             <span className="text-lg">📱</span>
             <div>
@@ -160,8 +198,15 @@ const MercadoPagoTab = () => {
           <div className="flex items-center gap-2 rounded-md border border-border bg-secondary/30 px-3 py-2">
             <span className="text-lg">💳</span>
             <div>
-              <p className="text-xs font-medium text-foreground">Cartão de Crédito</p>
-              <p className="text-[10px] text-muted-foreground">Tokenização segura</p>
+              <p className="text-xs font-medium text-foreground">Cartão</p>
+              <p className="text-[10px] text-muted-foreground">Bricks SDK (PCI)</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 rounded-md border border-border bg-secondary/30 px-3 py-2">
+            <span className="text-lg">📄</span>
+            <div>
+              <p className="text-xs font-medium text-foreground">Boleto</p>
+              <p className="text-[10px] text-muted-foreground">3 dias úteis</p>
             </div>
           </div>
           <div className="flex items-center gap-2 rounded-md border border-border bg-secondary/30 px-3 py-2">

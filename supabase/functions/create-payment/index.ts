@@ -83,6 +83,56 @@ serve(async (req) => {
     } else if (method === "boleto") {
       paymentPayload.payment_method_id = "bolbradesco";
       paymentPayload.date_of_expiration = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString();
+    } else if (method === "wallet") {
+      // MercadoPago Wallet — create a preference and redirect
+      const prefRes = await fetch("https://api.mercadopago.com/checkout/preferences", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${mpToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          items: [{
+            title: `Pedido #${order.order_number || orderId}`,
+            quantity: 1,
+            unit_price: Number(order.order_final_price),
+            currency_id: "BRL",
+          }],
+          payer: {
+            email: payerEmail || order.client_email || "comprador@email.com",
+            name: payerName || order.client_name || "",
+          },
+          external_reference: orderId,
+          notification_url: notificationUrl,
+          back_urls: {
+            success: `${req.headers.get("origin") || "https://ninja-cod-flow.lovable.app"}/c/${storeId}/success`,
+            failure: `${req.headers.get("origin") || "https://ninja-cod-flow.lovable.app"}/c/${storeId}`,
+            pending: `${req.headers.get("origin") || "https://ninja-cod-flow.lovable.app"}/c/${storeId}`,
+          },
+          auto_return: "approved",
+          payment_methods: {
+            excluded_payment_types: [{ id: "ticket" }, { id: "bank_transfer" }],
+          },
+        }),
+      });
+
+      const pref = await prefRes.json();
+      if (pref.error) {
+        console.error("MP preference error:", pref);
+        return new Response(JSON.stringify({ error: pref.message || "Erro ao criar preferência" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      // Update order
+      await supabase.from("orders").update({
+        payment_method: "wallet",
+        status: "Aguardando",
+      }).eq("id", orderId);
+
+      return new Response(JSON.stringify({
+        method: "wallet",
+        walletRedirectUrl: pref.init_point,
+        preferenceId: pref.id,
+      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     const res = await fetch("https://api.mercadopago.com/v1/payments", {

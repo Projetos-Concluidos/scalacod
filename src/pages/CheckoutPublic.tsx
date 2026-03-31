@@ -85,7 +85,7 @@ const CheckoutPublic = () => {
   const [deliveryDates, setDeliveryDates] = useState<DeliveryDate[]>([]);
   const [selectedDate, setSelectedDate] = useState<DeliveryDate | null>(null);
   const [deliveryChecked, setDeliveryChecked] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<"pix" | "credit_card" | "boleto">("pix");
+  const [paymentMethod, setPaymentMethod] = useState<"pix" | "credit_card" | "boleto" | "wallet">("pix");
   const [orderNumber, setOrderNumber] = useState("");
   const [showMobileSummary, setShowMobileSummary] = useState(false);
   const [cpfValidating, setCpfValidating] = useState(false);
@@ -402,7 +402,9 @@ const CheckoutPublic = () => {
       } else if (paymentMethod === "boleto") {
         if (data.boletoUrl) window.open(data.boletoUrl, "_blank");
         toast.success("Boleto gerado! Aguardando pagamento.");
-        startPixPolling(data.paymentId); // reuse polling for boleto status
+        startPixPolling(data.paymentId);
+      } else if (paymentMethod === "wallet" && data.walletRedirectUrl) {
+        window.location.href = data.walletRedirectUrl;
       } else {
         // credit_card pending
         toast.info("Pagamento em processamento...");
@@ -963,16 +965,16 @@ const CheckoutPublic = () => {
                     <h2 className="text-sm font-bold text-gray-900">Forma de Pagamento</h2>
                   </div>
 
-                  <div className="mb-4 flex rounded-xl border border-gray-200 overflow-hidden">
-                    {(["pix", "credit_card", "boleto"] as const).map((m) => (
+                  <div className="mb-4 grid grid-cols-4 gap-1 rounded-xl border border-gray-200 overflow-hidden">
+                    {(["pix", "credit_card", "boleto", "wallet"] as const).map((m) => (
                       <button
                         key={m}
                         onClick={() => { setPaymentMethod(m); setPixData(null); setPaymentStatus(null); }}
-                        className={`flex-1 px-3 py-2.5 text-xs font-medium transition-colors ${
+                        className={`px-2 py-2.5 text-xs font-medium transition-colors ${
                           paymentMethod === m ? "bg-emerald-50 text-emerald-700 border-b-2 border-emerald-500" : "bg-gray-50 text-gray-500"
                         }`}
                       >
-                        {m === "pix" ? "📱 PIX" : m === "credit_card" ? "💳 Cartão" : "📄 Boleto"}
+                        {m === "pix" ? "📱 PIX" : m === "credit_card" ? "💳 Cartão" : m === "boleto" ? "📄 Boleto" : "💰 Saldo MP"}
                       </button>
                     ))}
                   </div>
@@ -1032,6 +1034,16 @@ const CheckoutPublic = () => {
                         </div>
                       </motion.div>
                     )}
+
+                    {paymentMethod === "wallet" && (
+                      <motion.div key="wallet" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                        <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 text-center">
+                          <p className="text-2xl mb-2">💰</p>
+                          <p className="text-sm text-gray-900 font-medium mb-1">Saldo MercadoPago</p>
+                          <p className="text-xs text-gray-500">Você será redirecionado para o MercadoPago para concluir o pagamento com seu saldo disponível.</p>
+                        </div>
+                      </motion.div>
+                    )}
                   </AnimatePresence>
 
                   {/* Only show pay button if not already showing PIX QR and not credit_card (Bricks handles its own submit) */}
@@ -1040,7 +1052,7 @@ const CheckoutPublic = () => {
                       className="mt-5 w-full rounded-xl bg-emerald-500 py-3 text-sm font-semibold text-white hover:bg-emerald-600 shadow-md shadow-emerald-500/20 transition-all disabled:opacity-50"
                     >
                       {paymentLoading ? <Loader2 className="inline h-4 w-4 animate-spin mr-2" /> : null}
-                      {paymentMethod === "pix" ? "Gerar QR Code PIX" : "Gerar Boleto"} → R$ {totalPrice.toFixed(2)}
+                      {paymentMethod === "pix" ? "Gerar QR Code PIX" : paymentMethod === "boleto" ? "Gerar Boleto" : paymentMethod === "wallet" ? "Pagar com Saldo MP" : "Pagar"} → R$ {totalPrice.toFixed(2)}
                     </button>
                   )}
 
