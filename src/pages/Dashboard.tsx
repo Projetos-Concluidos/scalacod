@@ -250,12 +250,12 @@ const Dashboard = () => {
                     <stop offset="100%" stopColor="#059669" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsla(240,15%,20%,0.5)" />
-                <XAxis dataKey="name" tick={{ fontSize: 10, fill: "#8888AA" }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 10, fill: "#8888AA" }} axisLine={false} tickLine={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                <XAxis dataKey="name" tick={{ fontSize: 10, fill: "#6B7280" }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 10, fill: "#6B7280" }} axisLine={false} tickLine={false} />
                 <Tooltip contentStyle={chartTooltipStyle} />
-                <Area type="monotone" dataKey="visitantes" stroke="#00FF88" strokeWidth={2} fill="url(#gradVisitantes)" />
-                <Area type="monotone" dataKey="pedidos" stroke="#00D4FF" strokeWidth={2} fill="url(#gradPedidos)" />
+                <Area type="monotone" dataKey="visitantes" stroke="#10B981" strokeWidth={2} fill="url(#gradVisitantes)" />
+                <Area type="monotone" dataKey="pedidos" stroke="#059669" strokeWidth={2} fill="url(#gradPedidos)" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
