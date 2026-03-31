@@ -841,7 +841,13 @@ const CheckoutPublic = () => {
                   )}
 
                   <button
-                    onClick={handleSubmit}
+                    onClick={async () => {
+                      setSubmitting(true);
+                      track("order_submitted");
+                      const oid = await createOrder();
+                      if (oid) setStep(4);
+                      setSubmitting(false);
+                    }}
                     disabled={submitting || !selectedDate}
                     className={`w-full rounded-xl py-3 text-sm font-semibold text-white transition-all ${
                       selectedDate ? "bg-emerald-500 hover:bg-emerald-600 shadow-md shadow-emerald-500/20" : "bg-gray-300 cursor-not-allowed"
