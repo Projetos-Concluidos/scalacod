@@ -225,7 +225,8 @@ const CheckoutPublic = () => {
         status: "Confirmado",
       }, { onConflict: "user_id,phone" }).select();
 
-      setStep(provider === "coinzz" ? 3 : 4); // coinzz needs payment step, logzz goes to confirm
+      track("order_confirmed", { order_number: num });
+      setStep(provider === "coinzz" ? 3 : 4);
     } catch (e: any) {
       toast.error(e.message || "Erro ao criar pedido");
     }
