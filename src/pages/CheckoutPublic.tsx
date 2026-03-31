@@ -63,6 +63,11 @@ const CheckoutPublic = () => {
     cep: "", street: "", number: "", complement: "", district: "", city: "", state: "",
   });
 
+  // Pixel tracking helper
+  const track = (event: string, meta: Record<string, any> = {}) => {
+    if (checkout) trackPixelEvent(checkout.user_id, checkout.id, event, meta);
+  };
+
   // Load checkout data
   useEffect(() => {
     if (!slug) return;
@@ -70,13 +75,14 @@ const CheckoutPublic = () => {
       const { data: c } = await supabase.from("checkouts").select("*").eq("slug", slug).eq("is_active", true).maybeSingle();
       if (!c) { setLoading(false); return; }
       setCheckout(c as any);
+      // Track pageview
+      trackPixelEvent(c.user_id, c.id, "pageview");
       if (c.offer_id) {
         const { data: o } = await supabase.from("offers").select("*").eq("id", c.offer_id).single();
         if (o) {
           setOffer(o as any);
           const { data: p } = await supabase.from("products").select("*").eq("id", o.product_id).single();
           if (p) setProduct(p as any);
-          // Load order bumps
           if (c.order_bump_enabled) {
             const { data: bumps } = await supabase.from("order_bumps").select("*").eq("offer_id", c.offer_id).eq("is_active", true);
             if (bumps) setOrderBumps(bumps as any);
@@ -86,6 +92,15 @@ const CheckoutPublic = () => {
       setLoading(false);
     })();
   }, [slug]);
+
+  // Track first interaction
+  const [interactionTracked, setInteractionTracked] = useState(false);
+  const trackInteraction = () => {
+    if (!interactionTracked && checkout) {
+      track("interaction");
+      setInteractionTracked(true);
+    }
+  };
 
   const updateField = (field: string, value: string) => setForm((prev) => ({ ...prev, [field]: value }));
 
