@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Eye, EyeOff, Save } from "lucide-react";
 import { useState } from "react";
+import InfoTooltip from "@/components/InfoTooltip";
 
 interface IntegrationField {
   label: string;
