@@ -15,6 +15,8 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import type { Tables } from "@/integrations/supabase/types";
+import EmojiStickerPicker from "@/components/chat/EmojiStickerPicker";
+import { useNotificationSound } from "@/hooks/useNotificationSound";
 
 type Conversation = Tables<"conversations">;
 type Message = Tables<"messages">;
@@ -68,8 +70,11 @@ const Conversas = () => {
   const [newLabelName, setNewLabelName] = useState("");
   const [leadData, setLeadData] = useState<any>(null);
   const [orderData, setOrderData] = useState<any>(null);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { play: playNotification, requestPermission } = useNotificationSound();
 
   const fetchConversations = async () => {
     if (!user) return;
@@ -125,7 +130,7 @@ const Conversas = () => {
     }
   };
 
-  useEffect(() => { fetchConversations(); }, [user]);
+  useEffect(() => { fetchConversations(); requestPermission(); }, [user]);
 
   // Realtime messages
   useEffect(() => {
@@ -136,6 +141,10 @@ const Conversas = () => {
         if (selectedConv && msg.conversation_id === selectedConv.id) {
           setMessages(prev => [...prev, msg]);
           setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
+        }
+        // Play notification sound for inbound messages
+        if (msg.direction === "inbound") {
+          playNotification();
         }
         // Update conversation list
         setConversations(prev => prev.map(c =>
@@ -220,6 +229,62 @@ const Conversas = () => {
     setSending(false);
   };
 
+  const sendMediaMessage = async (file: File) => {
+    if (!selectedConv || !user || sending) return;
+    setSending(true);
+
+    const type = file.type.startsWith("image/") ? "image"
+      : file.type.startsWith("audio/") ? "audio"
+      : file.type.startsWith("video/") ? "video"
+      : "document";
+
+    // Upload to a temporary public URL (using data URL for now)
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const dataUrl = reader.result as string;
+
+      const optimistic: Message = {
+        id: crypto.randomUUID(),
+        conversation_id: selectedConv.id,
+        direction: "outbound",
+        type,
+        content: `[${type}] ${file.name}`,
+        status: "pending",
+        timestamp: new Date().toISOString(),
+        created_at: new Date().toISOString(),
+        media_url: dataUrl,
+        message_id_whatsapp: null,
+      };
+      setMessages(prev => [...prev, optimistic]);
+
+      try {
+        // For real usage, upload to storage first and get a public URL
+        toast.info(`Enviando ${type}: ${file.name}...`);
+        const { error } = await supabase.functions.invoke("send-whatsapp-message", {
+          body: { conversationId: selectedConv.id, content: file.name, type, mediaUrl: dataUrl },
+        });
+        if (error) throw new Error(error.message);
+        setMessages(prev => prev.filter(m => m.id !== optimistic.id));
+      } catch (err: any) {
+        setMessages(prev => prev.filter(m => m.id !== optimistic.id));
+        toast.error(err.message || "Falha ao enviar mídia");
+      }
+      setSending(false);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 16 * 1024 * 1024) {
+        toast.error("Arquivo muito grande (máx 16MB)");
+        return;
+      }
+      sendMediaMessage(file);
+    }
+    e.target.value = "";
+  };
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -494,12 +559,58 @@ const Conversas = () => {
 
           {/* Input area */}
           <div className="border-t border-border bg-card p-3">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*,audio/*,video/*,.pdf,.doc,.docx,.xls,.xlsx"
+              className="hidden"
+              onChange={handleFileSelect}
+            />
+            {showEmojiPicker && (
+              <div className="relative">
+                <EmojiStickerPicker
+                  onSelectEmoji={(emoji) => {
+                    setNewMessage(prev => prev + emoji);
+                    textareaRef.current?.focus();
+                  }}
+                  onSelectSticker={(text) => {
+                    setNewMessage(text);
+                    setShowEmojiPicker(false);
+                    setTimeout(() => sendMessage(), 100);
+                  }}
+                  onSelectGif={async (url) => {
+                    setShowEmojiPicker(false);
+                    if (!selectedConv || !user) return;
+                    setSending(true);
+                    try {
+                      const { error } = await supabase.functions.invoke("send-whatsapp-message", {
+                        body: { conversationId: selectedConv.id, content: "", type: "image", mediaUrl: url },
+                      });
+                      if (error) throw new Error(error.message);
+                    } catch (err: any) {
+                      toast.error(err.message || "Falha ao enviar GIF");
+                    }
+                    setSending(false);
+                  }}
+                  onClose={() => setShowEmojiPicker(false)}
+                />
+              </div>
+            )}
             <div className="flex items-end gap-2">
               <div className="flex items-center gap-1">
-                <button className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted">
+                <button
+                  onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                  className={cn(
+                    "flex h-8 w-8 items-center justify-center rounded-lg transition-colors",
+                    showEmojiPicker ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                  )}
+                >
                   <Smile className="h-4 w-4" />
                 </button>
-                <button className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted">
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted"
+                >
                   <Paperclip className="h-4 w-4" />
                 </button>
               </div>

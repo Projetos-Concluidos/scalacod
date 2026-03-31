@@ -152,8 +152,26 @@ const WhatsAppCloud = () => {
     }
   };
 
+  const [testSending, setTestSending] = useState(false);
+
   const handleTestSend = async () => {
-    toast.info("Envio de teste será implementado via edge function");
+    const testPhone = prompt("Digite o número WhatsApp para teste (ex: +5511999999999):");
+    if (!testPhone?.trim()) return;
+    setTestSending(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("send-whatsapp-message", {
+        body: {
+          phone: testPhone.trim(),
+          content: "🥷 ScalaNinja — Conexão WhatsApp testada com sucesso! ✅",
+          direct: true,
+        },
+      });
+      if (error) throw new Error(error.message);
+      toast.success("Mensagem de teste enviada com sucesso!");
+    } catch (err: any) {
+      toast.error("Falha no teste: " + (err.message || "Erro desconhecido"));
+    }
+    setTestSending(false);
   };
 
   const tabs = [
@@ -265,9 +283,11 @@ const WhatsAppCloud = () => {
                   <div className="flex gap-3 pt-2">
                     <button
                       onClick={handleTestSend}
-                      className="flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 px-4 py-2 text-sm font-medium text-primary hover:bg-primary/10"
+                      disabled={testSending}
+                      className="flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 px-4 py-2 text-sm font-medium text-primary hover:bg-primary/10 disabled:opacity-50"
                     >
-                      <Send className="h-4 w-4" /> Testar envio
+                      {testSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                      {testSending ? "Enviando..." : "Testar envio"}
                     </button>
                     <button
                       onClick={handleDisconnect}
