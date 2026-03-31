@@ -471,12 +471,111 @@ const CheckoutPublic = () => {
                       </div>
                       <div>
                         <Label className="text-xs text-gray-600">CPF *</Label>
-                        <Input value={form.cpf} onChange={(e) => updateField("cpf", maskCpf(e.target.value))} placeholder="000.000.000-00" className="mt-1 border-gray-200 bg-white focus:border-emerald-500 focus:ring-emerald-500" />
-                        {form.cpf.replace(/\D/g, "").length === 11 && (
-                          <p className={`mt-1 text-xs font-medium ${cpfValid ? "text-emerald-600" : "text-red-500"}`}>
-                            {cpfValid ? "✓ CPF válido" : "✗ CPF inválido"}
-                          </p>
-                        )}
+                        <div className="relative">
+                          <Input
+                            value={form.cpf}
+                            onChange={(e) => updateField("cpf", maskCpf(e.target.value))}
+                            placeholder="000.000.000-00"
+                            className={`mt-1 border-gray-200 bg-white focus:border-emerald-500 focus:ring-emerald-500 pr-10 transition-colors ${
+                              cpfResult?.valid === true ? "border-emerald-400 bg-emerald-50/30" :
+                              cpfResult?.valid === false ? "border-red-400 bg-red-50/30" : ""
+                            }`}
+                          />
+                          {/* Animated icon indicator */}
+                          <AnimatePresence mode="wait">
+                            {cpfValidating && (
+                              <motion.div
+                                key="cpf-loading"
+                                initial={{ opacity: 0, scale: 0.5 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                exit={{ opacity: 0, scale: 0.5 }}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 mt-0.5"
+                              >
+                                <Loader2 className="h-4 w-4 animate-spin text-emerald-500" />
+                              </motion.div>
+                            )}
+                            {!cpfValidating && cpfResult?.valid === true && (
+                              <motion.div
+                                key="cpf-valid"
+                                initial={{ opacity: 0, scale: 0, rotate: -90 }}
+                                animate={{ opacity: 1, scale: 1, rotate: 0 }}
+                                exit={{ opacity: 0, scale: 0.5 }}
+                                transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 mt-0.5"
+                              >
+                                <CheckCircle className="h-4 w-4 text-emerald-500" />
+                              </motion.div>
+                            )}
+                            {!cpfValidating && cpfResult?.valid === false && (
+                              <motion.div
+                                key="cpf-invalid"
+                                initial={{ opacity: 0, scale: 0 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                exit={{ opacity: 0, scale: 0.5 }}
+                                transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 mt-0.5"
+                              >
+                                <XCircle className="h-4 w-4 text-red-500" />
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </div>
+                        {/* Animated feedback message */}
+                        <AnimatePresence mode="wait">
+                          {cpfValidating && (
+                            <motion.p
+                              key="cpf-msg-loading"
+                              initial={{ opacity: 0, y: -5 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{ opacity: 0, y: -5 }}
+                              className="mt-1.5 text-xs font-medium text-gray-500 flex items-center gap-1"
+                            >
+                              <Loader2 className="h-3 w-3 animate-spin" /> Verificando CPF na Logzz...
+                            </motion.p>
+                          )}
+                          {!cpfValidating && cpfResult?.valid === true && (
+                            <motion.div
+                              key="cpf-msg-valid"
+                              initial={{ opacity: 0, y: -5, height: 0 }}
+                              animate={{ opacity: 1, y: 0, height: "auto" }}
+                              exit={{ opacity: 0, y: -5, height: 0 }}
+                              className="mt-1.5"
+                            >
+                              <p className="text-xs font-medium text-emerald-600 flex items-center gap-1">
+                                <CheckCircle className="h-3 w-3" />
+                                {cpfResult.message}
+                                {cpfResult.source === "logzz" && (
+                                  <span className="ml-1 inline-flex items-center rounded-full bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700 border border-emerald-200">
+                                    Logzz ✓
+                                  </span>
+                                )}
+                              </p>
+                              {cpfResult.customer_name && (
+                                <motion.p
+                                  initial={{ opacity: 0 }}
+                                  animate={{ opacity: 1 }}
+                                  transition={{ delay: 0.2 }}
+                                  className="text-[11px] text-gray-500 mt-0.5"
+                                >
+                                  Cliente: {cpfResult.customer_name}
+                                </motion.p>
+                              )}
+                            </motion.div>
+                          )}
+                          {!cpfValidating && cpfResult?.valid === false && (
+                            <motion.p
+                              key="cpf-msg-invalid"
+                              initial={{ opacity: 0, y: -5 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{ opacity: 0, y: -5 }}
+                              className="mt-1.5 text-xs font-medium text-red-500 flex items-center gap-1"
+                            >
+                              <XCircle className="h-3 w-3" />
+                              {cpfResult.status === "blocked" ? "⚠️ " : ""}
+                              {cpfResult.message}
+                            </motion.p>
+                          )}
+                        </AnimatePresence>
                       </div>
                     </div>
                     <div>
