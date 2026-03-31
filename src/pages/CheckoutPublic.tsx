@@ -354,6 +354,7 @@ const CheckoutPublic = () => {
     try {
       const num = generateOrderNumber();
       setOrderNumber(num);
+      const utm = getUTM();
       const { data: inserted, error } = await supabase.from("orders").insert({
         user_id: checkout.user_id, order_number: num, checkout_id: checkout.id, offer_id: offer.id,
         client_name: form.name, client_email: form.email || null,
@@ -367,6 +368,9 @@ const CheckoutPublic = () => {
         status: "Aguardando", logistics_type: provider || "logzz",
         delivery_date: provider === "logzz" && selectedDate ? selectedDate.date : null,
         payment_method: provider === "logzz" ? "afterpay" : paymentMethod,
+        utm_source: utm.utm_source || null, utm_medium: utm.utm_medium || null,
+        utm_campaign: utm.utm_campaign || null, utm_content: utm.utm_content || null,
+        utm_term: utm.utm_term || null, utm_id: utm.utm_id || null,
       }).select("id").single();
       if (error) throw error;
       await supabase.from("leads").upsert({
@@ -374,6 +378,35 @@ const CheckoutPublic = () => {
         email: form.email || null, document: form.cpf.replace(/\D/g, "") || null, status: "Confirmado",
       }, { onConflict: "user_id,phone" }).select();
       track("order_confirmed", { order_number: num });
+
+      // FB Pixel Purchase (client-side)
+      if (fbPixelRef.current) fbPixelRef.current.purchase(totalPrice, "BRL", num);
+
+      // Google Ads Conversion
+      if (gAdsRef.current) gAdsRef.current.trackConversion(totalPrice, "BRL", num);
+
+      // FB CAPI (server-side — more reliable)
+      if (checkout.pixel_facebook && checkout.meta_capi_token) {
+        supabase.functions.invoke("fb-capi", {
+          body: {
+            event: "Purchase",
+            pixelId: checkout.pixel_facebook,
+            capiToken: checkout.meta_capi_token,
+            eventSourceUrl: window.location.href,
+            userData: {
+              email: form.email, phone: form.phone,
+              firstName: form.name.split(" ")[0],
+              lastName: form.name.split(" ").slice(1).join(" "),
+              fbp: getCookie("_fbp"), fbc: getCookie("_fbc"),
+            },
+            customData: { value: totalPrice, currency: "BRL", order_id: num },
+          },
+        }).catch(() => {}); // fire-and-forget
+      }
+
+      // FB Lead event
+      if (fbPixelRef.current) fbPixelRef.current.lead(totalPrice);
+
       return inserted?.id || null;
     } catch (e: any) {
       toast.error(e.message || "Erro ao criar pedido");
