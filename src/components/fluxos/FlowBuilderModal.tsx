@@ -233,11 +233,11 @@ export default function FlowBuilderModal({ open, onClose, onSave, initialData }:
                   onNodeClick={(_, node) => setSelectedNode(node)}
                   fitView
                   proOptions={{ hideAttribution: true }}
-                  style={{ background: "hsl(240 25% 4%)" }}
+                  style={{ background: "#F8FFFE" }}
                 >
-                  <Controls style={{ background: "hsl(240 20% 7%)", borderColor: "hsl(190 100% 50% / 0.2)" }} />
-                  <MiniMap style={{ background: "hsl(240 20% 7%)" }} nodeColor="hsl(190 100% 50% / 0.3)" />
-                  <Background color="hsl(190 100% 50% / 0.05)" gap={20} />
+                  <Controls style={{ background: "#FFFFFF", borderColor: "hsl(160 84% 39% / 0.2)" }} />
+                  <MiniMap style={{ background: "#FFFFFF" }} nodeColor="hsl(160 84% 39% / 0.3)" />
+                  <Background color="hsl(160 84% 39% / 0.08)" gap={20} />
                 </ReactFlow>
               </div>
 

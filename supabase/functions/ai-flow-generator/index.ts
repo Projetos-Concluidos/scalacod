@@ -81,16 +81,16 @@ Gere entre 4 e 8 nós. Posicione verticalmente com y incrementando em 130px.`;
 
     // Add styling to nodes
     const startStyle = {
-      background: "hsl(190 100% 50% / 0.15)",
-      border: "1px solid hsl(190 100% 50% / 0.3)",
+      background: "hsl(160 84% 39% / 0.15)",
+      border: "1px solid hsl(160 84% 39% / 0.3)",
       borderRadius: 12, padding: 12,
-      color: "hsl(190 100% 50%)", fontWeight: 600, fontSize: 13,
+      color: "hsl(160 84% 39%)", fontWeight: 600, fontSize: 13,
     };
     const nodeStyle = {
-      background: "hsl(240 20% 7%)",
-      border: "1px solid hsl(190 100% 50% / 0.2)",
+      background: "#FFFFFF",
+      border: "1px solid hsl(160 84% 39% / 0.2)",
       borderRadius: 12, padding: 12,
-      color: "hsl(240 20% 97%)", fontSize: 13, minWidth: 200,
+      color: "#111827", fontSize: 13, minWidth: 200,
     };
 
     if (flowData.nodes) {
@@ -102,7 +102,7 @@ Gere entre 4 e 8 nós. Posicione verticalmente com y incrementando em 130px.`;
     if (flowData.edges) {
       flowData.edges = flowData.edges.map((e: any) => ({
         ...e,
-        style: { stroke: "hsl(190 100% 50%)" },
+        style: { stroke: "hsl(160 84% 39%)" },
       }));
     }
 
