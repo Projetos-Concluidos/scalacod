@@ -31,10 +31,10 @@ interface LibraryVoice {
 }
 
 const packs = [
-  { name: "Pack Iniciante", tokens: 5000, display: "5.000", price: "R$ 19,90", popular: false },
-  { name: "Pack Essencial", tokens: 10000, display: "10.000", price: "R$ 39,90", popular: false },
-  { name: "Pack Profissional", tokens: 50000, display: "50.000", price: "R$ 197,00", popular: true },
-  { name: "Pack Enterprise", tokens: 100000, display: "100.000", price: "R$ 397,00", popular: false },
+  { id: "starter", name: "Pack Iniciante", tokens: 5000, display: "5.000", price: "R$ 19,90", amount: 19.90, popular: false },
+  { id: "essencial", name: "Pack Essencial", tokens: 10000, display: "10.000", price: "R$ 39,90", amount: 39.90, popular: false },
+  { id: "profissional", name: "Pack Profissional", tokens: 50000, display: "50.000", price: "R$ 197,00", amount: 197.00, popular: true },
+  { id: "enterprise", name: "Pack Enterprise", tokens: 100000, display: "100.000", price: "R$ 397,00", amount: 397.00, popular: false },
 ];
 
 const FALLBACK_LIBRARY: LibraryVoice[] = [
