@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { Store, Clock, Save, Globe, Key, Webhook, Bell, Info } from "lucide-react";
 import LogzzTab from "@/components/settings/LogzzTab";
+import CoinzzTab from "@/components/settings/CoinzzTab";
+import MercadoPagoTab from "@/components/settings/MercadoPagoTab";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
