@@ -171,9 +171,19 @@ const LogzzTab = () => {
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
               <Truck className="h-5 w-5 text-primary" />
             </div>
-            <div>
+            <div className="flex items-center gap-2">
               <h2 className="text-lg font-bold text-foreground">Logzz</h2>
-              <p className="text-xs text-muted-foreground">Logística para vendas COD</p>
+              <InfoTooltip
+                title="Como configurar a Logzz:"
+                steps={[
+                  <>Acesse <a href="https://app.logzz.com.br" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-medium">app.logzz.com.br <ExternalLink className="inline h-3 w-3" /></a></>,
+                  "Vá em Configurações → API e copie o Bearer Token",
+                  "Vá em Remapeamento → URL de webhook e copie a URL de importação",
+                  "Cole os valores nos campos abaixo e clique em Testar Conexão",
+                ]}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">Logística para vendas COD</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -181,22 +191,6 @@ const LogzzTab = () => {
             <Badge variant={isActive ? "default" : "secondary"} className={isActive ? "bg-success/10 text-success border-success/20" : ""}>
               {isActive ? "ATIVO" : "INATIVO"}
             </Badge>
-          </div>
-        </div>
-
-        {/* Mini Tutorial */}
-        <div className="mb-6 rounded-lg border border-primary/10 bg-primary/5 p-4">
-          <div className="flex items-start gap-2">
-            <Info className="h-4 w-4 text-primary mt-0.5 shrink-0" />
-            <div className="text-xs text-muted-foreground space-y-1.5">
-              <p className="font-semibold text-foreground">Como configurar a Logzz:</p>
-              <ol className="list-decimal list-inside space-y-1">
-                <li>Acesse <a href="https://app.logzz.com.br" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-medium">app.logzz.com.br <ExternalLink className="inline h-3 w-3" /></a></li>
-                <li>Vá em <strong className="text-foreground">Configurações → API</strong> e copie o <strong className="text-foreground">Bearer Token</strong></li>
-                <li>Vá em <strong className="text-foreground">Remapeamento → URL de webhook</strong> e copie a URL de importação de pedidos</li>
-                <li>Cole os valores nos campos abaixo e clique em Testar Conexão</li>
-              </ol>
-            </div>
           </div>
         </div>
 
