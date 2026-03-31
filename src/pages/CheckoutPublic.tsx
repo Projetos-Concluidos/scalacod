@@ -406,9 +406,11 @@ const CheckoutPublic = () => {
         <div className="flex flex-col lg:flex-row gap-6">
           {/* LEFT: Form Column */}
           <div className="flex-1 space-y-4">
+            <AnimatePresence mode="wait">
 
             {/* ── STEP 1: Suas Informações ── */}
             {step > 1 ? (
+              <motion.div key="step1-collapsed" variants={collapseVariants} initial="initial" animate="animate" exit="exit">
               <CollapsedStep num={1} title="Suas Informações" onEdit={() => setStep(1)}>
                 <p>👤 {form.name.toUpperCase()}</p>
                 <p>📱 {form.phone}</p>
