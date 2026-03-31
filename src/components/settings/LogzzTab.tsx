@@ -111,24 +111,21 @@ const LogzzTab = () => {
 
   const handleCheckCep = async () => {
     const clean = cep.replace(/\D/g, "");
-    if (clean.length !== 8) {
-      toast.error("CEP inválido");
-      return;
-    }
+    if (clean.length !== 8) { toast.error("CEP inválido"); return; }
     setCheckingCep(true);
     setCepResult(null);
     try {
-      // Simulated — in production goes through edge function with Logzz token
-      await new Promise((r) => setTimeout(r, 1200));
-      setCepResult({
-        available: true,
-        operation: "Operação São Paulo",
-        city: "São Paulo - SP",
-        dates: [
-          { date: "15/04", type: "Padrão", price: 24.98 },
-          { date: "14/04", type: "Express", price: 29.98 },
-        ],
-      });
+      const data = await callCheckoutApi("check_delivery", { cep: clean });
+      if (data.provider === "logzz" && data.dates?.length > 0) {
+        setCepResult({
+          available: true,
+          operation: "Logzz",
+          city: "",
+          dates: data.dates,
+        });
+      } else {
+        setCepResult({ available: false, error: data.message || "CEP não atendido pela Logzz" });
+      }
     } catch {
       setCepResult({ available: false, error: "Erro ao verificar CEP" });
     } finally {
