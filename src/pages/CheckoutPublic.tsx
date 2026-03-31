@@ -234,6 +234,72 @@ const CheckoutPublic = () => {
   const shippingPrice = provider === "logzz" && selectedDate ? selectedDate.price : 0;
   const totalPrice = (offer?.price || 0) + bumpsTotal + shippingPrice;
 
+  // Initialize MercadoPago Bricks when credit_card is selected on step 3
+  useEffect(() => {
+    if (step !== 3 || provider !== "coinzz" || paymentMethod !== "credit_card" || !mpPublicKey || !offer) return;
+    if (!window.MercadoPago) return;
+
+    setBricksReady(false);
+
+    const initBricks = async () => {
+      try {
+        if (bricksControllerRef.current) {
+          try { bricksControllerRef.current.unmount(); } catch {}
+          bricksControllerRef.current = null;
+        }
+        const container = document.getElementById("cardPaymentBrick_container");
+        if (container) container.innerHTML = "";
+
+        const mp = new window.MercadoPago(mpPublicKey, { locale: "pt-BR" });
+        const bricksBuilder = mp.bricks();
+
+        const controller = await bricksBuilder.create("cardPayment", "cardPaymentBrick_container", {
+          initialization: {
+            amount: totalPrice,
+            payer: {
+              email: form.email || "",
+              firstName: form.name.split(" ")[0] || "",
+              lastName: form.name.split(" ").slice(1).join(" ") || "",
+              identification: { type: "CPF", number: form.cpf.replace(/\D/g, "") },
+            },
+          },
+          customization: {
+            paymentMethods: { minInstallments: 1, maxInstallments: 12 },
+            visual: {
+              style: {
+                theme: "default",
+                customVariables: { formBackgroundColor: "#ffffff", baseColor: "#10B981" },
+              },
+            },
+          },
+          callbacks: {
+            onReady: () => setBricksReady(true),
+            onSubmit: async (cardFormData: any) => {
+              await processPayment(cardFormData.token, cardFormData.installments);
+            },
+            onError: (error: any) => {
+              console.error("Bricks error:", error);
+              toast.error("Erro no formulário de pagamento");
+            },
+          },
+        });
+
+        bricksControllerRef.current = controller;
+      } catch (err) {
+        console.error("Failed to init Bricks:", err);
+      }
+    };
+
+    const timer = setTimeout(initBricks, 300);
+    return () => {
+      clearTimeout(timer);
+      if (bricksControllerRef.current) {
+        try { bricksControllerRef.current.unmount(); } catch {}
+        bricksControllerRef.current = null;
+      }
+    };
+  }, [step, provider, paymentMethod, mpPublicKey, totalPrice]);
+
   const totalSteps = provider === "logzz" ? 3 : 4;
   const progressPercent = provider === "logzz"
     ? step >= 4 ? 100 : step === 3 ? 75 : step === 2 ? 50 : 25
