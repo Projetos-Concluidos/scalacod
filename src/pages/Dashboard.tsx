@@ -14,10 +14,10 @@ import { useAuth } from "@/contexts/AuthContext";
 const periods = ["Hoje", "Ontem", "7 dias", "15 dias", "30 dias", "Máximo"];
 
 const chartTooltipStyle = {
-  backgroundColor: "hsl(240,20%,7%)",
-  border: "1px solid hsla(190,100%,50%,0.12)",
+  backgroundColor: "#FFFFFF",
+  border: "1px solid #E5E7EB",
   borderRadius: "8px",
-  color: "hsl(240,20%,97%)",
+  color: "#111827",
   fontSize: "12px",
 };
 
