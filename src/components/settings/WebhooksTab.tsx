@@ -114,7 +114,18 @@ const WebhooksTab = () => {
             <Webhook className="h-5 w-5 text-primary" />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-foreground">Configurar Webhook</h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg font-bold text-foreground">Configurar Webhook</h2>
+              <InfoTooltip
+                title="Como configurar Webhooks:"
+                steps={[
+                  "Insira a URL do seu endpoint que receberá os eventos",
+                  "Selecione quais eventos deseja monitorar",
+                  "Gere uma chave secreta (HMAC) para validar a autenticidade",
+                  "Clique em Salvar e use Testar Webhook para validar",
+                ]}
+              />
+            </div>
             <p className="text-xs text-muted-foreground">Receba notificações de eventos em tempo real</p>
           </div>
         </div>
