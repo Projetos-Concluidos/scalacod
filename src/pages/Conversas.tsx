@@ -229,6 +229,62 @@ const Conversas = () => {
     setSending(false);
   };
 
+  const sendMediaMessage = async (file: File) => {
+    if (!selectedConv || !user || sending) return;
+    setSending(true);
+
+    const type = file.type.startsWith("image/") ? "image"
+      : file.type.startsWith("audio/") ? "audio"
+      : file.type.startsWith("video/") ? "video"
+      : "document";
+
+    // Upload to a temporary public URL (using data URL for now)
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const dataUrl = reader.result as string;
+
+      const optimistic: Message = {
+        id: crypto.randomUUID(),
+        conversation_id: selectedConv.id,
+        direction: "outbound",
+        type,
+        content: `[${type}] ${file.name}`,
+        status: "pending",
+        timestamp: new Date().toISOString(),
+        created_at: new Date().toISOString(),
+        media_url: dataUrl,
+        message_id_whatsapp: null,
+      };
+      setMessages(prev => [...prev, optimistic]);
+
+      try {
+        // For real usage, upload to storage first and get a public URL
+        toast.info(`Enviando ${type}: ${file.name}...`);
+        const { error } = await supabase.functions.invoke("send-whatsapp-message", {
+          body: { conversationId: selectedConv.id, content: file.name, type, mediaUrl: dataUrl },
+        });
+        if (error) throw new Error(error.message);
+        setMessages(prev => prev.filter(m => m.id !== optimistic.id));
+      } catch (err: any) {
+        setMessages(prev => prev.filter(m => m.id !== optimistic.id));
+        toast.error(err.message || "Falha ao enviar mídia");
+      }
+      setSending(false);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 16 * 1024 * 1024) {
+        toast.error("Arquivo muito grande (máx 16MB)");
+        return;
+      }
+      sendMediaMessage(file);
+    }
+    e.target.value = "";
+  };
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
