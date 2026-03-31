@@ -65,6 +65,15 @@ const TopBar = () => {
         <button className="hidden h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground sm:flex">
           <HelpCircle className="h-[18px] w-[18px]" />
         </button>
+        {profile?.role === "superadmin" && (
+          <button
+            onClick={() => navigate("/admin")}
+            className="flex h-9 w-9 items-center justify-center rounded-lg text-primary transition-colors hover:bg-primary/10"
+            title="Painel Admin"
+          >
+            <Shield className="h-[18px] w-[18px]" />
+          </button>
+        )}
         <div className="ml-2 flex items-center gap-2">
           <div className="hidden text-right sm:block">
             <p className="text-sm font-semibold text-foreground">{profile?.name || "Usuário"}</p>
