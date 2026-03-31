@@ -222,14 +222,12 @@ const CheckoutPublic = () => {
     setStep(s);
   };
 
-  const handleSubmit = async () => {
-    if (!checkout || !offer) return;
-    setSubmitting(true);
-    track("order_submitted");
+  const createOrder = async (): Promise<string | null> => {
+    if (!checkout || !offer) return null;
     try {
       const num = generateOrderNumber();
       setOrderNumber(num);
-      const { error } = await supabase.from("orders").insert({
+      const { data: inserted, error } = await supabase.from("orders").insert({
         user_id: checkout.user_id, order_number: num, checkout_id: checkout.id, offer_id: offer.id,
         client_name: form.name, client_email: form.email || null,
         client_document: form.cpf.replace(/\D/g, "") || null,
@@ -242,21 +240,111 @@ const CheckoutPublic = () => {
         status: "Aguardando", logistics_type: provider || "logzz",
         delivery_date: provider === "logzz" && selectedDate ? selectedDate.date : null,
         payment_method: provider === "logzz" ? "afterpay" : paymentMethod,
-      });
+      }).select("id").single();
       if (error) throw error;
       await supabase.from("leads").upsert({
         user_id: checkout.user_id, name: form.name, phone: form.phone.replace(/\D/g, ""),
         email: form.email || null, document: form.cpf.replace(/\D/g, "") || null, status: "Confirmado",
       }, { onConflict: "user_id,phone" }).select();
       track("order_confirmed", { order_number: num });
-      setStep(provider === "coinzz" ? 3 : 4);
+      return inserted?.id || null;
     } catch (e: any) {
       toast.error(e.message || "Erro ao criar pedido");
+      return null;
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!checkout || !offer) return;
+    setSubmitting(true);
+    track("order_submitted");
+    if (provider === "logzz") {
+      const oid = await createOrder();
+      if (oid) setStep(4);
+    } else {
+      // For coinzz, just move to step 3 (payment) — order created on payment
+      setStep(3);
     }
     setSubmitting(false);
   };
 
-  const confirmPayment = () => { setStep(4); toast.success("Pagamento processado!"); };
+  const processPayment = async () => {
+    if (!checkout || !offer) return;
+    setPaymentLoading(true);
+    try {
+      // Create order first
+      const oid = await createOrder();
+      if (!oid) { setPaymentLoading(false); return; }
+
+      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+      const res = await fetch(`https://${projectId}.supabase.co/functions/v1/create-payment?store=${checkout.user_id}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          orderId: oid,
+          method: paymentMethod,
+          cardToken: paymentMethod === "credit_card" ? cardForm.number : undefined,
+          installments: cardForm.installments,
+          payerEmail: form.email,
+          payerDocument: form.cpf,
+          payerName: form.name,
+        }),
+      });
+      const data = await res.json();
+
+      if (!res.ok || data.error) {
+        toast.error(data.error || "Erro ao processar pagamento");
+        setPaymentLoading(false);
+        return;
+      }
+
+      if (data.status === "approved") {
+        track("payment_approved", { method: paymentMethod });
+        setStep(4);
+      } else if (paymentMethod === "pix") {
+        setPixData({ pixQrCode: data.pixQrCode, pixQrCodeBase64: data.pixQrCodeBase64, paymentId: data.paymentId });
+        startPixPolling(data.paymentId);
+      } else if (paymentMethod === "boleto") {
+        if (data.boletoUrl) window.open(data.boletoUrl, "_blank");
+        toast.success("Boleto gerado! Aguardando pagamento.");
+        startPixPolling(data.paymentId); // reuse polling for boleto status
+      } else {
+        // credit_card pending
+        toast.info("Pagamento em processamento...");
+        startPixPolling(data.paymentId);
+      }
+    } catch (e: any) {
+      toast.error(e.message || "Erro ao processar pagamento");
+    }
+    setPaymentLoading(false);
+  };
+
+  const startPixPolling = (paymentId: string) => {
+    if (!checkout) return;
+    setPaymentStatus("polling");
+    const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`https://${projectId}.supabase.co/functions/v1/check-payment-status`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ paymentId, storeId: checkout!.user_id }),
+        });
+        const data = await res.json();
+        if (data.status === "approved") {
+          clearInterval(interval);
+          setPaymentStatus("approved");
+          track("payment_approved", { method: paymentMethod });
+          setStep(4);
+        } else if (data.status === "rejected" || data.status === "cancelled") {
+          clearInterval(interval);
+          setPaymentStatus("failed");
+          toast.error("Pagamento recusado. Tente novamente.");
+        }
+      } catch { /* retry */ }
+    }, 4000);
+    setTimeout(() => { clearInterval(interval); }, 30 * 60 * 1000);
+  };
 
   if (loading) {
     return (
