@@ -123,6 +123,7 @@ const CheckoutPublic = () => {
     return () => { clearTimeout(timer); setCpfValidating(false); };
   }, [form.cpf, checkout]);
 
+  const track = (event: string, meta: Record<string, any> = {}) => {
     if (checkout) trackPixelEvent(checkout.user_id, checkout.id, event, meta);
   };
 
