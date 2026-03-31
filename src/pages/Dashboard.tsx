@@ -174,7 +174,7 @@ const Dashboard = () => {
           <div className="mt-4 h-12">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={sparkData}>
-                <Line type="monotone" dataKey="v" stroke="#00D4FF" strokeWidth={2} dot={false} />
+                <Line type="monotone" dataKey="v" stroke="#10B981" strokeWidth={2} dot={false} />
               </LineChart>
             </ResponsiveContainer>
           </div>
