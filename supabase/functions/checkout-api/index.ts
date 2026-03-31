@@ -60,8 +60,9 @@ Deno.serve(async (req) => {
         const cleanCep = cep.replace(/\D/g, "");
         const res = await fetch(
           `https://app.logzz.com.br/api/delivery-day/options/zip-code/${cleanCep}`,
-          { headers: { Authorization: `Bearer ${token}` } }
+          { headers: { Authorization: `Bearer ${token}`, Accept: "application/json" } }
         );
+        if (!res.ok || !(res.headers.get("content-type") || "").includes("json")) throw new Error("Invalid response");
         const data = await res.json();
 
         if (data.success && data.data?.response?.dates_available?.length > 0) {
@@ -255,8 +256,16 @@ Deno.serve(async (req) => {
 
       try {
         const res = await fetch("https://app.logzz.com.br/api/offers", {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
         });
+        
+        const contentType = res.headers.get("content-type") || "";
+        if (!contentType.includes("application/json")) {
+          const text = await res.text();
+          console.error("Logzz returned non-JSON:", res.status, text.substring(0, 200));
+          throw new Error(`Logzz retornou resposta inválida (status ${res.status}). Verifique o token.`);
+        }
+        
         const data = await res.json();
 
         if (!data.success && !data.data) {
@@ -372,8 +381,14 @@ Deno.serve(async (req) => {
       const token = (logzz.config as any).bearer_token;
       try {
         const res = await fetch("https://app.logzz.com.br/api/offers", {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
         });
+        if (!res.ok || !(res.headers.get("content-type") || "").includes("json")) {
+          return new Response(
+            JSON.stringify({ connected: false, error: `Logzz retornou status ${res.status}. Token pode estar inválido.` }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
         const data = await res.json();
         return new Response(
           JSON.stringify({ connected: res.ok, offers_count: Array.isArray(data.data) ? data.data.length : 0 }),
