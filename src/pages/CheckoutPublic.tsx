@@ -82,6 +82,8 @@ const CheckoutPublic = () => {
   const [paymentMethod, setPaymentMethod] = useState<"pix" | "credit_card" | "boleto">("pix");
   const [orderNumber, setOrderNumber] = useState("");
   const [showMobileSummary, setShowMobileSummary] = useState(false);
+  const [cpfValidating, setCpfValidating] = useState(false);
+  const [cpfResult, setCpfResult] = useState<{ valid: boolean; status: string; message: string; source?: string; customer_name?: string | null } | null>(null);
 
   const [form, setForm] = useState({
     name: "", cpf: "", email: "", phone: "",
