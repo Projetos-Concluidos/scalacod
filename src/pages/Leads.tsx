@@ -181,9 +181,14 @@ const Leads = () => {
         title="Leads"
         subtitle="Gerencie seus contatos e funil de vendas em tempo real."
         actions={
-          <Button variant="outline" className="gap-2" onClick={() => setShowImport(true)}>
-            <Upload className="h-4 w-4" /> Importar
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" className="gap-2" onClick={exportCSV}>
+              <Download className="h-4 w-4" /> Exportar CSV
+            </Button>
+            <Button variant="outline" className="gap-2" onClick={() => setShowImport(true)}>
+              <Upload className="h-4 w-4" /> Importar
+            </Button>
+          </div>
         }
       />
 
