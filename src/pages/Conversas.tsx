@@ -74,6 +74,8 @@ const Conversas = () => {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
   const [sendingTemplate, setSendingTemplate] = useState(false);
+  const [selectedTemplateFlow, setSelectedTemplateFlow] = useState<any>(null);
+  const [templateVars, setTemplateVars] = useState<string[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -295,17 +297,41 @@ const Conversas = () => {
     reader.readAsDataURL(file);
   };
 
-  const sendTemplateMessage = async (flow: any) => {
+  // Extract variable count from template components
+  const getTemplateVarCount = (flow: any): number => {
+    const tmpl = flow.flow_templates?.find((t: any) => t.status === "APPROVED" || t.status === "approved") || flow.flow_templates?.[0];
+    if (!tmpl?.components) return 0;
+    const comps = tmpl.components as any[];
+    const bodyComp = comps.find((c: any) => c.type === "BODY");
+    if (!bodyComp?.text) return 0;
+    const matches = bodyComp.text.match(/\{\{\d+\}\}/g);
+    return matches ? matches.length : 0;
+  };
+
+  const selectTemplateFlow = (flow: any) => {
+    const varCount = getTemplateVarCount(flow);
+    if (varCount === 0) {
+      // No variables, send directly
+      sendTemplateMessage(flow, []);
+    } else {
+      setSelectedTemplateFlow(flow);
+      setTemplateVars(new Array(varCount).fill(""));
+      setShowTemplates(false);
+    }
+  };
+
+  const sendTemplateMessage = async (flow: any, variables: string[]) => {
     if (!selectedConv || !user || sendingTemplate) return;
     setSendingTemplate(true);
     setShowTemplates(false);
+    setSelectedTemplateFlow(null);
 
     try {
       const { data, error } = await supabase.functions.invoke("send-template-message", {
         body: {
           conversationId: selectedConv.id,
           flowId: flow.id,
-          variables: [], // Can be extended with variable input UI
+          variables: variables.filter(v => v.trim()),
         },
       });
 
@@ -628,7 +654,7 @@ const Conversas = () => {
                     return (
                       <button
                         key={flow.id}
-                        onClick={() => sendTemplateMessage(flow)}
+                        onClick={() => selectTemplateFlow(flow)}
                         disabled={sendingTemplate}
                         className="w-full text-left p-2.5 hover:bg-primary/5 rounded-lg text-sm mb-1 transition-colors border border-transparent hover:border-primary/20 disabled:opacity-50"
                       >
@@ -887,6 +913,85 @@ const Conversas = () => {
               ))}
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Template Variables Modal */}
+      <Dialog open={!!selectedTemplateFlow} onOpenChange={(open) => { if (!open) setSelectedTemplateFlow(null); }}>
+        <DialogContent className="bg-card border-border max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-foreground flex items-center gap-2">
+              <FileText className="h-5 w-5 text-primary" />
+              Preencher variáveis do template
+            </DialogTitle>
+          </DialogHeader>
+          {selectedTemplateFlow && (() => {
+            const tmpl = selectedTemplateFlow.flow_templates?.find((t: any) => t.status === "APPROVED" || t.status === "approved") || selectedTemplateFlow.flow_templates?.[0];
+            const bodyComp = (tmpl?.components as any[])?.find((c: any) => c.type === "BODY");
+            const bodyText = bodyComp?.text || "";
+
+            // Build preview with filled variables
+            let preview = bodyText;
+            templateVars.forEach((v, i) => {
+              preview = preview.replace(`{{${i + 1}}}`, v || `{{${i + 1}}}`);
+            });
+
+            return (
+              <div className="space-y-4">
+                <div className="space-y-1">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Template</p>
+                  <p className="text-sm font-medium text-foreground">{selectedTemplateFlow.name}</p>
+                  <p className="text-xs text-muted-foreground">{tmpl?.template_name} • {tmpl?.language || "pt_BR"}</p>
+                </div>
+
+                {/* Preview */}
+                <div className="rounded-lg border border-border bg-muted/30 p-3">
+                  <p className="text-xs font-semibold text-muted-foreground mb-1.5 uppercase tracking-wider">Pré-visualização</p>
+                  <p className="text-sm text-foreground whitespace-pre-wrap">{preview}</p>
+                </div>
+
+                {/* Variable inputs */}
+                <div className="space-y-2.5">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Variáveis</p>
+                  {templateVars.map((val, idx) => (
+                    <div key={idx}>
+                      <label className="text-xs text-muted-foreground mb-1 block">
+                        {`{{${idx + 1}}}`}
+                      </label>
+                      <input
+                        value={val}
+                        onChange={e => {
+                          const updated = [...templateVars];
+                          updated[idx] = e.target.value;
+                          setTemplateVars(updated);
+                        }}
+                        placeholder={`Valor para {{${idx + 1}}}...`}
+                        className="h-9 w-full rounded-lg border border-border bg-input px-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
+                      />
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex gap-2 pt-1">
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => setSelectedTemplateFlow(null)}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    className="flex-1 bg-primary text-primary-foreground"
+                    disabled={sendingTemplate || templateVars.some(v => !v.trim())}
+                    onClick={() => sendTemplateMessage(selectedTemplateFlow, templateVars)}
+                  >
+                    {sendingTemplate ? "Enviando..." : "Enviar Template"}
+                    {!sendingTemplate && <Send className="h-4 w-4 ml-1.5" />}
+                  </Button>
+                </div>
+              </div>
+            );
+          })()}
         </DialogContent>
       </Dialog>
     </div>
