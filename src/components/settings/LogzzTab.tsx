@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
-import { Truck, Eye, EyeOff, Copy, CheckCircle, XCircle, Loader2, MapPin, Package, ExternalLink } from "lucide-react";
+import { Truck, Eye, EyeOff, Copy, CheckCircle, XCircle, Loader2, MapPin, Package, ExternalLink, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -25,7 +26,6 @@ const LogzzTab = () => {
   const [cep, setCep] = useState("");
   const [checkingCep, setCheckingCep] = useState(false);
   const [cepResult, setCepResult] = useState<CepResult | null>(null);
-  const [products, setProducts] = useState<any[]>([]);
 
   const webhookUrl = user
     ? `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/logzz-webhook?store=${user.id}`
@@ -50,6 +50,21 @@ const LogzzTab = () => {
     load();
   }, [user]);
 
+  const handleToggle = async (checked: boolean) => {
+    setIsActive(checked);
+    if (!user) return;
+    const { data: existing } = await supabase
+      .from("integrations")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("type", "logzz")
+      .maybeSingle();
+    if (existing) {
+      await supabase.from("integrations").update({ is_active: checked }).eq("id", existing.id);
+      toast.success(checked ? "Logzz ativada" : "Logzz desativada");
+    }
+  };
+
   const callCheckoutApi = async (action: string, extra: any = {}) => {
     const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
     const res = await fetch(`https://${projectId}.supabase.co/functions/v1/checkout-api`, {
@@ -65,10 +80,7 @@ const LogzzTab = () => {
     if (!logzzWebhookUrl.trim()) { toast.error("Insira a URL de Importação de Pedidos da Logzz"); return; }
     setTesting(true);
     try {
-      // Save first with is_active = true
       await handleSave(true);
-      
-      // Test via edge function (avoids CORS issues)
       const data = await callCheckoutApi("test_connection");
       if (data.connected) {
         toast.success(`✅ ${data.message || "Conexão OK!"}`);
@@ -87,8 +99,6 @@ const LogzzTab = () => {
     if (!user) return;
     setSaving(true);
     try {
-      const shouldBeActive = forceActive ?? isActive;
-      // Auto-activate if both token and webhook URL are provided
       const autoActive = !!(token.trim() && logzzWebhookUrl.trim());
       const finalActive = forceActive !== undefined ? forceActive : (autoActive || isActive);
       
@@ -129,12 +139,7 @@ const LogzzTab = () => {
     try {
       const data = await callCheckoutApi("check_delivery", { cep: clean });
       if (data.provider === "logzz" && data.dates?.length > 0) {
-        setCepResult({
-          available: true,
-          operation: "Logzz",
-          city: "",
-          dates: data.dates,
-        });
+        setCepResult({ available: true, operation: "Logzz", city: "", dates: data.dates });
       } else {
         setCepResult({ available: false, error: data.message || "CEP não atendido pela Logzz" });
       }
@@ -170,9 +175,28 @@ const LogzzTab = () => {
               <p className="text-xs text-muted-foreground">Logística para vendas COD</p>
             </div>
           </div>
-          <Badge variant={isActive ? "default" : "secondary"} className={isActive ? "bg-success/10 text-success border-success/20" : ""}>
-            {isActive ? "ATIVO" : "INATIVO"}
-          </Badge>
+          <div className="flex items-center gap-3">
+            <Switch checked={isActive} onCheckedChange={handleToggle} />
+            <Badge variant={isActive ? "default" : "secondary"} className={isActive ? "bg-success/10 text-success border-success/20" : ""}>
+              {isActive ? "ATIVO" : "INATIVO"}
+            </Badge>
+          </div>
+        </div>
+
+        {/* Mini Tutorial */}
+        <div className="mb-6 rounded-lg border border-primary/10 bg-primary/5 p-4">
+          <div className="flex items-start gap-2">
+            <Info className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+            <div className="text-xs text-muted-foreground space-y-1.5">
+              <p className="font-semibold text-foreground">Como configurar a Logzz:</p>
+              <ol className="list-decimal list-inside space-y-1">
+                <li>Acesse <a href="https://app.logzz.com.br" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-medium">app.logzz.com.br <ExternalLink className="inline h-3 w-3" /></a></li>
+                <li>Vá em <strong className="text-foreground">Configurações → API</strong> e copie o <strong className="text-foreground">Bearer Token</strong></li>
+                <li>Vá em <strong className="text-foreground">Remapeamento → URL de webhook</strong> e copie a URL de importação de pedidos</li>
+                <li>Cole os valores nos campos abaixo e clique em Testar Conexão</li>
+              </ol>
+            </div>
+          </div>
         </div>
 
         {/* Formulário Token */}
@@ -194,13 +218,6 @@ const LogzzTab = () => {
               {showToken ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             </button>
           </div>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Gere em{" "}
-            <a href="https://app.logzz.com.br" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-              app.logzz.com.br
-            </a>{" "}
-            → Configurações → API
-          </p>
         </div>
 
         {/* URL de Importação Logzz */}
@@ -221,7 +238,7 @@ const LogzzTab = () => {
             )}
           </div>
           <p className="mt-1 text-xs text-muted-foreground">
-            Cole a URL de importação/webhook da Logzz (Remapeamento → URL de webhook). Usada para enviar pedidos do ScalaNinja para a Logzz.
+            Cole a URL de importação/webhook da Logzz. Usada para enviar pedidos do ScalaNinja para a Logzz.
           </p>
         </div>
 

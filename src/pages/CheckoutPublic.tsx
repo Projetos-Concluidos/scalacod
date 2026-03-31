@@ -402,7 +402,9 @@ const CheckoutPublic = () => {
       } else if (paymentMethod === "boleto") {
         if (data.boletoUrl) window.open(data.boletoUrl, "_blank");
         toast.success("Boleto gerado! Aguardando pagamento.");
-        startPixPolling(data.paymentId); // reuse polling for boleto status
+        startPixPolling(data.paymentId);
+      } else if (paymentMethod === "wallet" && data.walletRedirectUrl) {
+        window.location.href = data.walletRedirectUrl;
       } else {
         // credit_card pending
         toast.info("Pagamento em processamento...");
