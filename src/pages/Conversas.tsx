@@ -185,7 +185,7 @@ const Conversas = () => {
       direction: "outbound",
       type: "text",
       content,
-      status: "sent",
+      status: "pending",
       timestamp: new Date().toISOString(),
       created_at: new Date().toISOString(),
       media_url: null,
@@ -194,23 +194,28 @@ const Conversas = () => {
     setMessages(prev => [...prev, optimistic]);
     setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
 
-    const { error } = await supabase.from("messages").insert({
-      conversation_id: selectedConv.id,
-      direction: "outbound",
-      type: "text",
-      content,
-      status: "sent",
-      timestamp: new Date().toISOString(),
-    });
+    try {
+      const { data, error } = await supabase.functions.invoke("send-whatsapp-message", {
+        body: { conversationId: selectedConv.id, content },
+      });
 
-    if (error) {
-      toast.error("Erro ao enviar mensagem");
+      if (error) throw new Error(error.message || "Erro ao enviar");
+
+      // Remove optimistic — real message comes via realtime subscription
       setMessages(prev => prev.filter(m => m.id !== optimistic.id));
-    } else {
-      await supabase.from("conversations").update({
-        last_message: content,
-        last_message_at: new Date().toISOString(),
-      }).eq("id", selectedConv.id);
+
+      // Update conversation list optimistically
+      setConversations(prev =>
+        prev.map(c =>
+          c.id === selectedConv.id
+            ? { ...c, last_message: content, last_message_at: new Date().toISOString() }
+            : c
+        )
+      );
+    } catch (err: any) {
+      // Revert optimistic update
+      setMessages(prev => prev.filter(m => m.id !== optimistic.id));
+      toast.error(err.message || "Falha ao enviar mensagem");
     }
     setSending(false);
   };
