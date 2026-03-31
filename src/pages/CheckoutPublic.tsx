@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Loader2, ShieldCheck, Package, MapPin, Calendar, CreditCard,
   CheckCircle, User, Truck, Copy, QrCode, ChevronDown, Pencil,
