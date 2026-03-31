@@ -948,13 +948,13 @@ const CheckoutPublic = () => {
                     )}
                   </AnimatePresence>
 
-                  {/* Only show pay button if not already showing PIX QR */}
-                  {!(paymentMethod === "pix" && pixData) && (
-                    <button onClick={processPayment} disabled={paymentLoading || submitting}
+                  {/* Only show pay button if not already showing PIX QR and not credit_card (Bricks handles its own submit) */}
+                  {!(paymentMethod === "pix" && pixData) && paymentMethod !== "credit_card" && (
+                    <button onClick={() => processPayment()} disabled={paymentLoading || submitting}
                       className="mt-5 w-full rounded-xl bg-emerald-500 py-3 text-sm font-semibold text-white hover:bg-emerald-600 shadow-md shadow-emerald-500/20 transition-all disabled:opacity-50"
                     >
                       {paymentLoading ? <Loader2 className="inline h-4 w-4 animate-spin mr-2" /> : null}
-                      {paymentMethod === "pix" ? "Gerar QR Code PIX" : paymentMethod === "boleto" ? "Gerar Boleto" : "Pagar"} → R$ {totalPrice.toFixed(2)}
+                      {paymentMethod === "pix" ? "Gerar QR Code PIX" : "Gerar Boleto"} → R$ {totalPrice.toFixed(2)}
                     </button>
                   )}
 
