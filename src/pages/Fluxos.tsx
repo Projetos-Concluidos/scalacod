@@ -101,7 +101,7 @@ const Fluxos = () => {
         if (import.meta.env.DEV) console.log("Inserting flow:", JSON.stringify(insertPayload).substring(0, 300));
         const { error } = await supabase.from("flows").insert(insertPayload);
         if (error) {
-          console.error("Insert flow error:", error);
+          if (import.meta.env.DEV) console.error("Insert flow error:", error);
           toast.error(`Erro ao criar fluxo: ${error.message}`);
           return;
         }
