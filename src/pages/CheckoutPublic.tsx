@@ -85,7 +85,7 @@ const CheckoutPublic = () => {
   const [deliveryDates, setDeliveryDates] = useState<DeliveryDate[]>([]);
   const [selectedDate, setSelectedDate] = useState<DeliveryDate | null>(null);
   const [deliveryChecked, setDeliveryChecked] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<"pix" | "credit_card" | "boleto">("pix");
+  const [paymentMethod, setPaymentMethod] = useState<"pix" | "credit_card" | "boleto" | "wallet">("pix");
   const [orderNumber, setOrderNumber] = useState("");
   const [showMobileSummary, setShowMobileSummary] = useState(false);
   const [cpfValidating, setCpfValidating] = useState(false);
