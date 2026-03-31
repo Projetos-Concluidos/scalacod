@@ -1278,6 +1278,50 @@ export type Database = {
           },
         ]
       }
+      token_purchases: {
+        Row: {
+          amount: number
+          created_at: string | null
+          id: string
+          mp_payment_id: string | null
+          pack_id: string
+          paid_at: string | null
+          status: string | null
+          tokens: number
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          id?: string
+          mp_payment_id?: string | null
+          pack_id: string
+          paid_at?: string | null
+          status?: string | null
+          tokens: number
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          id?: string
+          mp_payment_id?: string | null
+          pack_id?: string
+          paid_at?: string | null
+          status?: string | null
+          tokens?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "token_purchases_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       usage_limits: {
         Row: {
           campaigns_this_month: number | null
@@ -1526,6 +1570,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_tokens_to_user: {
+        Args: { p_amount: number; p_user_id: string }
+        Returns: undefined
+      }
       admin_add_tokens: {
         Args: { p_amount: number; p_reason: string; p_user_id: string }
         Returns: undefined
