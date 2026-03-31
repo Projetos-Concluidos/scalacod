@@ -295,6 +295,37 @@ const Conversas = () => {
     reader.readAsDataURL(file);
   };
 
+  const sendTemplateMessage = async (flow: any) => {
+    if (!selectedConv || !user || sendingTemplate) return;
+    setSendingTemplate(true);
+    setShowTemplates(false);
+
+    try {
+      const { data, error } = await supabase.functions.invoke("send-template-message", {
+        body: {
+          conversationId: selectedConv.id,
+          flowId: flow.id,
+          variables: [], // Can be extended with variable input UI
+        },
+      });
+
+      if (error) throw new Error(error.message || "Erro ao enviar template");
+
+      toast.success(`Template "${flow.name}" enviado!`);
+
+      setConversations(prev =>
+        prev.map(c =>
+          c.id === selectedConv.id
+            ? { ...c, last_message: `[Template: ${flow.name}]`, last_message_at: new Date().toISOString() }
+            : c
+        )
+      );
+    } catch (err: any) {
+      toast.error(err.message || "Falha ao enviar template");
+    }
+    setSendingTemplate(false);
+  };
+
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
