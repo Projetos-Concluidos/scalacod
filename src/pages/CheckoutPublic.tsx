@@ -1032,6 +1032,16 @@ const CheckoutPublic = () => {
                         </div>
                       </motion.div>
                     )}
+
+                    {paymentMethod === "wallet" && (
+                      <motion.div key="wallet" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                        <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 text-center">
+                          <p className="text-2xl mb-2">💰</p>
+                          <p className="text-sm text-gray-900 font-medium mb-1">Saldo MercadoPago</p>
+                          <p className="text-xs text-gray-500">Você será redirecionado para o MercadoPago para concluir o pagamento com seu saldo disponível.</p>
+                        </div>
+                      </motion.div>
+                    )}
                   </AnimatePresence>
 
                   {/* Only show pay button if not already showing PIX QR and not credit_card (Bricks handles its own submit) */}
@@ -1040,7 +1050,7 @@ const CheckoutPublic = () => {
                       className="mt-5 w-full rounded-xl bg-emerald-500 py-3 text-sm font-semibold text-white hover:bg-emerald-600 shadow-md shadow-emerald-500/20 transition-all disabled:opacity-50"
                     >
                       {paymentLoading ? <Loader2 className="inline h-4 w-4 animate-spin mr-2" /> : null}
-                      {paymentMethod === "pix" ? "Gerar QR Code PIX" : "Gerar Boleto"} → R$ {totalPrice.toFixed(2)}
+                      {paymentMethod === "pix" ? "Gerar QR Code PIX" : paymentMethod === "boleto" ? "Gerar Boleto" : paymentMethod === "wallet" ? "Pagar com Saldo MP" : "Pagar"} → R$ {totalPrice.toFixed(2)}
                     </button>
                   )}
 
