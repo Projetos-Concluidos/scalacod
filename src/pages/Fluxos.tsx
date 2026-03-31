@@ -374,6 +374,68 @@ const Fluxos = () => {
           </div>
         )}
 
+        {subTab === "executions" && (
+          <div className="space-y-2">
+            {execLoading ? (
+              Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-16 rounded-xl" />)
+            ) : executions.length === 0 ? (
+              <div className="text-center py-12">
+                <History className="h-12 w-12 mx-auto text-muted-foreground/30 mb-3" />
+                <p className="text-sm text-muted-foreground">Nenhuma execução registrada</p>
+                <p className="text-xs text-muted-foreground mt-1">Execuções aparecerão quando pedidos mudarem de status</p>
+              </div>
+            ) : (
+              executions.map((exec) => (
+                <div key={exec.id} className="flex items-center justify-between rounded-xl border border-border bg-background/50 px-4 py-3 transition-colors hover:bg-muted/30">
+                  <div className="flex items-center gap-3">
+                    <div className={`flex h-9 w-9 items-center justify-center rounded-lg ${
+                      exec.status === "completed" ? "bg-success/10" : exec.status === "failed" ? "bg-destructive/10" : "bg-warning/10"
+                    }`}>
+                      {exec.status === "completed" ? (
+                        <CheckCircle className="h-4 w-4 text-success" />
+                      ) : exec.status === "failed" ? (
+                        <AlertTriangle className="h-4 w-4 text-destructive" />
+                      ) : (
+                        <Loader2 className="h-4 w-4 text-warning animate-spin" />
+                      )}
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-semibold text-foreground">
+                          {(exec.flows as any)?.name || "Fluxo removido"}
+                        </span>
+                        <NinjaBadge variant={exec.status === "completed" ? "success" : exec.status === "failed" ? "danger" : "warning"}>
+                          {exec.status === "completed" ? "Concluído" : exec.status === "failed" ? "Falhou" : "Executando"}
+                        </NinjaBadge>
+                      </div>
+                      <div className="flex items-center gap-3 mt-0.5 text-xs text-muted-foreground">
+                        {(exec.orders as any)?.order_number && (
+                          <span>Pedido #{(exec.orders as any).order_number}</span>
+                        )}
+                        {(exec.orders as any)?.client_name && (
+                          <span>{(exec.orders as any).client_name}</span>
+                        )}
+                        <span className="flex items-center gap-1">
+                          <GitBranch className="h-3 w-3" /> {exec.nodes_executed || 0} nós
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          {exec.executed_at ? formatDistanceToNow(new Date(exec.executed_at), { addSuffix: true, locale: ptBR }) : "—"}
+                        </span>
+                      </div>
+                      {exec.error_message && (
+                        <p className="text-xs text-destructive mt-1 truncate max-w-md">
+                          ⚠ {exec.error_message}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+
         {subTab === "tags" && (
           <div className="text-center py-12">
             <Tag className="h-12 w-12 mx-auto text-muted-foreground/30 mb-3" />
