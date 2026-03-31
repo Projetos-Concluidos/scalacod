@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import MetaTab from "@/components/whatsapp/MetaTab";
+import EvolutionTab from "@/components/whatsapp/EvolutionTab";
 
 type ConnectionStatus = "disconnected" | "connecting" | "connected";
 
@@ -158,7 +159,7 @@ const WhatsAppCloud = () => {
   const tabs = [
     { id: "ycloud" as const, label: "☁ YCloud", active: true },
     { id: "meta" as const, label: "🌐 Facebook/Meta", active: true },
-    { id: "evolution" as const, label: "⚡ Evolution API", active: false },
+    { id: "evolution" as const, label: "⚡ Evolution API", active: true },
   ];
 
   const statusConfig = {
@@ -379,13 +380,7 @@ const WhatsAppCloud = () => {
 
           {activeTab === "meta" && <MetaTab />}
 
-          {activeTab === "evolution" && (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <span className="text-4xl mb-3">⚡</span>
-              <h3 className="text-lg font-semibold text-foreground mb-1">Evolution API</h3>
-              <p className="text-sm text-muted-foreground">Em breve — conexão via QR Code com Evolution API.</p>
-            </div>
-          )}
+          {activeTab === "evolution" && <EvolutionTab />}
         </div>
 
         {/* Info card */}
