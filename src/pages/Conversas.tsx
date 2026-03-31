@@ -130,7 +130,7 @@ const Conversas = () => {
     }
   };
 
-  useEffect(() => { fetchConversations(); }, [user]);
+  useEffect(() => { fetchConversations(); requestPermission(); }, [user]);
 
   // Realtime messages
   useEffect(() => {
