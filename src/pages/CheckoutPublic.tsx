@@ -10,6 +10,7 @@ import {
   CheckCircle, User, Truck, Copy, QrCode,
 } from "lucide-react";
 import { toast } from "sonner";
+import { trackPixelEvent } from "@/lib/pixel";
 
 interface CheckoutData {
   id: string; name: string; slug: string; type: string; offer_id: string;
@@ -62,6 +63,11 @@ const CheckoutPublic = () => {
     cep: "", street: "", number: "", complement: "", district: "", city: "", state: "",
   });
 
+  // Pixel tracking helper
+  const track = (event: string, meta: Record<string, any> = {}) => {
+    if (checkout) trackPixelEvent(checkout.user_id, checkout.id, event, meta);
+  };
+
   // Load checkout data
   useEffect(() => {
     if (!slug) return;
@@ -69,13 +75,14 @@ const CheckoutPublic = () => {
       const { data: c } = await supabase.from("checkouts").select("*").eq("slug", slug).eq("is_active", true).maybeSingle();
       if (!c) { setLoading(false); return; }
       setCheckout(c as any);
+      // Track pageview
+      trackPixelEvent(c.user_id, c.id, "pageview");
       if (c.offer_id) {
         const { data: o } = await supabase.from("offers").select("*").eq("id", c.offer_id).single();
         if (o) {
           setOffer(o as any);
           const { data: p } = await supabase.from("products").select("*").eq("id", o.product_id).single();
           if (p) setProduct(p as any);
-          // Load order bumps
           if (c.order_bump_enabled) {
             const { data: bumps } = await supabase.from("order_bumps").select("*").eq("offer_id", c.offer_id).eq("is_active", true);
             if (bumps) setOrderBumps(bumps as any);
@@ -85,6 +92,15 @@ const CheckoutPublic = () => {
       setLoading(false);
     })();
   }, [slug]);
+
+  // Track first interaction
+  const [interactionTracked, setInteractionTracked] = useState(false);
+  const trackInteraction = () => {
+    if (!interactionTracked && checkout) {
+      track("interaction");
+      setInteractionTracked(true);
+    }
+  };
 
   const updateField = (field: string, value: string) => setForm((prev) => ({ ...prev, [field]: value }));
 
@@ -99,7 +115,8 @@ const CheckoutPublic = () => {
         setForm((prev) => ({ ...prev, street: data.logradouro || "", district: data.bairro || "", city: data.localidade || "", state: data.uf || "" }));
       }
     } catch { /* ignore */ }
-    // Check delivery provider
+    // Track CEP check
+    track("cep_check", { cep });
     await checkDeliveryProvider(cep);
     setCepLoading(false);
   };
@@ -169,6 +186,7 @@ const CheckoutPublic = () => {
   const handleSubmit = async () => {
     if (!checkout || !offer) return;
     setSubmitting(true);
+    track("order_submitted");
     try {
       const num = generateOrderNumber();
       setOrderNumber(num);
@@ -207,7 +225,8 @@ const CheckoutPublic = () => {
         status: "Confirmado",
       }, { onConflict: "user_id,phone" }).select();
 
-      setStep(provider === "coinzz" ? 3 : 4); // coinzz needs payment step, logzz goes to confirm
+      track("order_confirmed", { order_number: num });
+      setStep(provider === "coinzz" ? 3 : 4);
     } catch (e: any) {
       toast.error(e.message || "Erro ao criar pedido");
     }
@@ -291,7 +310,7 @@ const CheckoutPublic = () => {
 
         {/* STEP 1: Client Data */}
         {step === 1 && (
-          <div className="space-y-4">
+          <div className="space-y-4" onClick={trackInteraction}>
             <div className="ninja-card">
               <h2 className="flex items-center gap-2 text-base font-bold text-foreground mb-4">
                 <User className="h-4 w-4 text-primary" /> Dados Pessoais
