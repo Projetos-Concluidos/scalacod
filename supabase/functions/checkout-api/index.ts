@@ -393,8 +393,16 @@ Deno.serve(async (req) => {
       const token = (logzz.config as any).bearer_token;
       try {
         const res = await fetch("https://app.logzz.com.br/api/offers", {
+          method: "GET",
           headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+          redirect: "manual",
         });
+        if (res.status >= 300 && res.status < 400) {
+          return new Response(
+            JSON.stringify({ connected: false, error: "Token Logzz expirado (redirecionado para login)." }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
         const rawTest = await res.text();
         let data: any;
         try { data = JSON.parse(rawTest); } catch {
