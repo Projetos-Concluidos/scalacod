@@ -37,6 +37,7 @@ const LIBRARY_VOICES = [
 ];
 
 const Vozes = () => {
+  const gate = useFeatureGate("voices");
   const { user } = useAuth();
   const [voices, setVoices] = useState<Voice[]>([]);
   const [tokenData, setTokenData] = useState<VoiceTokens | null>(null);
