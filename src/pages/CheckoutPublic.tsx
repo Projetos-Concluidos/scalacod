@@ -921,19 +921,20 @@ const CheckoutPublic = () => {
 
                     {paymentMethod === "credit_card" && (
                       <motion.div key="card" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-3">
-                        <div><Label className="text-xs text-gray-600">Número do Cartão</Label><Input value={cardForm.number} onChange={(e) => setCardForm(p => ({ ...p, number: e.target.value }))} placeholder="0000 0000 0000 0000" className="mt-1 border-gray-200" /></div>
-                        <div className="grid grid-cols-2 gap-3">
-                          <div><Label className="text-xs text-gray-600">Validade</Label><Input value={cardForm.expiry} onChange={(e) => setCardForm(p => ({ ...p, expiry: e.target.value }))} placeholder="MM/AA" className="mt-1 border-gray-200" /></div>
-                          <div><Label className="text-xs text-gray-600">CVV</Label><Input value={cardForm.cvv} onChange={(e) => setCardForm(p => ({ ...p, cvv: e.target.value }))} placeholder="000" className="mt-1 border-gray-200" /></div>
-                        </div>
-                        <div><Label className="text-xs text-gray-600">Nome no Cartão</Label><Input value={cardForm.holderName} onChange={(e) => setCardForm(p => ({ ...p, holderName: e.target.value }))} placeholder="Como impresso no cartão" className="mt-1 border-gray-200" /></div>
-                        <div><Label className="text-xs text-gray-600">Parcelas</Label>
-                          <select value={cardForm.installments} onChange={(e) => setCardForm(p => ({ ...p, installments: Number(e.target.value) }))} className="mt-1 w-full h-10 rounded-lg border border-gray-200 bg-white px-3 text-sm">
-                            {[1,2,3,4,5,6,7,8,9,10,11,12].map(i => (
-                              <option key={i} value={i}>{i}x de R$ {(totalPrice / i).toFixed(2)}{i === 1 ? " (à vista)" : ""}</option>
-                            ))}
-                          </select>
-                        </div>
+                        {!mpPublicKey ? (
+                          <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 text-center">
+                            <Loader2 className="h-6 w-6 animate-spin text-emerald-500 mx-auto mb-2" />
+                            <p className="text-xs text-gray-500">Carregando formulário de pagamento...</p>
+                          </div>
+                        ) : (
+                          <div id="cardPaymentBrick_container" ref={cardFormRef} />
+                        )}
+                        {!bricksReady && mpPublicKey && (
+                          <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 text-center">
+                            <Loader2 className="h-6 w-6 animate-spin text-emerald-500 mx-auto mb-2" />
+                            <p className="text-xs text-gray-500">Inicializando pagamento seguro...</p>
+                          </div>
+                        )}
                       </motion.div>
                     )}
 
