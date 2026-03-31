@@ -70,8 +70,11 @@ const Conversas = () => {
   const [newLabelName, setNewLabelName] = useState("");
   const [leadData, setLeadData] = useState<any>(null);
   const [orderData, setOrderData] = useState<any>(null);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { play: playNotification, requestPermission } = useNotificationSound();
 
   const fetchConversations = async () => {
     if (!user) return;
