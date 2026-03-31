@@ -246,8 +246,10 @@ const Configuracoes = () => {
         </TabsContent>
 
         {/* Placeholder tabs */}
-        <TabsContent value="integracoes">
+        <TabsContent value="integracoes" className="space-y-6">
           <LogzzTab />
+          <CoinzzTab />
+          <MercadoPagoTab />
         </TabsContent>
         <TabsContent value="api">
           <div className="ninja-card flex flex-col items-center justify-center py-16 text-center">
