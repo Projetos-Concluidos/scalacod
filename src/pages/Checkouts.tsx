@@ -209,7 +209,7 @@ const Checkouts = () => {
   function handleSave() {
     if (!formName.trim()) return toast.error("Nome é obrigatório");
     const slug = formName.trim().toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
-    const payload = {
+    const payload: any = {
       name: formName.trim(),
       slug,
       type: formType,
@@ -219,6 +219,13 @@ const Checkouts = () => {
       upsell_enabled: formUpsell,
       custom_css: formCustomCss || null,
       user_id: user!.id,
+      pixel_facebook: formPixelFacebook || null,
+      meta_capi_token: formMetaCapiToken || null,
+      google_ads_id: formGoogleAdsId || null,
+      google_conversion_id: formGoogleConversionId || null,
+      google_analytics_id: formGoogleAnalyticsId || null,
+      thank_you_page_url: formThankYouUrl || null,
+      whatsapp_support: formWhatsappSupport || null,
     };
     if (editingCheckout) {
       updateMutation.mutate({ id: editingCheckout.id, ...payload });
