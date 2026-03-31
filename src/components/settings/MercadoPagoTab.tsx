@@ -104,20 +104,21 @@ const MercadoPagoTab = () => {
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[hsl(210,100%,50%)]/10">
             <CreditCard className="h-5 w-5 text-[hsl(210,100%,50%)]" />
           </div>
-          <div className="flex items-center gap-2">
-            <h2 className="text-lg font-bold text-foreground">MercadoPago</h2>
-            <InfoTooltip
-              title="Como configurar o MercadoPago:"
-              steps={[
-                <>Acesse <a href="https://www.mercadopago.com.br/developers/panel/app" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-medium">mercadopago.com.br/developers <ExternalLink className="inline h-3 w-3" /></a></>,
-                "Vá em Suas Integrações → Crie ou selecione uma aplicação",
-                "Em Credenciais de Produção, copie o Access Token e a Public Key",
-                "Cole os valores nos campos abaixo e clique em Salvar",
-              ]}
-              warning="⚠️ Use credenciais de produção, não de teste. O Access Token começa com APP_USR-"
-            />
-          </div>
-          <p className="text-xs text-muted-foreground">Processador de pagamentos para pedidos Coinzz</p>
+          <div>
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg font-bold text-foreground">MercadoPago</h2>
+              <InfoTooltip
+                title="Como configurar o MercadoPago:"
+                steps={[
+                  <>Acesse <a href="https://www.mercadopago.com.br/developers/panel/app" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-medium">mercadopago.com.br/developers <ExternalLink className="inline h-3 w-3" /></a></>,
+                  "Vá em Suas Integrações → Crie ou selecione uma aplicação",
+                  "Em Credenciais de Produção, copie o Access Token e a Public Key",
+                  "Cole os valores nos campos abaixo e clique em Salvar",
+                ]}
+                warning="⚠️ Use credenciais de produção, não de teste. O Access Token começa com APP_USR-"
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">Processador de pagamentos para pedidos Coinzz</p>
           </div>
         </div>
         <div className="flex items-center gap-3">

@@ -112,19 +112,20 @@ const CoinzzTab = () => {
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-success/10">
               <Package className="h-5 w-5 text-success" />
             </div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-lg font-bold text-foreground">Coinzz</h2>
-              <InfoTooltip
-                title="Como configurar a Coinzz:"
-                steps={[
-                  <>Acesse <a href="https://app.coinzz.com.br" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-medium">app.coinzz.com.br <ExternalLink className="inline h-3 w-3" /></a></>,
-                  "Vá em Configurações → API → Token",
-                  "Copie o Bearer Token e cole no campo abaixo",
-                  "Clique em Salvar — pedidos sem Logzz são roteados automaticamente",
-                ]}
-              />
-            </div>
-            <p className="text-xs text-muted-foreground">Fallback logístico via Correios + pagamento online</p>
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-lg font-bold text-foreground">Coinzz</h2>
+                <InfoTooltip
+                  title="Como configurar a Coinzz:"
+                  steps={[
+                    <>Acesse <a href="https://app.coinzz.com.br" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-medium">app.coinzz.com.br <ExternalLink className="inline h-3 w-3" /></a></>,
+                    "Vá em Configurações → API → Token",
+                    "Copie o Bearer Token e cole no campo abaixo",
+                    "Clique em Salvar — pedidos sem Logzz são roteados automaticamente",
+                  ]}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">Fallback logístico via Correios + pagamento online</p>
             </div>
           </div>
           <div className="flex items-center gap-3">

@@ -171,19 +171,20 @@ const LogzzTab = () => {
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
               <Truck className="h-5 w-5 text-primary" />
             </div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-lg font-bold text-foreground">Logzz</h2>
-              <InfoTooltip
-                title="Como configurar a Logzz:"
-                steps={[
-                  <>Acesse <a href="https://app.logzz.com.br" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-medium">app.logzz.com.br <ExternalLink className="inline h-3 w-3" /></a></>,
-                  "Vá em Configurações → API e copie o Bearer Token",
-                  "Vá em Remapeamento → URL de webhook e copie a URL de importação",
-                  "Cole os valores nos campos abaixo e clique em Testar Conexão",
-                ]}
-              />
-            </div>
-            <p className="text-xs text-muted-foreground">Logística para vendas COD</p>
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-lg font-bold text-foreground">Logzz</h2>
+                <InfoTooltip
+                  title="Como configurar a Logzz:"
+                  steps={[
+                    <>Acesse <a href="https://app.logzz.com.br" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-medium">app.logzz.com.br <ExternalLink className="inline h-3 w-3" /></a></>,
+                    "Vá em Configurações → API e copie o Bearer Token",
+                    "Vá em Remapeamento → URL de webhook e copie a URL de importação",
+                    "Cole os valores nos campos abaixo e clique em Testar Conexão",
+                  ]}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">Logística para vendas COD</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
