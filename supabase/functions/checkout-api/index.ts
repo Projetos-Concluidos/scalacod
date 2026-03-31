@@ -257,16 +257,27 @@ Deno.serve(async (req) => {
 
       try {
         const res = await fetch("https://app.logzz.com.br/api/offers", {
+          method: "GET",
           headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+          redirect: "manual",
         });
         
+        // Handle redirects (token invalid → login page)
+        if (res.status >= 300 && res.status < 400) {
+          const loc = res.headers.get("location") || "unknown";
+          console.error("Logzz redirected to:", loc);
+          throw new Error(`Token Logzz inválido (redirecionado para login). Gere um novo token.`);
+        }
+        
         const raw = await res.text();
+        console.log("Logzz response status:", res.status, "length:", raw.length, "preview:", raw.substring(0, 100));
+        
         let data: any;
         try {
           data = JSON.parse(raw);
         } catch {
-          console.error("Logzz returned non-JSON:", res.status, raw.substring(0, 200));
-          throw new Error(`Logzz retornou resposta inválida (status ${res.status}). Verifique o token.`);
+          console.error("Logzz non-JSON body:", raw.substring(0, 300));
+          throw new Error(`Logzz retornou HTML em vez de JSON (status ${res.status}). Token pode estar expirado.`);
         }
 
         if (!data.success && !data.data) {
@@ -382,8 +393,16 @@ Deno.serve(async (req) => {
       const token = (logzz.config as any).bearer_token;
       try {
         const res = await fetch("https://app.logzz.com.br/api/offers", {
+          method: "GET",
           headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+          redirect: "manual",
         });
+        if (res.status >= 300 && res.status < 400) {
+          return new Response(
+            JSON.stringify({ connected: false, error: "Token Logzz expirado (redirecionado para login)." }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
         const rawTest = await res.text();
         let data: any;
         try { data = JSON.parse(rawTest); } catch {
