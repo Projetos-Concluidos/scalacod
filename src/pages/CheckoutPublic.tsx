@@ -115,7 +115,8 @@ const CheckoutPublic = () => {
         setForm((prev) => ({ ...prev, street: data.logradouro || "", district: data.bairro || "", city: data.localidade || "", state: data.uf || "" }));
       }
     } catch { /* ignore */ }
-    // Check delivery provider
+    // Track CEP check
+    track("cep_check", { cep });
     await checkDeliveryProvider(cep);
     setCepLoading(false);
   };
