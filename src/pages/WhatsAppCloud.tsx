@@ -159,7 +159,7 @@ const WhatsAppCloud = () => {
   const tabs = [
     { id: "ycloud" as const, label: "☁ YCloud", active: true },
     { id: "meta" as const, label: "🌐 Facebook/Meta", active: true },
-    { id: "evolution" as const, label: "⚡ Evolution API", active: false },
+    { id: "evolution" as const, label: "⚡ Evolution API", active: true },
   ];
 
   const statusConfig = {
