@@ -1,10 +1,12 @@
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, ShoppingCart, Package, Users, MessageCircle,
-  GitBranch, Mic, Send, Cloud, Settings, LogOut
+  GitBranch, Mic, Send, Cloud, Settings, LogOut, X
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
+import { useMobileSidebar } from "@/contexts/MobileSidebarContext";
+import { useEffect } from "react";
 
 const mainNav = [
   { label: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
@@ -35,6 +37,12 @@ const AppSidebar = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { signOut } = useAuth();
+  const { isOpen, close } = useMobileSidebar();
+
+  // Close sidebar on route change (mobile)
+  useEffect(() => {
+    close();
+  }, [location.pathname, close]);
 
   const handleSignOut = async () => {
     await signOut();
@@ -42,63 +50,88 @@ const AppSidebar = () => {
   };
 
   return (
-    <aside className="fixed left-0 top-0 z-40 flex h-screen w-[220px] flex-col border-r border-sidebar-border bg-sidebar">
-      <div className="flex items-center gap-3 px-6 py-6">
-        <ShurikenLogo />
-        <div>
-          <h1 className="text-base font-bold leading-tight">
-            <span className="text-white">Scala</span>
-            <span className="text-sidebar-primary">Ninja</span>
-          </h1>
-          <span className="text-[10px] font-medium uppercase tracking-[0.2em] text-sidebar-foreground">
-            Obsidian Edition
-          </span>
-        </div>
-      </div>
+    <>
+      {/* Mobile overlay */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/50 md:hidden"
+          onClick={close}
+        />
+      )}
 
-      <nav className="flex-1 space-y-0.5 px-3 overflow-y-auto">
-        {mainNav.map((item) => {
-          const isActive = location.pathname === item.path;
-          return (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
-                isActive
-                  ? "border-l-[3px] border-sidebar-primary bg-sidebar-accent text-sidebar-accent-foreground"
-                  : "border-l-[3px] border-transparent text-sidebar-foreground hover:bg-white/5 hover:text-white"
-              )}
-            >
-              <item.icon className="h-[18px] w-[18px] shrink-0" />
-              <span>{item.label}</span>
-            </NavLink>
-          );
-        })}
-      </nav>
-
-      <div className="border-t border-sidebar-border px-3 py-3 space-y-0.5">
-        <NavLink
-          to="/configuracoes"
-          className={cn(
-            "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
-            location.pathname === "/configuracoes"
-              ? "border-l-[3px] border-sidebar-primary bg-sidebar-accent text-sidebar-accent-foreground"
-              : "border-l-[3px] border-transparent text-sidebar-foreground hover:bg-white/5 hover:text-white"
-          )}
-        >
-          <Settings className="h-[18px] w-[18px]" />
-          <span>Configurações</span>
-        </NavLink>
+      <aside
+        className={cn(
+          "fixed left-0 top-0 z-50 flex h-screen w-[220px] flex-col border-r border-sidebar-border bg-sidebar transition-transform duration-300 ease-in-out",
+          "md:relative md:translate-x-0",
+          isOpen ? "translate-x-0" : "-translate-x-full"
+        )}
+      >
+        {/* Mobile close button */}
         <button
-          onClick={handleSignOut}
-          className="flex w-full items-center gap-3 rounded-lg border-l-[3px] border-transparent px-3 py-2.5 text-sm font-medium text-red-400 transition-all hover:bg-red-500/10"
+          onClick={close}
+          className="absolute right-3 top-5 flex h-8 w-8 items-center justify-center rounded-lg text-white/50 hover:text-white md:hidden"
+          aria-label="Fechar menu"
         >
-          <LogOut className="h-[18px] w-[18px]" />
-          <span>Sair da conta</span>
+          <X className="h-5 w-5" />
         </button>
-      </div>
-    </aside>
+
+        <div className="flex items-center gap-3 px-6 py-6">
+          <ShurikenLogo />
+          <div>
+            <h1 className="text-base font-bold leading-tight">
+              <span className="text-white">Scala</span>
+              <span className="text-sidebar-primary">Ninja</span>
+            </h1>
+            <span className="text-[10px] font-medium uppercase tracking-[0.2em] text-sidebar-foreground">
+              Obsidian Edition
+            </span>
+          </div>
+        </div>
+
+        <nav className="flex-1 space-y-0.5 px-3 overflow-y-auto">
+          {mainNav.map((item) => {
+            const isActive = location.pathname === item.path;
+            return (
+              <NavLink
+                key={item.path}
+                to={item.path}
+                className={cn(
+                  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
+                  isActive
+                    ? "border-l-[3px] border-sidebar-primary bg-sidebar-accent text-sidebar-accent-foreground"
+                    : "border-l-[3px] border-transparent text-sidebar-foreground hover:bg-white/5 hover:text-white"
+                )}
+              >
+                <item.icon className="h-[18px] w-[18px] shrink-0" />
+                <span>{item.label}</span>
+              </NavLink>
+            );
+          })}
+        </nav>
+
+        <div className="border-t border-sidebar-border px-3 py-3 space-y-0.5">
+          <NavLink
+            to="/configuracoes"
+            className={cn(
+              "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
+              location.pathname === "/configuracoes"
+                ? "border-l-[3px] border-sidebar-primary bg-sidebar-accent text-sidebar-accent-foreground"
+                : "border-l-[3px] border-transparent text-sidebar-foreground hover:bg-white/5 hover:text-white"
+            )}
+          >
+            <Settings className="h-[18px] w-[18px]" />
+            <span>Configurações</span>
+          </NavLink>
+          <button
+            onClick={handleSignOut}
+            className="flex w-full items-center gap-3 rounded-lg border-l-[3px] border-transparent px-3 py-2.5 text-sm font-medium text-red-400 transition-all hover:bg-red-500/10"
+          >
+            <LogOut className="h-[18px] w-[18px]" />
+            <span>Sair da conta</span>
+          </button>
+        </div>
+      </aside>
+    </>
   );
 };
 
