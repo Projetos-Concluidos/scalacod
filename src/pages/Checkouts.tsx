@@ -346,12 +346,12 @@ const Checkouts = () => {
 
           {/* Step indicators */}
           <div className="flex items-center gap-2 mb-6">
-            {[1, 2, 3].map((s) => (
+            {[1, 2, 3, 4].map((s) => (
               <button key={s} onClick={() => setWizardStep(s)} className={`flex-1 h-1.5 rounded-full transition-colors ${wizardStep >= s ? "bg-primary" : "bg-muted"}`} />
             ))}
           </div>
           <p className="text-xs text-muted-foreground mb-4">
-            Passo {wizardStep} de 3 — {wizardStep === 1 ? "Produto & Oferta" : wizardStep === 2 ? "Configurações" : "Personalização"}
+            Passo {wizardStep} de 4 — {wizardStep === 1 ? "Produto & Oferta" : wizardStep === 2 ? "Configurações" : wizardStep === 3 ? "Tracking & Pixels" : "Personalização"}
           </p>
 
           {wizardStep === 1 && (
