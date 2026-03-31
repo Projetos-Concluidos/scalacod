@@ -142,6 +142,10 @@ const Conversas = () => {
           setMessages(prev => [...prev, msg]);
           setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
         }
+        // Play notification sound for inbound messages
+        if (msg.direction === "inbound") {
+          playNotification();
+        }
         // Update conversation list
         setConversations(prev => prev.map(c =>
           c.id === msg.conversation_id
