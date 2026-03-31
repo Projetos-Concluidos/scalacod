@@ -60,8 +60,9 @@ Deno.serve(async (req) => {
         const cleanCep = cep.replace(/\D/g, "");
         const res = await fetch(
           `https://app.logzz.com.br/api/delivery-day/options/zip-code/${cleanCep}`,
-          { headers: { Authorization: `Bearer ${token}` } }
+          { headers: { Authorization: `Bearer ${token}`, Accept: "application/json" } }
         );
+        if (!res.ok || !(res.headers.get("content-type") || "").includes("json")) throw new Error("Invalid response");
         const data = await res.json();
 
         if (data.success && data.data?.response?.dates_available?.length > 0) {
