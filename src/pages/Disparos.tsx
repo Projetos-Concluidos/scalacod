@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Send, TrendingUp, AlertTriangle, Info, Plus, Search, Loader2, Calendar, Clock, Users, FileText, Upload, Check, ArrowLeft, ArrowRight } from "lucide-react";
+import { useFeatureGate, UpgradePrompt } from "@/hooks/useFeatureGate";
 import PageHeader from "@/components/PageHeader";
 import StatCard from "@/components/StatCard";
 import EmptyState from "@/components/EmptyState";
