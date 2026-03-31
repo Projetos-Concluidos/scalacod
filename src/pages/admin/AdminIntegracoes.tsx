@@ -92,7 +92,16 @@ const AdminIntegracoes = () => {
         {sections.map((section) => (
           <Card key={section.title}>
             <CardHeader>
-              <CardTitle className="text-base">{section.title}</CardTitle>
+              <div className="flex items-center gap-2">
+                <CardTitle className="text-base">{section.title}</CardTitle>
+                {section.tutorial && (
+                  <InfoTooltip
+                    title={section.tutorial.title}
+                    steps={section.tutorial.steps}
+                    warning={section.tutorial.warning}
+                  />
+                )}
+              </div>
               <p className="text-sm text-muted-foreground">{section.description}</p>
             </CardHeader>
             <CardContent className="space-y-4">
