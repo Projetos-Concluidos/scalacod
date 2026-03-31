@@ -618,6 +618,47 @@ const Conversas = () => {
               className="hidden"
               onChange={handleFileSelect}
             />
+            {/* Template Selector */}
+            {showTemplates && (
+              <div className="bg-card border border-border rounded-xl shadow-lg p-3 mb-2 max-h-48 overflow-y-auto">
+                <h4 className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wider">Templates Aprovados</h4>
+                {approvedFlows && approvedFlows.length > 0 ? (
+                  approvedFlows.map((flow: any) => {
+                    const tmpl = flow.flow_templates?.find((t: any) => t.status === "APPROVED" || t.status === "approved") || flow.flow_templates?.[0];
+                    return (
+                      <button
+                        key={flow.id}
+                        onClick={() => sendTemplateMessage(flow)}
+                        disabled={sendingTemplate}
+                        className="w-full text-left p-2.5 hover:bg-primary/5 rounded-lg text-sm mb-1 transition-colors border border-transparent hover:border-primary/20 disabled:opacity-50"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium text-foreground">{flow.name}</span>
+                          <Badge variant="outline" className="text-[10px] bg-success/10 text-success border-success/30">
+                            Aprovado
+                          </Badge>
+                        </div>
+                        {tmpl && (
+                          <span className="text-xs text-muted-foreground mt-0.5 block">
+                            {tmpl.template_name} • {tmpl.language || "pt_BR"}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })
+                ) : (
+                  <div className="text-center py-3">
+                    <Layout className="h-6 w-6 text-muted-foreground mx-auto mb-1.5" />
+                    <p className="text-xs text-muted-foreground">
+                      Nenhum template aprovado.
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Vá em <span className="text-primary font-medium">Fluxos → Enviar para aprovação</span>
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
             {showEmojiPicker && (
               <div className="relative">
                 <EmojiStickerPicker
