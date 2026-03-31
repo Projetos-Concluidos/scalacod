@@ -62,8 +62,9 @@ Deno.serve(async (req) => {
           `https://app.logzz.com.br/api/delivery-day/options/zip-code/${cleanCep}`,
           { headers: { Authorization: `Bearer ${token}`, Accept: "application/json" } }
         );
-        if (!res.ok || !(res.headers.get("content-type") || "").includes("json")) throw new Error("Invalid response");
-        const data = await res.json();
+        const rawCep = await res.text();
+        let data: any;
+        try { data = JSON.parse(rawCep); } catch { throw new Error("Invalid response"); }
 
         if (data.success && data.data?.response?.dates_available?.length > 0) {
           const dates = data.data.response.dates_available.map((d: any) => ({
@@ -259,14 +260,14 @@ Deno.serve(async (req) => {
           headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
         });
         
-        const contentType = res.headers.get("content-type") || "";
-        if (!contentType.includes("application/json")) {
-          const text = await res.text();
-          console.error("Logzz returned non-JSON:", res.status, text.substring(0, 200));
+        const raw = await res.text();
+        let data: any;
+        try {
+          data = JSON.parse(raw);
+        } catch {
+          console.error("Logzz returned non-JSON:", res.status, raw.substring(0, 200));
           throw new Error(`Logzz retornou resposta inválida (status ${res.status}). Verifique o token.`);
         }
-        
-        const data = await res.json();
 
         if (!data.success && !data.data) {
           throw new Error(data.message || "Erro ao buscar ofertas da Logzz");
@@ -383,13 +384,14 @@ Deno.serve(async (req) => {
         const res = await fetch("https://app.logzz.com.br/api/offers", {
           headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
         });
-        if (!res.ok || !(res.headers.get("content-type") || "").includes("json")) {
+        const rawTest = await res.text();
+        let data: any;
+        try { data = JSON.parse(rawTest); } catch {
           return new Response(
-            JSON.stringify({ connected: false, error: `Logzz retornou status ${res.status}. Token pode estar inválido.` }),
+            JSON.stringify({ connected: false, error: `Logzz retornou resposta inválida. Token pode estar inválido.` }),
             { headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
-        const data = await res.json();
         return new Response(
           JSON.stringify({ connected: res.ok, offers_count: Array.isArray(data.data) ? data.data.length : 0 }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
