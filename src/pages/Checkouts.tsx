@@ -324,22 +324,71 @@ const Checkouts = () => {
             <div className="space-y-4">
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <Label>Oferta</Label>
-                  <SyncOffersButton userId={user?.id} onSynced={() => queryClient.invalidateQueries({ queryKey: ["offers"] })} />
+                  <Label>Importar da Logzz</Label>
+                  <button
+                    onClick={async () => {
+                      setSyncingLogzz(true);
+                      try {
+                        const { data, error } = await supabase.functions.invoke("logzz-list-products");
+                        if (error) throw error;
+                        if (data?.offers?.length > 0) {
+                          setLogzzOffers(data.offers);
+                          toast.success(`${data.offers.length} ofertas encontradas na Logzz!`);
+                        } else {
+                          toast.info(data?.message || "Nenhuma oferta encontrada. Verifique o token da Logzz.");
+                        }
+                      } catch {
+                        toast.error("Erro ao buscar ofertas da Logzz");
+                      } finally {
+                        setSyncingLogzz(false);
+                      }
+                    }}
+                    disabled={syncingLogzz}
+                    className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 disabled:opacity-50"
+                  >
+                    {syncingLogzz ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+                    {syncingLogzz ? "Buscando..." : "↻ Sincronizar Logzz"}
+                  </button>
+                </div>
+                {logzzOffers.length > 0 ? (
+                  <Select onValueChange={(hash) => {
+                    const o = logzzOffers.find((x) => x.offer_hash === hash);
+                    if (o) {
+                      setFormName(o.product_name);
+                      const slug = `${o.product_name.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "")}-${o.offer_hash}`;
+                      toast.success(`Produto "${o.product_name}" importado!`);
+                    }
+                  }}>
+                    <SelectTrigger className="bg-input border-border"><SelectValue placeholder="Selecione uma oferta da Logzz" /></SelectTrigger>
+                    <SelectContent>
+                      {logzzOffers.map((o, i) => (
+                        <SelectItem key={o.offer_hash || i} value={o.offer_hash || `idx-${i}`}>
+                          {o.product_name} — {o.offer_name} (R$ {o.price.toFixed(2)}) [{o.role}]
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <p className="text-xs text-muted-foreground">Clique em ↻ para buscar ofertas da Logzz (produtor, afiliado, coprodutor).</p>
+                )}
+              </div>
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <Label>Oferta Local (banco)</Label>
                 </div>
                 <Select value={formOfferId} onValueChange={(v) => {
                   setFormOfferId(v);
                   const o = offers.find((x) => x.id === v);
-                  if (o) {
-                    if (!formName) setFormName(o.name);
-                  }
+                  if (o && !formName) setFormName(o.name);
                 }}>
-                  <SelectTrigger className="bg-input border-border"><SelectValue placeholder="Selecione uma oferta" /></SelectTrigger>
+                  <SelectTrigger className="bg-input border-border"><SelectValue placeholder="Selecione uma oferta salva" /></SelectTrigger>
                   <SelectContent>
-                    {offers.map((o) => <SelectItem key={o.id} value={o.id}>{o.name} — R$ {Number(o.price).toFixed(2)}</SelectItem>)}
+                    {offers.map((o) => {
+                      const prod = products.find((p) => p.id === o.product_id);
+                      return <SelectItem key={o.id} value={o.id}>{prod ? `${prod.name} — ` : ""}{o.name} — R$ {Number(o.price).toFixed(2)}</SelectItem>;
+                    })}
                   </SelectContent>
                 </Select>
-                <p className="text-xs text-muted-foreground mt-1">Clique em ↻ para sincronizar ofertas da Logzz. Ao selecionar, nome e preço serão preenchidos.</p>
               </div>
               <div>
                 <Label>Nome do Checkout</Label>
