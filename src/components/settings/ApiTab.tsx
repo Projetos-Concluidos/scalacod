@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useFeatureGate, UpgradePrompt } from "@/hooks/useFeatureGate";
 
 const ENDPOINTS = [
   { method: "POST", path: "/api/v1/orders", desc: "Criar pedido" },
