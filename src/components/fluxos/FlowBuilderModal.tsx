@@ -97,7 +97,7 @@ export default function FlowBuilderModal({ open, onClose, onSave, initialData }:
   }, [open, initialData]);
 
   const onConnect = useCallback((params: Connection) => {
-    setEdges((eds) => addEdge({ ...params, animated: true, style: { stroke: "hsl(190 100% 50%)" } }, eds));
+    setEdges((eds) => addEdge({ ...params, animated: true, style: { stroke: "hsl(160 84% 39%)" } }, eds));
   }, [setEdges]);
 
   const addNode = (type: string) => {
