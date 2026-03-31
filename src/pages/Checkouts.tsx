@@ -59,6 +59,14 @@ const Checkouts = () => {
   const [formOrderBump, setFormOrderBump] = useState(false);
   const [formUpsell, setFormUpsell] = useState(false);
   const [formCustomCss, setFormCustomCss] = useState("");
+  // Tracking fields
+  const [formPixelFacebook, setFormPixelFacebook] = useState("");
+  const [formMetaCapiToken, setFormMetaCapiToken] = useState("");
+  const [formGoogleAdsId, setFormGoogleAdsId] = useState("");
+  const [formGoogleConversionId, setFormGoogleConversionId] = useState("");
+  const [formGoogleAnalyticsId, setFormGoogleAnalyticsId] = useState("");
+  const [formThankYouUrl, setFormThankYouUrl] = useState("");
+  const [formWhatsappSupport, setFormWhatsappSupport] = useState("");
   const [logzzOffers, setLogzzOffers] = useState<LogzzOffer[]>([]);
   const [syncingLogzz, setSyncingLogzz] = useState(false);
   const [logzzPopoverOpen, setLogzzPopoverOpen] = useState(false);
@@ -169,6 +177,13 @@ const Checkouts = () => {
     setFormOrderBump(false);
     setFormUpsell(false);
     setFormCustomCss("");
+    setFormPixelFacebook("");
+    setFormMetaCapiToken("");
+    setFormGoogleAdsId("");
+    setFormGoogleConversionId("");
+    setFormGoogleAnalyticsId("");
+    setFormThankYouUrl("");
+    setFormWhatsappSupport("");
   }
 
   function openEdit(c: CheckoutWithOffer) {
@@ -180,6 +195,13 @@ const Checkouts = () => {
     setFormOrderBump(c.order_bump_enabled || false);
     setFormUpsell(c.upsell_enabled || false);
     setFormCustomCss(c.custom_css || "");
+    setFormPixelFacebook((c as any).pixel_facebook || "");
+    setFormMetaCapiToken((c as any).meta_capi_token || "");
+    setFormGoogleAdsId((c as any).google_ads_id || "");
+    setFormGoogleConversionId((c as any).google_conversion_id || "");
+    setFormGoogleAnalyticsId((c as any).google_analytics_id || "");
+    setFormThankYouUrl((c as any).thank_you_page_url || "");
+    setFormWhatsappSupport((c as any).whatsapp_support || "");
     setWizardStep(1);
     setWizardOpen(true);
   }
@@ -187,7 +209,7 @@ const Checkouts = () => {
   function handleSave() {
     if (!formName.trim()) return toast.error("Nome é obrigatório");
     const slug = formName.trim().toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
-    const payload = {
+    const payload: any = {
       name: formName.trim(),
       slug,
       type: formType,
@@ -197,6 +219,13 @@ const Checkouts = () => {
       upsell_enabled: formUpsell,
       custom_css: formCustomCss || null,
       user_id: user!.id,
+      pixel_facebook: formPixelFacebook || null,
+      meta_capi_token: formMetaCapiToken || null,
+      google_ads_id: formGoogleAdsId || null,
+      google_conversion_id: formGoogleConversionId || null,
+      google_analytics_id: formGoogleAnalyticsId || null,
+      thank_you_page_url: formThankYouUrl || null,
+      whatsapp_support: formWhatsappSupport || null,
     };
     if (editingCheckout) {
       updateMutation.mutate({ id: editingCheckout.id, ...payload });
@@ -317,12 +346,12 @@ const Checkouts = () => {
 
           {/* Step indicators */}
           <div className="flex items-center gap-2 mb-6">
-            {[1, 2, 3].map((s) => (
+            {[1, 2, 3, 4].map((s) => (
               <button key={s} onClick={() => setWizardStep(s)} className={`flex-1 h-1.5 rounded-full transition-colors ${wizardStep >= s ? "bg-primary" : "bg-muted"}`} />
             ))}
           </div>
           <p className="text-xs text-muted-foreground mb-4">
-            Passo {wizardStep} de 3 — {wizardStep === 1 ? "Produto & Oferta" : wizardStep === 2 ? "Configurações" : "Personalização"}
+            Passo {wizardStep} de 4 — {wizardStep === 1 ? "Produto & Oferta" : wizardStep === 2 ? "Configurações" : wizardStep === 3 ? "Tracking & Pixels" : "Personalização"}
           </p>
 
           {wizardStep === 1 && (
@@ -454,6 +483,44 @@ const Checkouts = () => {
 
           {wizardStep === 3 && (
             <div className="space-y-4">
+              <div className="rounded-lg border border-primary/10 bg-primary/5 p-3 mb-2">
+                <p className="text-xs text-muted-foreground"><strong className="text-foreground">📊 Tracking & Pixels</strong> — Configure os pixels de rastreamento para medir conversões do checkout.</p>
+              </div>
+              <div>
+                <Label>Facebook Pixel ID</Label>
+                <Input value={formPixelFacebook} onChange={(e) => setFormPixelFacebook(e.target.value)} placeholder="Ex: 1234567890" className="bg-input border-border" />
+                <p className="text-xs text-muted-foreground mt-1">Encontre em: Meta Business → Gerenciador de Eventos → Pixel</p>
+              </div>
+              <div>
+                <Label>Meta CAPI Token (Conversions API)</Label>
+                <Input value={formMetaCapiToken} onChange={(e) => setFormMetaCapiToken(e.target.value)} placeholder="EAAXXXXX..." type="password" className="bg-input border-border" />
+                <p className="text-xs text-muted-foreground mt-1">Gere em: Gerenciador de Eventos → Configurações → Token de acesso</p>
+              </div>
+              <div>
+                <Label>Google Ads ID</Label>
+                <Input value={formGoogleAdsId} onChange={(e) => setFormGoogleAdsId(e.target.value)} placeholder="AW-XXXXXXXXXX" className="bg-input border-border" />
+              </div>
+              <div>
+                <Label>Google Conversion ID</Label>
+                <Input value={formGoogleConversionId} onChange={(e) => setFormGoogleConversionId(e.target.value)} placeholder="XXXXXXXX" className="bg-input border-border" />
+              </div>
+              <div>
+                <Label>Google Analytics ID</Label>
+                <Input value={formGoogleAnalyticsId} onChange={(e) => setFormGoogleAnalyticsId(e.target.value)} placeholder="G-XXXXXXXXXX" className="bg-input border-border" />
+              </div>
+              <div>
+                <Label>URL pós-compra (Thank You Page)</Label>
+                <Input value={formThankYouUrl} onChange={(e) => setFormThankYouUrl(e.target.value)} placeholder="https://seusite.com/obrigado" className="bg-input border-border" />
+              </div>
+              <div>
+                <Label>WhatsApp Suporte</Label>
+                <Input value={formWhatsappSupport} onChange={(e) => setFormWhatsappSupport(e.target.value)} placeholder="5511999999999" className="bg-input border-border" />
+              </div>
+            </div>
+          )}
+
+          {wizardStep === 4 && (
+            <div className="space-y-4">
               <div>
                 <Label>CSS Customizado</Label>
                 <Textarea
@@ -476,7 +543,7 @@ const Checkouts = () => {
             <Button variant="ghost" onClick={() => wizardStep > 1 ? setWizardStep(wizardStep - 1) : closeWizard()} className="text-muted-foreground">
               {wizardStep > 1 ? "Voltar" : "Cancelar"}
             </Button>
-            {wizardStep < 3 ? (
+            {wizardStep < 4 ? (
               <Button onClick={() => setWizardStep(wizardStep + 1)} className="gradient-primary text-primary-foreground">Próximo</Button>
             ) : (
               <Button onClick={handleSave} disabled={createMutation.isPending || updateMutation.isPending} className="gradient-primary text-primary-foreground">

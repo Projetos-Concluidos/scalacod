@@ -10,7 +10,7 @@ import {
   Lock, MessageCircle, FileText, AlertTriangle, XCircle,
 } from "lucide-react";
 import { toast } from "sonner";
-import { trackPixelEvent } from "@/lib/pixel";
+import { trackPixelEvent, FacebookPixel, GoogleAds, captureUTM, getUTM, getCookie } from "@/lib/pixel";
 
 declare global {
   interface Window {
@@ -21,6 +21,10 @@ declare global {
 interface CheckoutData {
   id: string; name: string; slug: string; type: string; offer_id: string;
   order_bump_enabled: boolean; config: any; custom_css: string | null; user_id: string;
+  pixel_facebook?: string | null; meta_capi_token?: string | null;
+  google_ads_id?: string | null; google_conversion_id?: string | null;
+  google_analytics_id?: string | null; thank_you_page_url?: string | null;
+  whatsapp_support?: string | null;
 }
 interface OfferData { id: string; name: string; price: number; original_price: number | null; product_id: string; hash: string | null; }
 interface ProductData { id: string; name: string; main_image_url: string | null; }
@@ -97,6 +101,8 @@ const CheckoutPublic = () => {
   const [bricksReady, setBricksReady] = useState(false);
   const cardFormRef = useRef<HTMLDivElement>(null);
   const bricksControllerRef = useRef<any>(null);
+  const fbPixelRef = useRef<FacebookPixel | null>(null);
+  const gAdsRef = useRef<GoogleAds | null>(null);
 
   const [form, setForm] = useState({
     name: "", cpf: "", email: "", phone: "",
@@ -140,6 +146,9 @@ const CheckoutPublic = () => {
     if (checkout) trackPixelEvent(checkout.user_id, checkout.id, event, meta);
   };
 
+  // Capture UTM on mount
+  useEffect(() => { captureUTM(); }, []);
+
   useEffect(() => {
     if (!slug) return;
     (async () => {
@@ -147,6 +156,24 @@ const CheckoutPublic = () => {
       if (!c) { setLoading(false); return; }
       setCheckout(c as any);
       trackPixelEvent(c.user_id, c.id, "pageview");
+
+      // Initialize Facebook Pixel
+      if ((c as any).pixel_facebook) {
+        const fbp = new FacebookPixel((c as any).pixel_facebook);
+        fbp.init();
+        fbp.pageView();
+        fbPixelRef.current = fbp;
+      }
+
+      // Initialize Google Ads / Analytics
+      const gId = (c as any).google_ads_id || (c as any).google_analytics_id;
+      if (gId) {
+        const gads = new GoogleAds(gId, (c as any).google_conversion_id || "");
+        gads.init();
+        gads.pageView();
+        gAdsRef.current = gads;
+      }
+
       if (c.offer_id) {
         const { data: o } = await supabase.from("offers").select("*").eq("id", c.offer_id).single();
         if (o) {
@@ -314,6 +341,11 @@ const CheckoutPublic = () => {
     if (s === 2 && !step1Valid) { toast.error("Preencha todos os campos obrigatórios"); return; }
     if (s === 3 && !step2Valid) { toast.error("Preencha o endereço completo"); return; }
     track("step_" + s);
+
+    // FB Pixel step events
+    if (s === 2 && fbPixelRef.current) fbPixelRef.current.initiateCheckout(offer?.price || 0);
+    if (s === 3 && fbPixelRef.current) fbPixelRef.current.addPaymentInfo();
+
     setStep(s);
   };
 
@@ -322,6 +354,7 @@ const CheckoutPublic = () => {
     try {
       const num = generateOrderNumber();
       setOrderNumber(num);
+      const utm = getUTM();
       const { data: inserted, error } = await supabase.from("orders").insert({
         user_id: checkout.user_id, order_number: num, checkout_id: checkout.id, offer_id: offer.id,
         client_name: form.name, client_email: form.email || null,
@@ -335,6 +368,9 @@ const CheckoutPublic = () => {
         status: "Aguardando", logistics_type: provider || "logzz",
         delivery_date: provider === "logzz" && selectedDate ? selectedDate.date : null,
         payment_method: provider === "logzz" ? "afterpay" : paymentMethod,
+        utm_source: utm.utm_source || null, utm_medium: utm.utm_medium || null,
+        utm_campaign: utm.utm_campaign || null, utm_content: utm.utm_content || null,
+        utm_term: utm.utm_term || null, utm_id: utm.utm_id || null,
       }).select("id").single();
       if (error) throw error;
       await supabase.from("leads").upsert({
@@ -342,6 +378,35 @@ const CheckoutPublic = () => {
         email: form.email || null, document: form.cpf.replace(/\D/g, "") || null, status: "Confirmado",
       }, { onConflict: "user_id,phone" }).select();
       track("order_confirmed", { order_number: num });
+
+      // FB Pixel Purchase (client-side)
+      if (fbPixelRef.current) fbPixelRef.current.purchase(totalPrice, "BRL", num);
+
+      // Google Ads Conversion
+      if (gAdsRef.current) gAdsRef.current.trackConversion(totalPrice, "BRL", num);
+
+      // FB CAPI (server-side — more reliable)
+      if (checkout.pixel_facebook && checkout.meta_capi_token) {
+        supabase.functions.invoke("fb-capi", {
+          body: {
+            event: "Purchase",
+            pixelId: checkout.pixel_facebook,
+            capiToken: checkout.meta_capi_token,
+            eventSourceUrl: window.location.href,
+            userData: {
+              email: form.email, phone: form.phone,
+              firstName: form.name.split(" ")[0],
+              lastName: form.name.split(" ").slice(1).join(" "),
+              fbp: getCookie("_fbp"), fbc: getCookie("_fbc"),
+            },
+            customData: { value: totalPrice, currency: "BRL", order_id: num },
+          },
+        }).catch(() => {}); // fire-and-forget
+      }
+
+      // FB Lead event
+      if (fbPixelRef.current) fbPixelRef.current.lead(totalPrice);
+
       return inserted?.id || null;
     } catch (e: any) {
       toast.error(e.message || "Erro ao criar pedido");

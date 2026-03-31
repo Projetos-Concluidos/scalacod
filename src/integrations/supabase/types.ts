@@ -153,49 +153,70 @@ export type Database = {
           config: Json | null
           created_at: string | null
           custom_css: string | null
+          google_ads_id: string | null
+          google_analytics_id: string | null
+          google_conversion_id: string | null
           id: string
           is_active: boolean | null
+          meta_capi_token: string | null
           name: string
           offer_id: string | null
           order_bump_enabled: boolean | null
+          pixel_facebook: string | null
           pixel_id: string | null
           slug: string | null
+          thank_you_page_url: string | null
           type: string | null
           updated_at: string | null
           upsell_enabled: boolean | null
           user_id: string
+          whatsapp_support: string | null
         }
         Insert: {
           config?: Json | null
           created_at?: string | null
           custom_css?: string | null
+          google_ads_id?: string | null
+          google_analytics_id?: string | null
+          google_conversion_id?: string | null
           id?: string
           is_active?: boolean | null
+          meta_capi_token?: string | null
           name: string
           offer_id?: string | null
           order_bump_enabled?: boolean | null
+          pixel_facebook?: string | null
           pixel_id?: string | null
           slug?: string | null
+          thank_you_page_url?: string | null
           type?: string | null
           updated_at?: string | null
           upsell_enabled?: boolean | null
           user_id: string
+          whatsapp_support?: string | null
         }
         Update: {
           config?: Json | null
           created_at?: string | null
           custom_css?: string | null
+          google_ads_id?: string | null
+          google_analytics_id?: string | null
+          google_conversion_id?: string | null
           id?: string
           is_active?: boolean | null
+          meta_capi_token?: string | null
           name?: string
           offer_id?: string | null
           order_bump_enabled?: boolean | null
+          pixel_facebook?: string | null
           pixel_id?: string | null
           slug?: string | null
+          thank_you_page_url?: string | null
           type?: string | null
           updated_at?: string | null
           upsell_enabled?: boolean | null
           user_id?: string
+          whatsapp_support?: string | null
         }
         Relationships: [
           {
