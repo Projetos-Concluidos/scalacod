@@ -152,8 +152,26 @@ const WhatsAppCloud = () => {
     }
   };
 
+  const [testSending, setTestSending] = useState(false);
+
   const handleTestSend = async () => {
-    toast.info("Envio de teste será implementado via edge function");
+    const testPhone = prompt("Digite o número WhatsApp para teste (ex: +5511999999999):");
+    if (!testPhone?.trim()) return;
+    setTestSending(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("send-whatsapp-message", {
+        body: {
+          phone: testPhone.trim(),
+          content: "🥷 ScalaNinja — Conexão WhatsApp testada com sucesso! ✅",
+          direct: true,
+        },
+      });
+      if (error) throw new Error(error.message);
+      toast.success("Mensagem de teste enviada com sucesso!");
+    } catch (err: any) {
+      toast.error("Falha no teste: " + (err.message || "Erro desconhecido"));
+    }
+    setTestSending(false);
   };
 
   const tabs = [

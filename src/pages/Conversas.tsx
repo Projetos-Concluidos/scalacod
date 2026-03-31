@@ -559,12 +559,58 @@ const Conversas = () => {
 
           {/* Input area */}
           <div className="border-t border-border bg-card p-3">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*,audio/*,video/*,.pdf,.doc,.docx,.xls,.xlsx"
+              className="hidden"
+              onChange={handleFileSelect}
+            />
+            {showEmojiPicker && (
+              <div className="relative">
+                <EmojiStickerPicker
+                  onSelectEmoji={(emoji) => {
+                    setNewMessage(prev => prev + emoji);
+                    textareaRef.current?.focus();
+                  }}
+                  onSelectSticker={(text) => {
+                    setNewMessage(text);
+                    setShowEmojiPicker(false);
+                    setTimeout(() => sendMessage(), 100);
+                  }}
+                  onSelectGif={async (url) => {
+                    setShowEmojiPicker(false);
+                    if (!selectedConv || !user) return;
+                    setSending(true);
+                    try {
+                      const { error } = await supabase.functions.invoke("send-whatsapp-message", {
+                        body: { conversationId: selectedConv.id, content: "", type: "image", mediaUrl: url },
+                      });
+                      if (error) throw new Error(error.message);
+                    } catch (err: any) {
+                      toast.error(err.message || "Falha ao enviar GIF");
+                    }
+                    setSending(false);
+                  }}
+                  onClose={() => setShowEmojiPicker(false)}
+                />
+              </div>
+            )}
             <div className="flex items-end gap-2">
               <div className="flex items-center gap-1">
-                <button className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted">
+                <button
+                  onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                  className={cn(
+                    "flex h-8 w-8 items-center justify-center rounded-lg transition-colors",
+                    showEmojiPicker ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                  )}
+                >
                   <Smile className="h-4 w-4" />
                 </button>
-                <button className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted">
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted"
+                >
                   <Paperclip className="h-4 w-4" />
                 </button>
               </div>
