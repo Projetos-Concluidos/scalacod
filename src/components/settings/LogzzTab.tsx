@@ -271,7 +271,7 @@ const LogzzTab = () => {
             {testing ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
             Testar Conexão
           </Button>
-          <Button onClick={handleSave} disabled={saving} className="gradient-primary text-primary-foreground">
+          <Button onClick={() => handleSave()} disabled={saving} className="gradient-primary text-primary-foreground">
             {saving ? "Salvando..." : "Salvar"}
           </Button>
         </div>
