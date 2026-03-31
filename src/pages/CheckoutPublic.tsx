@@ -310,6 +310,7 @@ const CheckoutPublic = () => {
 
         {/* STEP 1: Client Data */}
         {step === 1 && (
+          <div className="space-y-4" onClick={trackInteraction}>
           <div className="space-y-4">
             <div className="ninja-card">
               <h2 className="flex items-center gap-2 text-base font-bold text-foreground mb-4">
