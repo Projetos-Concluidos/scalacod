@@ -74,6 +74,8 @@ const Conversas = () => {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
   const [sendingTemplate, setSendingTemplate] = useState(false);
+  const [selectedTemplateFlow, setSelectedTemplateFlow] = useState<any>(null);
+  const [templateVars, setTemplateVars] = useState<string[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
