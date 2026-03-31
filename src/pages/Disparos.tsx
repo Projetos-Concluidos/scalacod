@@ -68,6 +68,22 @@ const Disparos = () => {
 
   useEffect(() => { fetchData(); }, [user]);
 
+  // Realtime progress for running campaigns
+  useEffect(() => {
+    const channel = supabase
+      .channel("campaigns-realtime")
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "campaigns" }, (payload) => {
+        const updated = payload.new as Campaign;
+        setCampaigns(prev => prev.map(c => c.id === updated.id ? { ...updated } : c));
+        if (updated.status === "completed" && runningCampaignId === updated.id) {
+          setRunningCampaignId(null);
+          toast.success(`Campanha concluída! ${updated.sent_count || 0} enviados, ${updated.failed_count || 0} falhas`);
+        }
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [runningCampaignId]);
+
   const hasOfficialApi = whatsappInstances.some(i => i.provider === "meta" || i.provider === "ycloud");
   const approvedFlows = flows.filter(f => f.template_status === "approved");
   const pendingFlows = flows.filter(f => f.template_status === "pending");
