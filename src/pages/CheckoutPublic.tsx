@@ -341,6 +341,11 @@ const CheckoutPublic = () => {
     if (s === 2 && !step1Valid) { toast.error("Preencha todos os campos obrigatórios"); return; }
     if (s === 3 && !step2Valid) { toast.error("Preencha o endereço completo"); return; }
     track("step_" + s);
+
+    // FB Pixel step events
+    if (s === 2 && fbPixelRef.current) fbPixelRef.current.initiateCheckout(offer?.price || 0);
+    if (s === 3 && fbPixelRef.current) fbPixelRef.current.addPaymentInfo();
+
     setStep(s);
   };
 
