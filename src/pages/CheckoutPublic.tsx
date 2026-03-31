@@ -104,6 +104,7 @@ const CheckoutPublic = () => {
   const fbPixelRef = useRef<FacebookPixel | null>(null);
   const gAdsRef = useRef<GoogleAds | null>(null);
 
+  const [form, setForm] = useState({
     name: "", cpf: "", email: "", phone: "",
     cep: "", street: "", number: "", complement: "", district: "", city: "", state: "",
   });
