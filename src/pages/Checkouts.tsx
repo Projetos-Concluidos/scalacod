@@ -543,7 +543,7 @@ const Checkouts = () => {
             <Button variant="ghost" onClick={() => wizardStep > 1 ? setWizardStep(wizardStep - 1) : closeWizard()} className="text-muted-foreground">
               {wizardStep > 1 ? "Voltar" : "Cancelar"}
             </Button>
-            {wizardStep < 3 ? (
+            {wizardStep < 4 ? (
               <Button onClick={() => setWizardStep(wizardStep + 1)} className="gradient-primary text-primary-foreground">Próximo</Button>
             ) : (
               <Button onClick={handleSave} disabled={createMutation.isPending || updateMutation.isPending} className="gradient-primary text-primary-foreground">
