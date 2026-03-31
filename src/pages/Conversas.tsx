@@ -706,6 +706,16 @@ const Conversas = () => {
                 >
                   <Paperclip className="h-4 w-4" />
                 </button>
+                <button
+                  onClick={() => { setShowTemplates(!showTemplates); setShowEmojiPicker(false); }}
+                  className={cn(
+                    "flex h-8 w-8 items-center justify-center rounded-lg transition-colors",
+                    showTemplates ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                  )}
+                  title="Usar template"
+                >
+                  <FileText className="h-4 w-4" />
+                </button>
               </div>
               <textarea
                 ref={textareaRef}
