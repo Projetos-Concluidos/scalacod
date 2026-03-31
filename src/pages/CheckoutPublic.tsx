@@ -247,7 +247,7 @@ const CheckoutPublic = () => {
           <div className="rounded-2xl border border-gray-100 bg-white p-8 shadow-sm text-center">
             <motion.div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-emerald-50" initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.2, type: "spring", stiffness: 200 }}>
               <CheckCircle className="h-10 w-10 text-emerald-500" />
-            </div>
+            </motion.div>
             <h1 className="text-2xl font-bold text-gray-900 mb-1">Pedido Confirmado!</h1>
             <p className="text-sm text-gray-500 mb-6">Você receberá uma mensagem no WhatsApp com os detalhes.</p>
             <div className="mb-6 inline-block rounded-lg bg-gray-100 px-4 py-2 font-mono text-lg font-bold text-gray-900">
