@@ -62,8 +62,9 @@ Deno.serve(async (req) => {
           `https://app.logzz.com.br/api/delivery-day/options/zip-code/${cleanCep}`,
           { headers: { Authorization: `Bearer ${token}`, Accept: "application/json" } }
         );
-        if (!res.ok || !(res.headers.get("content-type") || "").includes("json")) throw new Error("Invalid response");
-        const data = await res.json();
+        const rawCep = await res.text();
+        let data: any;
+        try { data = JSON.parse(rawCep); } catch { throw new Error("Invalid response"); }
 
         if (data.success && data.data?.response?.dates_available?.length > 0) {
           const dates = data.data.response.dates_available.map((d: any) => ({
