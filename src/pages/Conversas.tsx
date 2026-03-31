@@ -1,18 +1,326 @@
-import { MessageSquare, Search, SlidersHorizontal, RefreshCw, Tag } from "lucide-react";
-import PageHeader from "@/components/PageHeader";
-import NinjaBadge from "@/components/NinjaBadge";
+import { useState, useEffect, useRef, useMemo } from "react";
+import {
+  MessageSquare, Search, SlidersHorizontal, RefreshCw, Tag, Send, Paperclip,
+  Smile, Mic, Info, Phone, Mail, FileText, X, Plus, Check, CheckCheck,
+  Image as ImageIcon, File, ChevronDown
+} from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
+import { format, isToday, isYesterday, isSameDay } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { cn } from "@/lib/utils";
+import type { Tables } from "@/integrations/supabase/types";
+
+type Conversation = Tables<"conversations">;
+type Message = Tables<"messages">;
+
+const getInitials = (name: string) => name?.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase() || "??";
+
+const formatTime = (d: string) => {
+  const date = new Date(d);
+  if (isToday(date)) return format(date, "HH:mm");
+  if (isYesterday(date)) return "Ontem";
+  return format(date, "dd/MM", { locale: ptBR });
+};
+
+const formatDateSeparator = (d: string) => {
+  const date = new Date(d);
+  if (isToday(date)) return "Hoje";
+  if (isYesterday(date)) return "Ontem";
+  return format(date, "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
+};
+
+const labelColors = [
+  "bg-primary/20 text-primary border-primary/30",
+  "bg-success/20 text-success border-success/30",
+  "bg-warning/20 text-warning border-warning/30",
+  "bg-destructive/20 text-destructive border-destructive/30",
+  "bg-accent/20 text-accent border-accent/30",
+];
+
+const statusFilters = [
+  { value: "all", label: "Todas" },
+  { value: "open", label: "Abertas" },
+  { value: "closed", label: "Fechadas" },
+  { value: "waiting", label: "Aguardando" },
+];
 
 const Conversas = () => {
+  const { user } = useAuth();
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [selectedConv, setSelectedConv] = useState<Conversation | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [msgLoading, setMsgLoading] = useState(false);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [showFilters, setShowFilters] = useState(false);
+  const [showUnreadOnly, setShowUnreadOnly] = useState(false);
+  const [showInfo, setShowInfo] = useState(false);
+  const [newMessage, setNewMessage] = useState("");
+  const [sending, setSending] = useState(false);
+  const [showLabels, setShowLabels] = useState(false);
+  const [newLabelName, setNewLabelName] = useState("");
+  const [leadData, setLeadData] = useState<any>(null);
+  const [orderData, setOrderData] = useState<any>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const fetchConversations = async () => {
+    if (!user) return;
+    setLoading(true);
+    const { data } = await supabase
+      .from("conversations")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("last_message_at", { ascending: false });
+    setConversations(data || []);
+    setLoading(false);
+  };
+
+  const fetchMessages = async (convId: string) => {
+    setMsgLoading(true);
+    const { data } = await supabase
+      .from("messages")
+      .select("*")
+      .eq("conversation_id", convId)
+      .order("timestamp", { ascending: true });
+    setMessages(data || []);
+    setMsgLoading(false);
+    setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
+  };
+
+  const fetchContactInfo = async (conv: Conversation) => {
+    if (!user) return;
+    const { data: lead } = await supabase
+      .from("leads")
+      .select("*")
+      .eq("user_id", user.id)
+      .eq("phone", conv.contact_phone)
+      .maybeSingle();
+    setLeadData(lead);
+
+    if (lead?.order_id) {
+      const { data: order } = await supabase
+        .from("orders")
+        .select("*")
+        .eq("id", lead.order_id)
+        .maybeSingle();
+      setOrderData(order);
+    } else {
+      const { data: order } = await supabase
+        .from("orders")
+        .select("*")
+        .eq("user_id", user.id)
+        .eq("client_phone", conv.contact_phone)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      setOrderData(order);
+    }
+  };
+
+  useEffect(() => { fetchConversations(); }, [user]);
+
+  // Realtime messages
+  useEffect(() => {
+    const channel = supabase
+      .channel("messages-realtime")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, (payload) => {
+        const msg = payload.new as Message;
+        if (selectedConv && msg.conversation_id === selectedConv.id) {
+          setMessages(prev => [...prev, msg]);
+          setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
+        }
+        // Update conversation list
+        setConversations(prev => prev.map(c =>
+          c.id === msg.conversation_id
+            ? { ...c, last_message: msg.content, last_message_at: msg.timestamp, unread_count: selectedConv?.id === c.id ? 0 : (c.unread_count || 0) + 1 }
+            : c
+        ).sort((a, b) => new Date(b.last_message_at || 0).getTime() - new Date(a.last_message_at || 0).getTime()));
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [selectedConv]);
+
+  // Realtime conversations
+  useEffect(() => {
+    const channel = supabase
+      .channel("conversations-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "conversations" }, () => {
+        fetchConversations();
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [user]);
+
+  const selectConversation = async (conv: Conversation) => {
+    setSelectedConv(conv);
+    setShowInfo(true);
+    fetchMessages(conv.id);
+    fetchContactInfo(conv);
+    // Mark as read
+    if (conv.unread_count && conv.unread_count > 0) {
+      await supabase.from("conversations").update({ unread_count: 0 }).eq("id", conv.id);
+      setConversations(prev => prev.map(c => c.id === conv.id ? { ...c, unread_count: 0 } : c));
+    }
+  };
+
+  const sendMessage = async () => {
+    if (!selectedConv || !newMessage.trim() || !user || sending) return;
+    setSending(true);
+    const content = newMessage.trim();
+    setNewMessage("");
+
+    // Optimistic add
+    const optimistic: Message = {
+      id: crypto.randomUUID(),
+      conversation_id: selectedConv.id,
+      direction: "outbound",
+      type: "text",
+      content,
+      status: "sent",
+      timestamp: new Date().toISOString(),
+      created_at: new Date().toISOString(),
+      media_url: null,
+      message_id_whatsapp: null,
+    };
+    setMessages(prev => [...prev, optimistic]);
+    setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
+
+    const { error } = await supabase.from("messages").insert({
+      conversation_id: selectedConv.id,
+      direction: "outbound",
+      type: "text",
+      content,
+      status: "sent",
+      timestamp: new Date().toISOString(),
+    });
+
+    if (error) {
+      toast.error("Erro ao enviar mensagem");
+      setMessages(prev => prev.filter(m => m.id !== optimistic.id));
+    } else {
+      await supabase.from("conversations").update({
+        last_message: content,
+        last_message_at: new Date().toISOString(),
+      }).eq("id", selectedConv.id);
+    }
+    setSending(false);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  };
+
+  const addLabel = async (convId: string, label: string) => {
+    const conv = conversations.find(c => c.id === convId);
+    if (!conv) return;
+    const current = (conv.labels as string[]) || [];
+    if (current.includes(label)) return;
+    const updated = [...current, label];
+    await supabase.from("conversations").update({ labels: updated as any }).eq("id", convId);
+    setConversations(prev => prev.map(c => c.id === convId ? { ...c, labels: updated as any } : c));
+    if (selectedConv?.id === convId) setSelectedConv({ ...selectedConv, labels: updated as any });
+  };
+
+  const removeLabel = async (convId: string, label: string) => {
+    const conv = conversations.find(c => c.id === convId);
+    if (!conv) return;
+    const current = (conv.labels as string[]) || [];
+    const updated = current.filter(l => l !== label);
+    await supabase.from("conversations").update({ labels: updated as any }).eq("id", convId);
+    setConversations(prev => prev.map(c => c.id === convId ? { ...c, labels: updated as any } : c));
+    if (selectedConv?.id === convId) setSelectedConv({ ...selectedConv, labels: updated as any });
+  };
+
+  const filtered = useMemo(() => {
+    let result = conversations;
+    if (statusFilter !== "all") result = result.filter(c => c.status === statusFilter);
+    if (showUnreadOnly) result = result.filter(c => (c.unread_count || 0) > 0);
+    if (search) {
+      const s = search.toLowerCase();
+      result = result.filter(c =>
+        (c.contact_name || "").toLowerCase().includes(s) ||
+        c.contact_phone.includes(s) ||
+        (c.last_message || "").toLowerCase().includes(s)
+      );
+    }
+    return result;
+  }, [conversations, statusFilter, showUnreadOnly, search]);
+
+  // Group messages by date
+  const groupedMessages = useMemo(() => {
+    const groups: { date: string; messages: Message[] }[] = [];
+    messages.forEach(msg => {
+      const dateStr = format(new Date(msg.timestamp), "yyyy-MM-dd");
+      const last = groups[groups.length - 1];
+      if (last && last.date === dateStr) {
+        last.messages.push(msg);
+      } else {
+        groups.push({ date: dateStr, messages: [msg] });
+      }
+    });
+    return groups;
+  }, [messages]);
+
+  const MessageStatus = ({ status }: { status: string | null }) => {
+    if (status === "read") return <CheckCheck className="h-3.5 w-3.5 text-primary" />;
+    if (status === "delivered") return <CheckCheck className="h-3.5 w-3.5 text-muted-foreground" />;
+    return <Check className="h-3.5 w-3.5 text-muted-foreground" />;
+  };
+
+  const MessageBubble = ({ msg }: { msg: Message }) => {
+    const isOut = msg.direction === "outbound";
+    return (
+      <div className={cn("flex mb-2", isOut ? "justify-end" : "justify-start")}>
+        <div className={cn(
+          "max-w-[70%] rounded-2xl px-4 py-2.5 text-sm",
+          isOut
+            ? "bg-primary/20 text-foreground rounded-br-md"
+            : "bg-muted text-foreground rounded-bl-md"
+        )}>
+          {msg.type === "image" && msg.media_url && (
+            <img src={msg.media_url} alt="" className="rounded-lg mb-1 max-w-[240px]" />
+          )}
+          {msg.type === "audio" && msg.media_url && (
+            <audio controls src={msg.media_url} className="max-w-[240px]" />
+          )}
+          {msg.type === "document" && msg.media_url && (
+            <a href={msg.media_url} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-primary hover:underline mb-1">
+              <File className="h-4 w-4" /> Documento
+            </a>
+          )}
+          {msg.content && <p className="whitespace-pre-wrap break-words">{msg.content}</p>}
+          <div className={cn("flex items-center gap-1 mt-1", isOut ? "justify-end" : "justify-start")}>
+            <span className="text-[10px] text-muted-foreground">{format(new Date(msg.timestamp), "HH:mm")}</span>
+            {isOut && <MessageStatus status={msg.status} />}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
-    <div className="flex h-[calc(100vh-100px)]">
-      {/* Left panel */}
-      <div className="w-[400px] border-r border-border flex flex-col">
+    <div className="flex h-[calc(100vh-80px)] overflow-hidden -m-6">
+      {/* COLUMN 1: Conversation List */}
+      <div className="w-[320px] min-w-[320px] border-r border-border flex flex-col bg-card">
         <div className="p-4 border-b border-border">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-xl font-bold text-foreground">Conversas</h2>
-            <div className="flex items-center gap-2">
-              <NinjaBadge variant="info">Teste</NinjaBadge>
-              <button className="text-muted-foreground hover:text-foreground"><RefreshCw className="h-4 w-4" /></button>
+            <h2 className="text-lg font-bold text-foreground">Conversas</h2>
+            <div className="flex items-center gap-1">
+              <button onClick={fetchConversations} className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted">
+                <RefreshCw className="h-4 w-4" />
+              </button>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -20,35 +328,348 @@ const Conversas = () => {
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <input
                 type="text"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
                 placeholder="Buscar contato..."
                 className="h-9 w-full rounded-lg border border-border bg-input pl-9 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none"
               />
             </div>
-            <button className="flex h-9 w-9 items-center justify-center rounded-lg border border-border text-muted-foreground hover:bg-muted">
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className={cn("flex h-9 w-9 items-center justify-center rounded-lg border border-border hover:bg-muted", showFilters ? "text-primary bg-primary/10 border-primary/30" : "text-muted-foreground")}
+            >
               <SlidersHorizontal className="h-4 w-4" />
             </button>
           </div>
-          <button className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground">
+
+          {showFilters && (
+            <div className="mt-3 space-y-2">
+              <div className="flex flex-wrap gap-1">
+                {statusFilters.map(f => (
+                  <button
+                    key={f.value}
+                    onClick={() => setStatusFilter(f.value)}
+                    className={cn(
+                      "rounded-md px-2.5 py-1 text-xs font-medium transition-colors",
+                      statusFilter === f.value
+                        ? "bg-primary text-primary-foreground"
+                        : "text-muted-foreground hover:bg-muted"
+                    )}
+                  >
+                    {f.label}
+                  </button>
+                ))}
+              </div>
+              <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
+                <input type="checkbox" checked={showUnreadOnly} onChange={e => setShowUnreadOnly(e.target.checked)} className="rounded border-border" />
+                Apenas não lidas
+              </label>
+            </div>
+          )}
+
+          <button onClick={() => setShowLabels(true)} className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors">
             <Tag className="h-3 w-3" /> Criar etiquetas rápidas
           </button>
         </div>
 
-        {/* Empty conversations list */}
-        <div className="flex-1 flex flex-col items-center justify-center text-center p-6">
-          <MessageSquare className="h-12 w-12 text-muted-foreground mb-3" />
-          <p className="text-sm font-semibold text-foreground">Nenhuma conversa</p>
-          <p className="text-xs text-muted-foreground">Conversas aparecerão com interações</p>
+        {/* Conversation list */}
+        <div className="flex-1 overflow-y-auto">
+          {loading ? (
+            <div className="p-4 space-y-3">
+              {[...Array(6)].map((_, i) => <div key={i} className="h-16 animate-pulse rounded-lg bg-muted" />)}
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="flex-1 flex flex-col items-center justify-center text-center p-6 h-full">
+              <MessageSquare className="h-10 w-10 text-muted-foreground mb-3" />
+              <p className="text-sm font-semibold text-foreground">Nenhuma conversa</p>
+              <p className="text-xs text-muted-foreground">Conversas aparecerão com interações</p>
+            </div>
+          ) : (
+            filtered.map(conv => (
+              <div
+                key={conv.id}
+                onClick={() => selectConversation(conv)}
+                className={cn(
+                  "flex items-start gap-3 px-4 py-3 cursor-pointer border-b border-border/50 transition-colors",
+                  selectedConv?.id === conv.id ? "bg-primary/5 border-l-2 border-l-primary" : "hover:bg-muted/30"
+                )}
+              >
+                <Avatar className="h-10 w-10 shrink-0">
+                  <AvatarFallback className="bg-primary/20 text-primary text-xs font-bold">
+                    {getInitials(conv.contact_name || conv.contact_phone)}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-semibold text-foreground truncate">{conv.contact_name || conv.contact_phone}</p>
+                    <span className="text-[10px] text-muted-foreground shrink-0 ml-2">
+                      {conv.last_message_at ? formatTime(conv.last_message_at) : ""}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground truncate mt-0.5">{conv.last_message || "Sem mensagens"}</p>
+                  <div className="flex items-center justify-between mt-1">
+                    <div className="flex gap-1 flex-wrap">
+                      {((conv.labels as string[]) || []).slice(0, 2).map((label, i) => (
+                        <span key={label} className={cn("text-[10px] px-1.5 py-0.5 rounded border", labelColors[i % labelColors.length])}>
+                          {label}
+                        </span>
+                      ))}
+                    </div>
+                    {(conv.unread_count || 0) > 0 && (
+                      <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-destructive px-1.5 text-[10px] font-bold text-destructive-foreground">
+                        {conv.unread_count}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
 
-      {/* Right panel */}
-      <div className="flex-1 flex flex-col items-center justify-center text-center">
-        <div className="rounded-2xl bg-muted/30 p-6 mb-4">
-          <MessageSquare className="h-12 w-12 text-muted-foreground" />
+      {/* COLUMN 2: Chat */}
+      {selectedConv ? (
+        <div className="flex-1 flex flex-col min-w-0">
+          {/* Chat header */}
+          <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-card">
+            <div className="flex items-center gap-3">
+              <Avatar className="h-9 w-9">
+                <AvatarFallback className="bg-primary/20 text-primary text-xs font-bold">
+                  {getInitials(selectedConv.contact_name || selectedConv.contact_phone)}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <p className="text-sm font-semibold text-foreground">{selectedConv.contact_name || selectedConv.contact_phone}</p>
+                <p className="text-xs text-muted-foreground">{selectedConv.contact_phone}</p>
+              </div>
+              {orderData && (
+                <Badge variant="outline" className="ml-2 text-xs bg-primary/10 text-primary border-primary/30">
+                  Pedido: {orderData.status}
+                </Badge>
+              )}
+            </div>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setShowInfo(!showInfo)}
+                className={cn("flex h-8 w-8 items-center justify-center rounded-lg transition-colors", showInfo ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground hover:bg-muted")}
+              >
+                <Info className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+
+          {/* Messages area */}
+          <div className="flex-1 overflow-y-auto px-4 py-4 bg-background/50">
+            {msgLoading ? (
+              <div className="flex items-center justify-center h-full">
+                <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+              </div>
+            ) : messages.length === 0 ? (
+              <div className="flex items-center justify-center h-full text-center">
+                <div>
+                  <MessageSquare className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
+                  <p className="text-sm text-muted-foreground">Nenhuma mensagem ainda</p>
+                </div>
+              </div>
+            ) : (
+              groupedMessages.map(group => (
+                <div key={group.date}>
+                  <div className="flex items-center justify-center my-4">
+                    <span className="rounded-full bg-muted px-3 py-1 text-[10px] text-muted-foreground font-medium">
+                      {formatDateSeparator(group.messages[0].timestamp)}
+                    </span>
+                  </div>
+                  {group.messages.map(msg => <MessageBubble key={msg.id} msg={msg} />)}
+                </div>
+              ))
+            )}
+            <div ref={messagesEndRef} />
+          </div>
+
+          {/* Input area */}
+          <div className="border-t border-border bg-card p-3">
+            <div className="flex items-end gap-2">
+              <div className="flex items-center gap-1">
+                <button className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted">
+                  <Smile className="h-4 w-4" />
+                </button>
+                <button className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted">
+                  <Paperclip className="h-4 w-4" />
+                </button>
+              </div>
+              <textarea
+                ref={textareaRef}
+                value={newMessage}
+                onChange={e => setNewMessage(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Digite uma mensagem..."
+                rows={1}
+                className="flex-1 resize-none rounded-lg border border-border bg-input px-4 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30 max-h-32"
+              />
+              <div className="flex items-center gap-1">
+                <button className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted">
+                  <Mic className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={sendMessage}
+                  disabled={!newMessage.trim() || sending}
+                  className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
+                >
+                  <Send className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
-        <h3 className="text-lg font-semibold text-foreground">Selecione uma conversa</h3>
-        <p className="text-sm text-muted-foreground">Escolha um contato para visualizar mensagens</p>
-      </div>
+      ) : (
+        /* Empty state */
+        <div className="flex-1 flex flex-col items-center justify-center text-center bg-background/30">
+          <div className="rounded-2xl bg-muted/30 p-6 mb-4">
+            <MessageSquare className="h-12 w-12 text-muted-foreground" />
+          </div>
+          <h3 className="text-lg font-semibold text-foreground">Selecione uma conversa</h3>
+          <p className="text-sm text-muted-foreground">Escolha um contato para visualizar mensagens</p>
+        </div>
+      )}
+
+      {/* COLUMN 3: Contact Info */}
+      {selectedConv && showInfo && (
+        <div className="w-[280px] min-w-[280px] border-l border-border bg-card overflow-y-auto">
+          <div className="p-4 border-b border-border">
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Informações</p>
+              <button onClick={() => setShowInfo(false)} className="text-muted-foreground hover:text-foreground">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="flex flex-col items-center text-center">
+              <Avatar className="h-16 w-16 mb-3">
+                <AvatarFallback className="bg-primary/20 text-primary text-lg font-bold">
+                  {getInitials(selectedConv.contact_name || selectedConv.contact_phone)}
+                </AvatarFallback>
+              </Avatar>
+              <p className="font-semibold text-foreground">{selectedConv.contact_name || "Contato"}</p>
+              <p className="text-xs text-muted-foreground">{selectedConv.contact_phone}</p>
+            </div>
+          </div>
+
+          {/* Contact Details */}
+          <div className="p-4 border-b border-border space-y-3">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Contato</p>
+            <div className="flex items-center gap-2 text-sm">
+              <Phone className="h-3.5 w-3.5 text-primary" />
+              <span className="text-foreground">{selectedConv.contact_phone}</span>
+            </div>
+            {leadData?.email && (
+              <div className="flex items-center gap-2 text-sm">
+                <Mail className="h-3.5 w-3.5 text-primary" />
+                <span className="text-foreground">{leadData.email}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Order */}
+          {orderData && (
+            <div className="p-4 border-b border-border space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Pedido Recente</p>
+              <div className="rounded-lg border border-border p-3 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-muted-foreground">#{orderData.order_number || orderData.id.slice(0, 8)}</span>
+                  <Badge variant="outline" className="text-[10px]">{orderData.status}</Badge>
+                </div>
+                <p className="text-sm font-bold text-foreground">
+                  {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(orderData.order_final_price))}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Labels */}
+          <div className="p-4 border-b border-border space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Etiquetas</p>
+            <div className="flex flex-wrap gap-1.5">
+              {((selectedConv.labels as string[]) || []).map((label, i) => (
+                <Badge key={label} variant="outline" className={cn("text-xs gap-1", labelColors[i % labelColors.length])}>
+                  {label}
+                  <button onClick={() => removeLabel(selectedConv.id, label)} className="hover:text-destructive">
+                    <X className="h-3 w-3" />
+                  </button>
+                </Badge>
+              ))}
+            </div>
+            <div className="flex gap-1.5">
+              <input
+                placeholder="Nova etiqueta..."
+                className="h-7 flex-1 rounded border border-border bg-input px-2 text-xs text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none"
+                onKeyDown={e => {
+                  if (e.key === "Enter" && (e.target as HTMLInputElement).value.trim()) {
+                    addLabel(selectedConv.id, (e.target as HTMLInputElement).value.trim());
+                    (e.target as HTMLInputElement).value = "";
+                  }
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Lead Tags */}
+          {leadData && (
+            <div className="p-4 space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Tags do Lead</p>
+              <div className="flex flex-wrap gap-1.5">
+                {((leadData.tags as string[]) || []).map(tag => (
+                  <Badge key={tag} variant="secondary" className="text-xs">{tag}</Badge>
+                ))}
+                {(!leadData.tags || (leadData.tags as string[]).length === 0) && (
+                  <p className="text-xs text-muted-foreground">Sem tags</p>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Labels CRUD Modal */}
+      <Dialog open={showLabels} onOpenChange={setShowLabels}>
+        <DialogContent className="bg-card border-border max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-foreground">Etiquetas Rápidas</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">Adicione etiquetas às conversas para organizar seu atendimento.</p>
+            <div className="flex gap-2">
+              <input
+                value={newLabelName}
+                onChange={e => setNewLabelName(e.target.value)}
+                placeholder="Nome da etiqueta..."
+                className="h-9 flex-1 rounded-lg border border-border bg-input px-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none"
+              />
+              <Button
+                size="sm"
+                onClick={() => {
+                  if (newLabelName.trim()) {
+                    toast.success(`Etiqueta "${newLabelName}" disponível para uso`);
+                    setNewLabelName("");
+                  }
+                }}
+                className="bg-primary text-primary-foreground"
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="space-y-1.5">
+              {["Urgente", "VIP", "Novo Cliente", "Pendente", "Suporte"].map((label, i) => (
+                <div key={label} className="flex items-center justify-between rounded-lg border border-border p-2.5">
+                  <div className="flex items-center gap-2">
+                    <div className={cn("h-3 w-3 rounded-full", i === 0 ? "bg-destructive" : i === 1 ? "bg-warning" : i === 2 ? "bg-success" : i === 3 ? "bg-primary" : "bg-accent")} />
+                    <span className="text-sm text-foreground">{label}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
