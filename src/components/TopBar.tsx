@@ -1,6 +1,7 @@
-import { Moon, Sun, Bell, HelpCircle, Menu } from "lucide-react";
+import { Moon, Sun, Bell, HelpCircle, Menu, Shield } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useMobileSidebar } from "@/contexts/MobileSidebarContext";
+import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 
 const TopBar = () => {
