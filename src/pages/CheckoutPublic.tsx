@@ -101,8 +101,9 @@ const CheckoutPublic = () => {
   const [bricksReady, setBricksReady] = useState(false);
   const cardFormRef = useRef<HTMLDivElement>(null);
   const bricksControllerRef = useRef<any>(null);
+  const fbPixelRef = useRef<FacebookPixel | null>(null);
+  const gAdsRef = useRef<GoogleAds | null>(null);
 
-  const [form, setForm] = useState({
     name: "", cpf: "", email: "", phone: "",
     cep: "", street: "", number: "", complement: "", district: "", city: "", state: "",
   });
