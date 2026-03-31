@@ -339,7 +339,7 @@ const Dashboard = () => {
                   </linearGradient>
                 </defs>
                 <path d="M16 2L20 12L30 16L20 20L16 30L12 20L2 16L12 12Z" fill="url(#shuriken-tip)" />
-                <circle cx="16" cy="16" r="3" fill="#0A0A0F" />
+                <circle cx="16" cy="16" r="3" fill="#F8FFFE" />
               </svg>
               <span className="text-sm font-bold text-foreground">Dica da ScalaNinja</span>
             </div>
