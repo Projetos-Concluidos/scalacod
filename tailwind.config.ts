@@ -50,6 +50,10 @@ export default {
           DEFAULT: "hsl(var(--success))",
           foreground: "hsl(var(--success-foreground))",
         },
+        info: {
+          DEFAULT: "hsl(var(--info))",
+          foreground: "hsl(var(--info-foreground))",
+        },
         popover: {
           DEFAULT: "hsl(var(--popover))",
           foreground: "hsl(var(--popover-foreground))",
@@ -86,8 +90,8 @@ export default {
           to: { height: "0" },
         },
         "pulse-glow": {
-          "0%, 100%": { boxShadow: "0 0 20px hsla(190, 100%, 50%, 0.15)" },
-          "50%": { boxShadow: "0 0 30px hsla(190, 100%, 50%, 0.3)" },
+          "0%, 100%": { boxShadow: "0 0 20px rgba(16, 185, 129, 0.15)" },
+          "50%": { boxShadow: "0 0 30px rgba(16, 185, 129, 0.3)" },
         },
       },
       animation: {
