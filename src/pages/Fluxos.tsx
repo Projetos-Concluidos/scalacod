@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { GitBranch, Zap, Folder, Plus, MessageCircle, Tag, ChevronDown, ChevronRight, Pencil, SlidersHorizontal, Sparkles, MoreHorizontal, XCircle, Star, CheckCircle, Loader2, Power, PowerOff, Trash2 } from "lucide-react";
+import { GitBranch, Zap, Folder, Plus, MessageCircle, Tag, ChevronDown, ChevronRight, Pencil, SlidersHorizontal, Sparkles, MoreHorizontal, XCircle, Star, CheckCircle, Loader2, Power, PowerOff, Trash2, History, AlertTriangle, Clock } from "lucide-react";
 import PageHeader from "@/components/PageHeader";
 import StatCard from "@/components/StatCard";
 import NinjaBadge from "@/components/NinjaBadge";
