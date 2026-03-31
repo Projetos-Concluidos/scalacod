@@ -15,6 +15,8 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import type { Tables } from "@/integrations/supabase/types";
+import EmojiStickerPicker from "@/components/chat/EmojiStickerPicker";
+import { useNotificationSound } from "@/hooks/useNotificationSound";
 
 type Conversation = Tables<"conversations">;
 type Message = Tables<"messages">;
