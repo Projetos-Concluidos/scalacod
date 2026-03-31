@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_action_logs: {
+        Row: {
+          action: string
+          admin_id: string
+          created_at: string | null
+          id: string
+          metadata: Json | null
+          target_user_id: string | null
+        }
+        Insert: {
+          action: string
+          admin_id: string
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          target_user_id?: string | null
+        }
+        Update: {
+          action?: string
+          admin_id?: string
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          target_user_id?: string | null
+        }
+        Relationships: []
+      }
       api_tokens: {
         Row: {
           created_at: string | null
@@ -1493,6 +1520,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_add_tokens: {
+        Args: { p_amount: number; p_reason: string; p_user_id: string }
+        Returns: undefined
+      }
+      admin_block_user: {
+        Args: { p_block: boolean; p_user_id: string }
+        Returns: undefined
+      }
+      admin_update_user_plan: {
+        Args: { p_plan_id: string; p_user_id: string }
+        Returns: undefined
+      }
       get_user_plan_limit: { Args: { feature: string }; Returns: number }
       has_active_subscription: { Args: never; Returns: boolean }
       has_role: {

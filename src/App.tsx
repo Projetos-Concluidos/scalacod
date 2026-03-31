@@ -5,7 +5,9 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/contexts/AuthContext";
 import AuthGuard from "@/components/AuthGuard";
+import AdminGuard from "@/components/AdminGuard";
 import AppLayout from "@/components/AppLayout";
+import AdminLayout from "@/components/admin/AdminLayout";
 import Dashboard from "@/pages/Dashboard";
 import Checkouts from "@/pages/Checkouts";
 import Pedidos from "@/pages/Pedidos";
@@ -22,6 +24,13 @@ import ForgotPassword from "@/pages/ForgotPassword";
 import ResetPassword from "@/pages/ResetPassword";
 import CheckoutPublic from "@/pages/CheckoutPublic";
 import NotFound from "@/pages/NotFound";
+import AdminOverview from "@/pages/admin/AdminOverview";
+import AdminAssinantes from "@/pages/admin/AdminAssinantes";
+import AdminPlanos from "@/pages/admin/AdminPlanos";
+import AdminCobrancas from "@/pages/admin/AdminCobrancas";
+import AdminTokens from "@/pages/admin/AdminTokens";
+import AdminIntegracoes from "@/pages/admin/AdminIntegracoes";
+import AdminLogs from "@/pages/admin/AdminLogs";
 
 const queryClient = new QueryClient();
 
@@ -50,6 +59,15 @@ const App = () => (
               <Route path="/disparos" element={<Disparos />} />
               <Route path="/whatsapp-cloud" element={<WhatsAppCloud />} />
               <Route path="/configuracoes" element={<Configuracoes />} />
+            </Route>
+            <Route element={<AuthGuard><AdminGuard><AdminLayout /></AdminGuard></AuthGuard>}>
+              <Route path="/admin" element={<AdminOverview />} />
+              <Route path="/admin/assinantes" element={<AdminAssinantes />} />
+              <Route path="/admin/planos" element={<AdminPlanos />} />
+              <Route path="/admin/cobrancas" element={<AdminCobrancas />} />
+              <Route path="/admin/tokens" element={<AdminTokens />} />
+              <Route path="/admin/integracoes" element={<AdminIntegracoes />} />
+              <Route path="/admin/logs" element={<AdminLogs />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
