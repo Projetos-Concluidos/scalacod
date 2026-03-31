@@ -163,7 +163,105 @@ const CheckoutPublic = () => {
     })();
   }, [slug]);
 
-  const [interactionTracked, setInteractionTracked] = useState(false);
+  // Fetch MP public key when checkout loads (for coinzz card payments)
+  useEffect(() => {
+    if (!checkout) return;
+    const fetchKey = async () => {
+      try {
+        const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+        const res = await fetch(`https://${projectId}.supabase.co/functions/v1/checkout-api`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "get_mp_public_key", user_id: checkout.user_id }),
+        });
+        const data = await res.json();
+        if (data.public_key) setMpPublicKey(data.public_key);
+      } catch { /* no MP configured */ }
+    };
+    fetchKey();
+  }, [checkout]);
+
+  // Initialize MercadoPago Bricks when credit_card is selected on step 3
+  useEffect(() => {
+    if (step !== 3 || provider !== "coinzz" || paymentMethod !== "credit_card" || !mpPublicKey || !offer) return;
+    if (!window.MercadoPago) return;
+
+    setBricksReady(false);
+
+    const initBricks = async () => {
+      try {
+        // Cleanup previous instance
+        if (bricksControllerRef.current) {
+          try { bricksControllerRef.current.unmount(); } catch {}
+          bricksControllerRef.current = null;
+        }
+        // Clear container
+        const container = document.getElementById("cardPaymentBrick_container");
+        if (container) container.innerHTML = "";
+
+        const mp = new window.MercadoPago(mpPublicKey, { locale: "pt-BR" });
+        const bricksBuilder = mp.bricks();
+
+        const controller = await bricksBuilder.create("cardPayment", "cardPaymentBrick_container", {
+          initialization: {
+            amount: totalPrice,
+            payer: {
+              email: form.email || "",
+              firstName: form.name.split(" ")[0] || "",
+              lastName: form.name.split(" ").slice(1).join(" ") || "",
+              identification: {
+                type: "CPF",
+                number: form.cpf.replace(/\D/g, ""),
+              },
+            },
+          },
+          customization: {
+            paymentMethods: {
+              minInstallments: 1,
+              maxInstallments: 12,
+            },
+            visual: {
+              style: {
+                theme: "default",
+                customVariables: {
+                  formBackgroundColor: "#ffffff",
+                  baseColor: "#10B981",
+                },
+              },
+            },
+          },
+          callbacks: {
+            onReady: () => {
+              setBricksReady(true);
+            },
+            onSubmit: async (cardFormData: any) => {
+              await processPayment(cardFormData.token, cardFormData.installments);
+            },
+            onError: (error: any) => {
+              console.error("Bricks error:", error);
+              toast.error("Erro no formulário de pagamento");
+            },
+          },
+        });
+
+        bricksControllerRef.current = controller;
+      } catch (err) {
+        console.error("Failed to init Bricks:", err);
+      }
+    };
+
+    // Small delay to ensure DOM is ready
+    const timer = setTimeout(initBricks, 300);
+    return () => {
+      clearTimeout(timer);
+      if (bricksControllerRef.current) {
+        try { bricksControllerRef.current.unmount(); } catch {}
+        bricksControllerRef.current = null;
+      }
+    };
+  }, [step, provider, paymentMethod, mpPublicKey, totalPrice]);
+
+
   const trackInteraction = () => {
     if (!interactionTracked && checkout) { track("interaction"); setInteractionTracked(true); }
   };
