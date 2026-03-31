@@ -9,6 +9,13 @@ interface Profile {
   store_name: string | null;
   plan: string | null;
   avatar_url: string | null;
+  plan_id: string | null;
+  subscription_id: string | null;
+  subscription_status: string | null;
+  trial_ends_at: string | null;
+  subscription_ends_at: string | null;
+  token_balance: number | null;
+  role: string | null; // from user_roles table
 }
 
 interface AuthContextType {
@@ -29,12 +36,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   const fetchProfile = async (userId: string) => {
-    const { data } = await supabase
+    // Fetch profile
+    const { data: profileData } = await supabase
       .from("profiles")
       .select("*")
       .eq("id", userId)
       .single();
-    if (data) setProfile(data);
+
+    // Fetch role from user_roles
+    const { data: roleData } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userId)
+      .limit(1)
+      .maybeSingle();
+
+    if (profileData) {
+      setProfile({
+        ...profileData,
+        role: roleData?.role || "tenant",
+      } as Profile);
+    }
   };
 
   useEffect(() => {
@@ -86,9 +108,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const updateProfile = async (data: Partial<Profile>) => {
     if (!user) return { error: new Error("Not authenticated") };
+    const { role, ...updateData } = data as any;
     const { error } = await supabase
       .from("profiles")
-      .update(data)
+      .update(updateData)
       .eq("id", user.id);
     if (!error) await fetchProfile(user.id);
     return { error: error as Error | null };
