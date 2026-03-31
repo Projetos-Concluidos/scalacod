@@ -373,9 +373,10 @@ Deno.serve(async (req) => {
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       } catch (e) {
+        const isAuthError = e.message?.includes("Token") || e.message?.includes("HTML") || e.message?.includes("login");
         return new Response(
           JSON.stringify({ error: e.message }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { status: isAuthError ? 400 : 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
     }
