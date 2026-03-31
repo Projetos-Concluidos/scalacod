@@ -79,8 +79,8 @@ const Fluxos = () => {
           node_count: serializedNodes.length,
           message_count: data.message_count,
         }).eq("id", editingFlow.id);
-        if (error) {
-          console.error("Update flow error:", error);
+          if (error) {
+            if (import.meta.env.DEV) console.error("Update flow error:", error);
           toast.error(`Erro ao atualizar fluxo: ${error.message}`);
           return;
         }
