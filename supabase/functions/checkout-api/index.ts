@@ -597,6 +597,101 @@ Deno.serve(async (req) => {
       }
     }
 
+    // ─── ACTION: validate_cpf ───────────────────────
+    if (action === "validate_cpf") {
+      const cpf = body.cpf?.replace(/\D/g, "");
+      if (!cpf || cpf.length !== 11) {
+        return new Response(
+          JSON.stringify({ valid: false, status: "invalid", message: "CPF inválido" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Local CPF algorithm validation
+      const isValidAlgo = (() => {
+        if (/^(\d)\1+$/.test(cpf)) return false;
+        let sum = 0;
+        for (let i = 0; i < 9; i++) sum += parseInt(cpf[i]) * (10 - i);
+        let rest = (sum * 10) % 11;
+        if (rest === 10) rest = 0;
+        if (rest !== parseInt(cpf[9])) return false;
+        sum = 0;
+        for (let i = 0; i < 10; i++) sum += parseInt(cpf[i]) * (11 - i);
+        rest = (sum * 10) % 11;
+        if (rest === 10) rest = 0;
+        return rest === parseInt(cpf[10]);
+      })();
+
+      if (!isValidAlgo) {
+        return new Response(
+          JSON.stringify({ valid: false, status: "invalid", message: "CPF inválido (dígito verificador incorreto)" }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Try Logzz API validation
+      const logzz = getIntegration("logzz");
+      const token = (logzz?.config as any)?.bearer_token;
+
+      if (token) {
+        try {
+          // Check if CPF is blocked/blacklisted in Logzz
+          const res = await fetch(
+            `https://app.logzz.com.br/api/v1/customer/validate-document/${cpf}`,
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+                Accept: "application/json",
+              },
+            }
+          );
+
+          if (res.ok) {
+            const data = await res.json();
+            const blocked = data?.blocked === true || data?.data?.blocked === true || data?.status === "blocked";
+            if (blocked) {
+              return new Response(
+                JSON.stringify({
+                  valid: false,
+                  status: "blocked",
+                  message: "CPF bloqueado para compras",
+                  source: "logzz",
+                }),
+                { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+              );
+            }
+
+            return new Response(
+              JSON.stringify({
+                valid: true,
+                status: "approved",
+                message: "CPF verificado na Logzz",
+                source: "logzz",
+                customer_name: data?.name || data?.data?.name || null,
+              }),
+              { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
+
+          // If endpoint doesn't exist (404/405), fallback to local validation
+          console.log(`[validate_cpf] Logzz returned ${res.status}, falling back to local`);
+        } catch (e) {
+          console.log(`[validate_cpf] Logzz error: ${e.message}, falling back to local`);
+        }
+      }
+
+      // Fallback: local validation passed
+      return new Response(
+        JSON.stringify({
+          valid: true,
+          status: "approved",
+          message: "CPF válido",
+          source: "local",
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     return new Response(
       JSON.stringify({ error: "Invalid action" }),
       { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
