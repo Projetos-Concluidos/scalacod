@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo } from "react";
-import { Users, Heart, MessageSquare, DollarSign, Upload, Search, LayoutGrid, List, Phone, Mail, Eye, MoreHorizontal, X, FileText, Plus, Tag, Send } from "lucide-react";
+import { useState, useEffect, useMemo, useCallback } from "react";
+import { Users, Heart, MessageSquare, DollarSign, Upload, Search, LayoutGrid, List, Phone, Mail, Eye, MoreHorizontal, X, FileText, Plus, Tag, Send, Download } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";

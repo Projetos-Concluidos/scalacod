@@ -95,6 +95,42 @@ const Fluxos = () => {
     }, 100);
   };
 
+  const submitTemplateToMeta = async (flow: Flow) => {
+    if (!user) return;
+    try {
+      const components = [];
+      const messageNodes = (flow.nodes as any[])?.filter((n: any) => n.data?.type === "message") || [];
+      if (messageNodes.length > 0) {
+        components.push({ type: "BODY", text: messageNodes.map((n: any) => n.data?.content || n.data?.label).join("\n") });
+      }
+      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+      const res = await fetch(`https://${projectId}.supabase.co/functions/v1/meta-templates`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "submit_template",
+          user_id: user.id,
+          flow_id: flow.id,
+          template_data: {
+            name: flow.name.toLowerCase().replace(/[^a-z0-9_]/g, "_").slice(0, 60),
+            category: "UTILITY",
+            language: "pt_BR",
+            components: components.length > 0 ? components : [{ type: "BODY", text: flow.name }],
+          },
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success(`Template enviado para aprovação! ID: ${data.template_id}`);
+        fetchFlows();
+      } else {
+        toast.error(data.error || "Erro ao submeter template");
+      }
+    } catch {
+      toast.error("Erro ao enviar template para a Meta");
+    }
+  };
+
   const toggleFlowActive = async (flow: Flow) => {
     await supabase.from("flows").update({ is_active: !flow.is_active }).eq("id", flow.id);
     toast.success(flow.is_active ? "Fluxo desativado" : "Fluxo ativado");
