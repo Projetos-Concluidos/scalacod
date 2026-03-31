@@ -56,6 +56,8 @@ const Checkouts = () => {
   const [formOrderBump, setFormOrderBump] = useState(false);
   const [formUpsell, setFormUpsell] = useState(false);
   const [formCustomCss, setFormCustomCss] = useState("");
+  const [logzzOffers, setLogzzOffers] = useState<LogzzOffer[]>([]);
+  const [syncingLogzz, setSyncingLogzz] = useState(false);
 
   const { data: checkouts = [], isLoading } = useQuery({
     queryKey: ["checkouts"],
