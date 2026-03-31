@@ -186,6 +186,7 @@ const CheckoutPublic = () => {
   const handleSubmit = async () => {
     if (!checkout || !offer) return;
     setSubmitting(true);
+    track("order_submitted");
     try {
       const num = generateOrderNumber();
       setOrderNumber(num);
