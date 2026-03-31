@@ -1,69 +1,62 @@
 
 
-# Plano de Desenvolvimento — 8 Melhorias Pendentes do ScalaNinja
+# Plano: Sincronizar Ofertas de Afiliado da Logzz
 
-## Explicacao de cada item
+## Problema
 
-**1. Indices de performance** — Adicionar indices no banco de dados nas colunas mais consultadas (user_id, created_at, status, phone, etc.) para acelerar queries de listagem, dashboard e filtros. Sem isso, conforme o volume de dados cresce, as paginas ficam lentas.
+O botão "Sincronizar Logzz" atualmente apenas lê ofertas já existentes no banco local. Ele não chama nenhuma API da Logzz para importar ofertas de afiliado. A Logzz não possui uma API REST pública documentada para listar ofertas de afiliado.
 
-**2. Trigger updated_at** — A funcao `update_updated_at_column()` ja existe mas so esta vinculada a tabela `profiles`. Precisa ser vinculada a todas as tabelas que tem coluna `updated_at` (orders, leads, conversations, stores, integrations, flows, checkouts, whatsapp_instances, voice_tokens). Isso garante que o campo se atualiza automaticamente.
+## Abordagem
 
-**3. Provider check real (Logzz)** — Hoje o checkout simula a verificacao de CEP com logica baseada no primeiro digito. Precisa criar uma edge function que faz a chamada real para `app.logzz.com.br/api/delivery-day/options/zip-code/{cep}` usando o token do usuario armazenado na tabela `integrations`.
+A Logzz opera com uma API interna em `app.logzz.com.br/api/`. O endpoint de delivery-day já funciona com o bearer token. Vamos tentar múltiplos endpoints candidatos para buscar ofertas de afiliado e, caso nenhum funcione, retornar uma mensagem clara com instruções de fallback.
 
-**4. Pagamento Coinzz/MercadoPago** — Hoje o checkout Coinzz mostra UI simulada (QR code fake, formulario sem tokenizacao). Precisa criar edge functions que: (a) criam pagamento PIX no MercadoPago e retornam QR code real, (b) criam pedido na Coinzz via API real.
+## Mudanças
 
-**5. Exportacao CSV** — Ja existe em Pedidos. Falta implementar em Leads (exportar leads filtrados) e potencialmente em Dashboard/Campanhas.
+### 1. Edge Function `checkout-api/index.ts` — Reescrever `sync_logzz_products`
 
-**6. Realtime automatico** — Os channels de realtime ja existem no codigo (Pedidos, Dashboard, Conversas), mas as tabelas `orders`, `conversations` e `messages` nao estao adicionadas a publication `supabase_realtime`. Sem isso, nenhum evento e disparado.
+Tentar os seguintes endpoints em sequência com o bearer token do usuário:
+- `GET https://app.logzz.com.br/api/affiliate/offers`
+- `GET https://app.logzz.com.br/api/v1/affiliate/offers`
+- `GET https://app.logzz.com.br/api/offers`
+- `GET https://app.logzz.com.br/api/v1/offers`
+- `GET https://app.logzz.com.br/api/products`
 
-**7. Modal IA com Lovable AI** — Hoje o AIFlowModal gera fluxos com logica hardcoded (keyword matching). Precisa integrar com Lovable AI Gateway via edge function para gerar estrutura JSON de fluxos inteligentemente a partir da descricao do usuario.
+Para cada endpoint:
+- Usar `redirect: "manual"` e `Accept: application/json`
+- Se retornar JSON válido com array de ofertas, parsear e importar
+- Se retornar HTML ou redirect, pular para o próximo
 
-**8. Templates sem submissao Meta** — A aba Templates mostra templates mas nao tem funcionalidade real de enviar templates para aprovacao na Meta via WhatsApp Cloud API. Precisa de edge function que chama `POST graph.facebook.com/v21.0/{waba_id}/message_templates`.
+Ao encontrar ofertas:
+- Para cada oferta, criar/atualizar `products` e `offers` no banco usando `upsert` por hash/nome
+- Retornar contagem de itens importados
 
----
+Se nenhum endpoint funcionar:
+- Retornar as ofertas locais existentes + mensagem explicativa dizendo que a API da Logzz não disponibiliza endpoint de listagem pública, sugerindo criar ofertas manualmente ou aguardar importação via webhook
 
-## Plano de Implementacao
+### 2. Frontend `Checkouts.tsx` — Melhorar feedback da sincronização
 
-### Step 1: Migration — Indices + Triggers + Realtime
-Uma unica migration SQL que:
-- Cria ~15 indices nas colunas mais usadas (user_id, created_at, status, phone, checkout_id, etc.)
-- Vincula trigger `update_updated_at_column` a 9 tabelas
-- Adiciona `orders`, `conversations`, `messages`, `leads` a `supabase_realtime`
+- Mostrar os itens retornados (mesmo que sejam locais) no toast de sucesso
+- Se a resposta contiver `message` de fallback, mostrar como toast informativo em vez de erro
 
-### Step 2: Edge function `checkout-api`
-Funcao que recebe acao no body:
-- `check_delivery`: chama Logzz API real com token do usuario
-- `create_pix`: chama MercadoPago para gerar QR code PIX
-- `create_coinzz_order`: chama Coinzz API para criar pedido
+### 3. Logging para debug
 
-Atualizar `CheckoutPublic.tsx` para chamar essa edge function em vez de simular.
+- A edge function vai logar o status e primeiros 200 chars de cada endpoint tentado, facilitando diagnóstico futuro
 
-### Step 3: Edge function `ai-flow-generator`
-Funcao que usa Lovable AI Gateway para gerar estrutura JSON de fluxo a partir de prompt do usuario. Atualizar `AIFlowModal.tsx` para chamar a edge function.
+## Detalhes técnicos
 
-### Step 4: Edge function `meta-templates`
-Funcao que submete templates para aprovacao na Meta via Cloud API. Atualizar aba Templates em `Fluxos.tsx` para ter botao funcional de submissao.
+```text
+sync_logzz_products
+├── Buscar token do usuário na tabela integrations
+├── Tentar endpoints em sequência (5 candidatos)
+│   ├── Se JSON válido com offers[] → parsear
+│   │   ├── Upsert products (by hash ou name)
+│   │   └── Upsert offers (by hash ou name)
+│   └── Se HTML/redirect/erro → próximo endpoint
+├── Se encontrou ofertas → retornar { success, synced, items }
+└── Se nenhum endpoint → retornar ofertas locais + mensagem
+```
 
-### Step 5: Exportacao CSV em Leads
-Adicionar funcao `exportCSV()` na pagina Leads (mesmo padrao ja usado em Pedidos).
-
-### Arquivos criados/editados
-
-| Arquivo | Acao |
-|---------|------|
-| `supabase/migrations/new.sql` | Indices, triggers, realtime |
-| `supabase/functions/checkout-api/index.ts` | Edge function delivery + pagamento |
-| `supabase/functions/ai-flow-generator/index.ts` | Edge function IA |
-| `supabase/functions/meta-templates/index.ts` | Edge function submissao Meta |
-| `src/pages/CheckoutPublic.tsx` | Integrar checkout-api |
-| `src/components/fluxos/AIFlowModal.tsx` | Integrar ai-flow-generator |
-| `src/pages/Fluxos.tsx` | Botao submissao template |
-| `src/pages/Leads.tsx` | Adicionar exportacao CSV |
-
-### Dependencias externas necessarias
-
-- **Logzz/Coinzz tokens**: ja armazenados na tabela `integrations` pelo usuario
-- **MercadoPago access token**: ja armazenado na tabela `integrations` pelo usuario
-- **Meta access token + WABA ID**: ja armazenados na tabela `whatsapp_instances`
-- **LOVABLE_API_KEY**: ja configurado automaticamente (verificado nos secrets)
+Arquivos modificados:
+- `supabase/functions/checkout-api/index.ts` — reescrever action `sync_logzz_products`
+- `src/pages/Checkouts.tsx` — melhorar tratamento da resposta de sync
 
