@@ -234,6 +234,158 @@ Deno.serve(async (req) => {
       }
     }
 
+    // ─── ACTION: sync_logzz_products ──────────────────
+    if (action === "sync_logzz_products") {
+      const logzz = getIntegration("logzz");
+      if (!logzz?.config) {
+        return new Response(
+          JSON.stringify({ error: "Logzz não configurado" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const token = (logzz.config as any).bearer_token;
+      if (!token) {
+        return new Response(
+          JSON.stringify({ error: "Token Logzz ausente" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      try {
+        const res = await fetch("https://app.logzz.com.br/api/offers", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
+
+        if (!data.success && !data.data) {
+          throw new Error(data.message || "Erro ao buscar ofertas da Logzz");
+        }
+
+        const offers = data.data || data;
+        const results = { synced: 0, products: 0, offers: 0 };
+
+        for (const item of (Array.isArray(offers) ? offers : [])) {
+          // Upsert product
+          const productPayload = {
+            user_id,
+            name: item.product_name || item.name || "Produto Logzz",
+            hash: item.product_hash || item.hash || null,
+            weight: item.weight || null,
+            width: item.width || null,
+            height: item.height || null,
+            length: item.length || null,
+            is_active: true,
+          };
+
+          let productId: string;
+          if (item.product_hash) {
+            const { data: existingProduct } = await supabase
+              .from("products")
+              .select("id")
+              .eq("user_id", user_id)
+              .eq("hash", item.product_hash)
+              .maybeSingle();
+
+            if (existingProduct) {
+              productId = existingProduct.id;
+              await supabase.from("products").update(productPayload).eq("id", productId);
+            } else {
+              const { data: newProduct } = await supabase
+                .from("products")
+                .insert(productPayload)
+                .select("id")
+                .single();
+              productId = newProduct!.id;
+              results.products++;
+            }
+          } else {
+            const { data: newProduct } = await supabase
+              .from("products")
+              .insert(productPayload)
+              .select("id")
+              .single();
+            productId = newProduct!.id;
+            results.products++;
+          }
+
+          // Upsert offer
+          const offerPayload = {
+            user_id,
+            product_id: productId,
+            name: item.offer_name || item.name || "Oferta Logzz",
+            price: item.price || 0,
+            original_price: item.original_price || null,
+            hash: item.offer_hash || item.hash || null,
+            checkout_type: "hybrid",
+            is_active: true,
+            expedition_checkout_url: item.expedition_checkout_url || null,
+            scheduling_checkout_url: item.scheduling_checkout_url || null,
+          };
+
+          const offerHash = item.offer_hash || item.hash;
+          if (offerHash) {
+            const { data: existingOffer } = await supabase
+              .from("offers")
+              .select("id")
+              .eq("user_id", user_id)
+              .eq("hash", offerHash)
+              .maybeSingle();
+
+            if (existingOffer) {
+              await supabase.from("offers").update(offerPayload).eq("id", existingOffer.id);
+            } else {
+              await supabase.from("offers").insert(offerPayload);
+              results.offers++;
+            }
+          } else {
+            await supabase.from("offers").insert(offerPayload);
+            results.offers++;
+          }
+
+          results.synced++;
+        }
+
+        return new Response(
+          JSON.stringify({ success: true, ...results }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      } catch (e) {
+        return new Response(
+          JSON.stringify({ error: e.message }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
+    // ─── ACTION: test_logzz_connection ────────────────
+    if (action === "test_connection") {
+      const logzz = getIntegration("logzz");
+      if (!logzz?.config) {
+        return new Response(
+          JSON.stringify({ connected: false, error: "Logzz não configurado" }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const token = (logzz.config as any).bearer_token;
+      try {
+        const res = await fetch("https://app.logzz.com.br/api/offers", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
+        return new Response(
+          JSON.stringify({ connected: res.ok, offers_count: Array.isArray(data.data) ? data.data.length : 0 }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      } catch (e) {
+        return new Response(
+          JSON.stringify({ connected: false, error: e.message }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
     return new Response(
       JSON.stringify({ error: "Invalid action" }),
       { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }

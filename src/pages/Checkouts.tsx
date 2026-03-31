@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { ShoppingCart, CheckCircle, PauseCircle, Package, Plus, Search, Copy, Pencil, Trash2, ToggleLeft, ToggleRight, ExternalLink } from "lucide-react";
+import { ShoppingCart, CheckCircle, PauseCircle, Package, Plus, Search, Copy, Pencil, Trash2, ToggleLeft, ToggleRight, ExternalLink, RefreshCw, Loader2 } from "lucide-react";
 import PageHeader from "@/components/PageHeader";
 import StatCard from "@/components/StatCard";
 import EmptyState from "@/components/EmptyState";
@@ -29,6 +29,39 @@ type CheckoutWithOffer = {
   config: any;
   offer_id: string | null;
   created_at: string | null;
+};
+
+const SyncOffersButton = ({ userId, onSynced }: { userId?: string; onSynced: () => void }) => {
+  const [syncing, setSyncing] = useState(false);
+  const handleSync = async () => {
+    if (!userId) return;
+    setSyncing(true);
+    try {
+      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+      const res = await fetch(`https://${projectId}.supabase.co/functions/v1/checkout-api`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "sync_logzz_products", user_id: userId }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success(`✅ Sincronizado! ${data.synced} itens (${data.products} novos produtos, ${data.offers} novas ofertas)`);
+        onSynced();
+      } else {
+        toast.error(data.error || "Erro ao sincronizar");
+      }
+    } catch {
+      toast.error("Erro ao sincronizar ofertas da Logzz");
+    } finally {
+      setSyncing(false);
+    }
+  };
+  return (
+    <button onClick={handleSync} disabled={syncing} className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 disabled:opacity-50" title="Sincronizar ofertas da Logzz">
+      {syncing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+      {syncing ? "Sincronizando..." : "Sincronizar Logzz"}
+    </button>
+  );
 };
 
 const Checkouts = () => {
@@ -312,17 +345,23 @@ const Checkouts = () => {
           {wizardStep === 1 && (
             <div className="space-y-4">
               <div>
-                <Label>Oferta</Label>
+                <div className="flex items-center justify-between mb-1">
+                  <Label>Oferta</Label>
+                  <SyncOffersButton userId={user?.id} onSynced={() => queryClient.invalidateQueries({ queryKey: ["offers"] })} />
+                </div>
                 <Select value={formOfferId} onValueChange={(v) => {
                   setFormOfferId(v);
                   const o = offers.find((x) => x.id === v);
-                  if (o && !formName) setFormName(o.name);
+                  if (o) {
+                    if (!formName) setFormName(o.name);
+                  }
                 }}>
                   <SelectTrigger className="bg-input border-border"><SelectValue placeholder="Selecione uma oferta" /></SelectTrigger>
                   <SelectContent>
                     {offers.map((o) => <SelectItem key={o.id} value={o.id}>{o.name} — R$ {Number(o.price).toFixed(2)}</SelectItem>)}
                   </SelectContent>
                 </Select>
+                <p className="text-xs text-muted-foreground mt-1">Clique em ↻ para sincronizar ofertas da Logzz. Ao selecionar, nome e preço serão preenchidos.</p>
               </div>
               <div>
                 <Label>Nome do Checkout</Label>

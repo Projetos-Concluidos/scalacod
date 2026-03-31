@@ -51,14 +51,14 @@ Tipos de nós disponíveis: start, message, delay, condition, audio, image, butt
 Variáveis: {{nome}}, {{telefone}}, {{pedido}}, {{produto}}, {{valor}}, {{rastreio}}, {{data_entrega}}.
 Gere entre 4 e 8 nós. Posicione verticalmente com y incrementando em 130px.`;
 
-    const res = await fetch("https://ai.lovable.dev/api/v1/chat/completions", {
+    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "google/gemini-3-flash-preview",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: prompt },
