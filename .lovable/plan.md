@@ -1,62 +1,68 @@
 
 
-# Plano: Sincronizar Ofertas de Afiliado da Logzz
+# Plano: Corrigir Importação de Ofertas da Logzz
 
 ## Problema
 
-O botão "Sincronizar Logzz" atualmente apenas lê ofertas já existentes no banco local. Ele não chama nenhuma API da Logzz para importar ofertas de afiliado. A Logzz não possui uma API REST pública documentada para listar ofertas de afiliado.
-
-## Abordagem
-
-A Logzz opera com uma API interna em `app.logzz.com.br/api/`. O endpoint de delivery-day já funciona com o bearer token. Vamos tentar múltiplos endpoints candidatos para buscar ofertas de afiliado e, caso nenhum funcione, retornar uma mensagem clara com instruções de fallback.
+Os logs mostram que `GET /api/v1/products` retorna status 200 com JSON do tipo `object` (não array), mas o código atual não extrai os dados porque espera arrays diretos. A Logzz retorna produtos agrupados por papel: `{ producer: [...], affiliate: [...], coproducer: [...] }`, cada produto contendo um array de `offers`.
 
 ## Mudanças
 
-### 1. Edge Function `checkout-api/index.ts` — Reescrever `sync_logzz_products`
+### 1. Edge Function `checkout-api/index.ts` — Corrigir parsing do `/api/v1/products`
 
-Tentar os seguintes endpoints em sequência com o bearer token do usuário:
-- `GET https://app.logzz.com.br/api/affiliate/offers`
-- `GET https://app.logzz.com.br/api/v1/affiliate/offers`
-- `GET https://app.logzz.com.br/api/offers`
-- `GET https://app.logzz.com.br/api/v1/offers`
-- `GET https://app.logzz.com.br/api/products`
+- Remover os 7 endpoints candidatos. Usar apenas `GET https://app.logzz.com.br/api/v1/products`
+- Adicionar parsing para a estrutura agrupada por papel:
+  ```
+  { producer: [{ name, hash, offers: [{ name, hash, price }] }],
+    affiliate: [...],
+    coproducer: [...] }
+  ```
+- Para cada produto em cada categoria, extrair cada offer com: `product_name`, `product_hash`, `offer_hash`, `offer_name`, `price`, `role`
+- Logar a resposta completa (primeiros 500 chars) para debug
+- Manter o upsert existente de products/offers no banco
 
-Para cada endpoint:
-- Usar `redirect: "manual"` e `Accept: application/json`
-- Se retornar JSON válido com array de ofertas, parsear e importar
-- Se retornar HTML ou redirect, pular para o próximo
+### 2. Frontend `Checkouts.tsx` — Melhorar seleção de oferta
 
-Ao encontrar ofertas:
-- Para cada oferta, criar/atualizar `products` e `offers` no banco usando `upsert` por hash/nome
-- Retornar contagem de itens importados
+- Quando o usuário seleciona uma oferta no dropdown, preencher automaticamente:
+  - `formName` → nome do produto
+  - Slug gerado: `nome-do-produto-offerhash`
+- Mostrar no dropdown: `Nome do Produto — Nome da Oferta (R$ preço)`
+- Incluir o nome do produto no texto de cada SelectItem (já busca products junto com offers)
 
-Se nenhum endpoint funcionar:
-- Retornar as ofertas locais existentes + mensagem explicativa dizendo que a API da Logzz não disponibiliza endpoint de listagem pública, sugerindo criar ofertas manualmente ou aguardar importação via webhook
+### 3. Criar Edge Function dedicada `logzz-list-products`
 
-### 2. Frontend `Checkouts.tsx` — Melhorar feedback da sincronização
+Alternativa mais limpa: criar uma edge function separada `logzz-list-products` que:
+- Autentica o usuário via JWT
+- Busca o token Logzz da tabela `integrations`
+- Chama `GET https://app.logzz.com.br/api/v1/products` com Bearer token
+- Extrai ofertas das 3 categorias (producer, affiliate, coproducer)
+- Retorna `{ success: true, offers: [...] }` diretamente, sem salvar no banco (o frontend decide)
 
-- Mostrar os itens retornados (mesmo que sejam locais) no toast de sucesso
-- Se a resposta contiver `message` de fallback, mostrar como toast informativo em vez de erro
-
-### 3. Logging para debug
-
-- A edge function vai logar o status e primeiros 200 chars de cada endpoint tentado, facilitando diagnóstico futuro
+O `SyncOffersButton` passará a chamar esta função via `supabase.functions.invoke("logzz-list-products")`, preenchendo o dropdown com as ofertas retornadas sem precisar salvar no banco primeiro.
 
 ## Detalhes técnicos
 
 ```text
-sync_logzz_products
-├── Buscar token do usuário na tabela integrations
-├── Tentar endpoints em sequência (5 candidatos)
-│   ├── Se JSON válido com offers[] → parsear
-│   │   ├── Upsert products (by hash ou name)
-│   │   └── Upsert offers (by hash ou name)
-│   └── Se HTML/redirect/erro → próximo endpoint
-├── Se encontrou ofertas → retornar { success, synced, items }
-└── Se nenhum endpoint → retornar ofertas locais + mensagem
+/api/v1/products response shape:
+{
+  producer: [
+    { name: "Whey", hash: "abc123", offers: [
+      { name: "Kit 1", hash: "xyz789", price: 197.00 }
+    ]}
+  ],
+  affiliate: [...],
+  coproducer: [...]
+}
+
+Extração:
+for role in [producer, affiliate, coproducer]:
+  for product in response[role]:
+    for offer in product.offers:
+      → { product_name, product_hash, offer_hash, offer_name, price, role }
 ```
 
-Arquivos modificados:
-- `supabase/functions/checkout-api/index.ts` — reescrever action `sync_logzz_products`
-- `src/pages/Checkouts.tsx` — melhorar tratamento da resposta de sync
+Arquivos:
+- `supabase/functions/logzz-list-products/index.ts` — nova edge function dedicada
+- `supabase/functions/checkout-api/index.ts` — simplificar `sync_logzz_products` (usar mesmo parsing corrigido)
+- `src/pages/Checkouts.tsx` — usar nova função, preencher campos ao selecionar oferta
 
