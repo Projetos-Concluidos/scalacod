@@ -386,3 +386,29 @@ const WhatsAppCloud = () => {
               <p className="text-sm text-muted-foreground">Em breve — conexão via QR Code com Evolution API.</p>
             </div>
           )}
+        </div>
+
+        {/* Info card */}
+        <div className="ninja-card h-fit">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-success/10 mb-4">
+            <Shield className="h-6 w-6 text-success" />
+          </div>
+          <h3 className="text-lg font-bold text-foreground mb-2">API Oficial</h3>
+          <p className="text-sm text-muted-foreground mb-4">
+            Utilize a infraestrutura oficial da Meta para garantir 100% de entrega e evitar banimentos. Suporte a botões, listas e fluxos interativos nativos.
+          </p>
+          <div className="space-y-2 text-xs text-primary">
+            <a href="https://developers.facebook.com/docs/whatsapp" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 hover:underline">
+              📄 Documentação da Meta
+            </a>
+            <a href="https://ycloud.com" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 hover:underline">
+              ☁ YCloud - WhatsApp BSP
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default WhatsAppCloud;
