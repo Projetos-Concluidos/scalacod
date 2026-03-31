@@ -283,9 +283,11 @@ const WhatsAppCloud = () => {
                   <div className="flex gap-3 pt-2">
                     <button
                       onClick={handleTestSend}
-                      className="flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 px-4 py-2 text-sm font-medium text-primary hover:bg-primary/10"
+                      disabled={testSending}
+                      className="flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 px-4 py-2 text-sm font-medium text-primary hover:bg-primary/10 disabled:opacity-50"
                     >
-                      <Send className="h-4 w-4" /> Testar envio
+                      {testSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                      {testSending ? "Enviando..." : "Testar envio"}
                     </button>
                     <button
                       onClick={handleDisconnect}
