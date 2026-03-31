@@ -20,12 +20,13 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Get user integrations
-    const { data: integrations } = await supabase
-      .from("integrations")
-      .select("*")
-      .eq("user_id", user_id)
-      .eq("is_active", true);
+    // Get user integrations (include inactive for test/sync actions)
+    const skipActiveFilter = ["test_connection", "sync_logzz_products"].includes(action);
+    let intQuery = supabase.from("integrations").select("*").eq("user_id", user_id);
+    if (!skipActiveFilter) {
+      intQuery = intQuery.eq("is_active", true);
+    }
+    const { data: integrations } = await intQuery;
 
     const getIntegration = (type: string) =>
       integrations?.find((i: any) => i.type === type);
