@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Loader2, ShieldCheck, Package, MapPin, Calendar, CreditCard,
   CheckCircle, User, Truck, Copy, QrCode, ChevronDown, Pencil,
-  Lock, MessageCircle, FileText,
+  Lock, MessageCircle, FileText, AlertTriangle, XCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { trackPixelEvent } from "@/lib/pixel";
