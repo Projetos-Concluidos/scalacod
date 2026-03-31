@@ -59,6 +59,14 @@ const Checkouts = () => {
   const [formOrderBump, setFormOrderBump] = useState(false);
   const [formUpsell, setFormUpsell] = useState(false);
   const [formCustomCss, setFormCustomCss] = useState("");
+  // Tracking fields
+  const [formPixelFacebook, setFormPixelFacebook] = useState("");
+  const [formMetaCapiToken, setFormMetaCapiToken] = useState("");
+  const [formGoogleAdsId, setFormGoogleAdsId] = useState("");
+  const [formGoogleConversionId, setFormGoogleConversionId] = useState("");
+  const [formGoogleAnalyticsId, setFormGoogleAnalyticsId] = useState("");
+  const [formThankYouUrl, setFormThankYouUrl] = useState("");
+  const [formWhatsappSupport, setFormWhatsappSupport] = useState("");
   const [logzzOffers, setLogzzOffers] = useState<LogzzOffer[]>([]);
   const [syncingLogzz, setSyncingLogzz] = useState(false);
   const [logzzPopoverOpen, setLogzzPopoverOpen] = useState(false);
