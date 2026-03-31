@@ -10,6 +10,7 @@ import {
   CheckCircle, User, Truck, Copy, QrCode,
 } from "lucide-react";
 import { toast } from "sonner";
+import { trackPixelEvent } from "@/lib/pixel";
 
 interface CheckoutData {
   id: string; name: string; slug: string; type: string; offer_id: string;
