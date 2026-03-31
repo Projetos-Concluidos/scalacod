@@ -58,7 +58,7 @@ Gere entre 4 e 8 nós. Posicione verticalmente com y incrementando em 130px.`;
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "google/gemini-3-flash-preview",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: prompt },
