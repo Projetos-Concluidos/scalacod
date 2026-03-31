@@ -261,7 +261,7 @@ const CheckoutPublic = () => {
     };
   }, [step, provider, paymentMethod, mpPublicKey, totalPrice]);
 
-
+  const [interactionTracked, setInteractionTracked] = useState(false);
   const trackInteraction = () => {
     if (!interactionTracked && checkout) { track("interaction"); setInteractionTracked(true); }
   };
