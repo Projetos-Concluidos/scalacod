@@ -82,17 +82,8 @@ const Fluxos = () => {
   };
 
   const handleAIGenerated = (data: any) => {
-    setEditingFlow(null);
+    setEditingFlow({ ...data, id: "" } as any);
     setBuilderOpen(true);
-    // Pre-populate builder with AI-generated data
-    setTimeout(() => {
-      setEditingFlow({ ...data, id: "" } as any);
-      setBuilderOpen(false);
-      setTimeout(() => {
-        setEditingFlow({ ...data, id: "" } as any);
-        setBuilderOpen(true);
-      }, 100);
-    }, 100);
   };
 
   const submitTemplateToMeta = async (flow: Flow) => {

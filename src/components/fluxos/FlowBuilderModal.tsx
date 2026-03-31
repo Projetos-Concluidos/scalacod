@@ -65,14 +65,36 @@ export default function FlowBuilderModal({ open, onClose, onSave, initialData }:
   const [apiType, setApiType] = useState(initialData?.is_official ? "official" : "evolution");
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
 
-  const initialNodes: Node[] = initialData?.nodes?.length ? initialData.nodes : [
-    { id: "start", position: { x: 250, y: 50 }, data: { label: "🚀 Início do Fluxo", type: "start" }, style: { background: "hsl(190 100% 50% / 0.15)", border: "1px solid hsl(190 100% 50% / 0.3)", borderRadius: 12, padding: 12, color: "hsl(190 100% 50%)", fontWeight: 600, fontSize: 13 } },
-  ];
-  const initialEdges: Edge[] = initialData?.edges?.length ? initialData.edges : [];
+  const defaultStartNode: Node = { id: "start", position: { x: 250, y: 50 }, data: { label: "🚀 Início do Fluxo", type: "start" }, style: { background: "hsl(190 100% 50% / 0.15)", border: "1px solid hsl(190 100% 50% / 0.3)", borderRadius: 12, padding: 12, color: "hsl(190 100% 50%)", fontWeight: 600, fontSize: 13 } };
 
-  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
-  const nodeIdCounter = useRef(nodes.length + 1);
+  const [nodes, setNodes, onNodesChange] = useNodesState(initialData?.nodes?.length ? initialData.nodes : [defaultStartNode]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(initialData?.edges?.length ? initialData.edges : []);
+  const nodeIdCounter = useRef(1);
+
+  // Sync initialData changes (e.g. from AI generation)
+  useEffect(() => {
+    if (open && initialData) {
+      setFlowName(initialData.name || "");
+      setFlowEmoji(initialData.emoji || "⚡");
+      setTriggerEvent(initialData.trigger_event || "");
+      setFlowType(initialData.flow_type || "cod");
+      setApiType(initialData.is_official ? "official" : "evolution");
+      setNodes(initialData.nodes?.length ? initialData.nodes : [defaultStartNode]);
+      setEdges(initialData.edges?.length ? initialData.edges : []);
+      nodeIdCounter.current = (initialData.nodes?.length || 0) + 1;
+      setStep(1);
+    } else if (open && !initialData) {
+      setFlowName("");
+      setFlowEmoji("⚡");
+      setTriggerEvent("");
+      setFlowType("cod");
+      setApiType("evolution");
+      setNodes([defaultStartNode]);
+      setEdges([]);
+      nodeIdCounter.current = 1;
+      setStep(1);
+    }
+  }, [open, initialData]);
 
   const onConnect = useCallback((params: Connection) => {
     setEdges((eds) => addEdge({ ...params, animated: true, style: { stroke: "hsl(190 100% 50%)" } }, eds));
