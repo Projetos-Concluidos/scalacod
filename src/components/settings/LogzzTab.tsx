@@ -193,6 +193,28 @@ const LogzzTab = () => {
           </p>
         </div>
 
+        {/* URL de Importação Logzz */}
+        <div className="mb-4 max-w-xl">
+          <label className="text-sm font-medium text-foreground">URL de Importação de Pedidos (Logzz)</label>
+          <div className="relative mt-1.5 flex gap-2">
+            <input
+              type="text"
+              value={logzzWebhookUrl}
+              onChange={(e) => setLogzzWebhookUrl(e.target.value)}
+              placeholder="https://app.logzz.com.br/api/importacao-de-pedidos/webhook/..."
+              className="h-10 flex-1 rounded-lg border border-border bg-input px-4 text-sm text-foreground focus:border-primary focus:outline-none"
+            />
+            {logzzWebhookUrl && (
+              <Button variant="outline" size="icon" onClick={() => copyToClipboard(logzzWebhookUrl)}>
+                <Copy className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Cole a URL de importação/webhook da Logzz (Remapeamento → URL de webhook). Usada para enviar pedidos do ScalaNinja para a Logzz.
+          </p>
+        </div>
+
         <div className="flex gap-3">
           <Button variant="outline" onClick={handleTestConnection} disabled={testing || !token.trim()}>
             {testing ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
