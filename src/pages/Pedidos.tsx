@@ -78,6 +78,13 @@ const Pedidos = () => {
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
       const { error } = await supabase.from("orders").update({ status }).eq("id", id);
       if (error) throw error;
+
+      // Trigger automation flows for this status change
+      if (user) {
+        supabase.functions.invoke("trigger-flow", {
+          body: { userId: user.id, orderId: id, newStatus: status },
+        }).catch((err: any) => console.warn("Flow trigger error:", err));
+      }
     },
     onError: (e: any) => {
       toast.error("Erro ao mover pedido: " + e.message);
