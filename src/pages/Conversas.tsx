@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import {
   MessageSquare, Search, SlidersHorizontal, RefreshCw, Tag, Send, Paperclip,
   Smile, Mic, Info, Phone, Mail, FileText, X, Plus, Check, CheckCheck,
-  Image as ImageIcon, File, ChevronDown
+  Image as ImageIcon, File, ChevronDown, Layout
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils";
 import type { Tables } from "@/integrations/supabase/types";
 import EmojiStickerPicker from "@/components/chat/EmojiStickerPicker";
 import { useNotificationSound } from "@/hooks/useNotificationSound";
+import { useQuery } from "@tanstack/react-query";
 
 type Conversation = Tables<"conversations">;
 type Message = Tables<"messages">;
@@ -71,10 +72,30 @@ const Conversas = () => {
   const [leadData, setLeadData] = useState<any>(null);
   const [orderData, setOrderData] = useState<any>(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [showTemplates, setShowTemplates] = useState(false);
+  const [sendingTemplate, setSendingTemplate] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { play: playNotification, requestPermission } = useNotificationSound();
+
+  // Fetch approved templates (flows with is_official + approved flow_templates)
+  const { data: approvedFlows } = useQuery({
+    queryKey: ["approved-templates", user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+      const { data } = await supabase
+        .from("flows")
+        .select("*, flow_templates(*)")
+        .eq("user_id", user.id)
+        .eq("is_official", true);
+      // Filter flows that have at least one approved template
+      return (data || []).filter((f: any) =>
+        f.flow_templates?.some((t: any) => t.status === "APPROVED" || t.status === "approved")
+      );
+    },
+    enabled: !!user,
+  });
 
   const fetchConversations = async () => {
     if (!user) return;
@@ -272,6 +293,37 @@ const Conversas = () => {
       setSending(false);
     };
     reader.readAsDataURL(file);
+  };
+
+  const sendTemplateMessage = async (flow: any) => {
+    if (!selectedConv || !user || sendingTemplate) return;
+    setSendingTemplate(true);
+    setShowTemplates(false);
+
+    try {
+      const { data, error } = await supabase.functions.invoke("send-template-message", {
+        body: {
+          conversationId: selectedConv.id,
+          flowId: flow.id,
+          variables: [], // Can be extended with variable input UI
+        },
+      });
+
+      if (error) throw new Error(error.message || "Erro ao enviar template");
+
+      toast.success(`Template "${flow.name}" enviado!`);
+
+      setConversations(prev =>
+        prev.map(c =>
+          c.id === selectedConv.id
+            ? { ...c, last_message: `[Template: ${flow.name}]`, last_message_at: new Date().toISOString() }
+            : c
+        )
+      );
+    } catch (err: any) {
+      toast.error(err.message || "Falha ao enviar template");
+    }
+    setSendingTemplate(false);
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -566,6 +618,47 @@ const Conversas = () => {
               className="hidden"
               onChange={handleFileSelect}
             />
+            {/* Template Selector */}
+            {showTemplates && (
+              <div className="bg-card border border-border rounded-xl shadow-lg p-3 mb-2 max-h-48 overflow-y-auto">
+                <h4 className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wider">Templates Aprovados</h4>
+                {approvedFlows && approvedFlows.length > 0 ? (
+                  approvedFlows.map((flow: any) => {
+                    const tmpl = flow.flow_templates?.find((t: any) => t.status === "APPROVED" || t.status === "approved") || flow.flow_templates?.[0];
+                    return (
+                      <button
+                        key={flow.id}
+                        onClick={() => sendTemplateMessage(flow)}
+                        disabled={sendingTemplate}
+                        className="w-full text-left p-2.5 hover:bg-primary/5 rounded-lg text-sm mb-1 transition-colors border border-transparent hover:border-primary/20 disabled:opacity-50"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium text-foreground">{flow.name}</span>
+                          <Badge variant="outline" className="text-[10px] bg-success/10 text-success border-success/30">
+                            Aprovado
+                          </Badge>
+                        </div>
+                        {tmpl && (
+                          <span className="text-xs text-muted-foreground mt-0.5 block">
+                            {tmpl.template_name} • {tmpl.language || "pt_BR"}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })
+                ) : (
+                  <div className="text-center py-3">
+                    <Layout className="h-6 w-6 text-muted-foreground mx-auto mb-1.5" />
+                    <p className="text-xs text-muted-foreground">
+                      Nenhum template aprovado.
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Vá em <span className="text-primary font-medium">Fluxos → Enviar para aprovação</span>
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
             {showEmojiPicker && (
               <div className="relative">
                 <EmojiStickerPicker
@@ -612,6 +705,16 @@ const Conversas = () => {
                   className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted"
                 >
                   <Paperclip className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => { setShowTemplates(!showTemplates); setShowEmojiPicker(false); }}
+                  className={cn(
+                    "flex h-8 w-8 items-center justify-center rounded-lg transition-colors",
+                    showTemplates ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                  )}
+                  title="Usar template"
+                >
+                  <FileText className="h-4 w-4" />
                 </button>
               </div>
               <textarea
