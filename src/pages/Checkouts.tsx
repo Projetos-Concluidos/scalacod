@@ -177,6 +177,13 @@ const Checkouts = () => {
     setFormOrderBump(false);
     setFormUpsell(false);
     setFormCustomCss("");
+    setFormPixelFacebook("");
+    setFormMetaCapiToken("");
+    setFormGoogleAdsId("");
+    setFormGoogleConversionId("");
+    setFormGoogleAnalyticsId("");
+    setFormThankYouUrl("");
+    setFormWhatsappSupport("");
   }
 
   function openEdit(c: CheckoutWithOffer) {
@@ -188,6 +195,13 @@ const Checkouts = () => {
     setFormOrderBump(c.order_bump_enabled || false);
     setFormUpsell(c.upsell_enabled || false);
     setFormCustomCss(c.custom_css || "");
+    setFormPixelFacebook((c as any).pixel_facebook || "");
+    setFormMetaCapiToken((c as any).meta_capi_token || "");
+    setFormGoogleAdsId((c as any).google_ads_id || "");
+    setFormGoogleConversionId((c as any).google_conversion_id || "");
+    setFormGoogleAnalyticsId((c as any).google_analytics_id || "");
+    setFormThankYouUrl((c as any).thank_you_page_url || "");
+    setFormWhatsappSupport((c as any).whatsapp_support || "");
     setWizardStep(1);
     setWizardOpen(true);
   }
