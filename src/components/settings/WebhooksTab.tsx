@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Webhook, Copy, RefreshCw, Loader2, Send, CheckCircle, XCircle } from "lucide-react";
+import InfoTooltip from "@/components/InfoTooltip";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
