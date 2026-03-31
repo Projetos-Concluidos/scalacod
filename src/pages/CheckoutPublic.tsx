@@ -181,7 +181,7 @@ const CheckoutPublic = () => {
     fetchKey();
   }, [checkout]);
 
-  // Bricks useEffect moved below totalPrice declaration
+  
 
   const [interactionTracked, setInteractionTracked] = useState(false);
   const trackInteraction = () => {
