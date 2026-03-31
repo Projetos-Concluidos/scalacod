@@ -3,6 +3,7 @@ import { Cloud, Eye, EyeOff, Copy, ExternalLink, Save, CheckCircle, AlertCircle,
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import MetaTab from "@/components/whatsapp/MetaTab";
 
 type ConnectionStatus = "disconnected" | "connecting" | "connected";
 
@@ -156,7 +157,7 @@ const WhatsAppCloud = () => {
 
   const tabs = [
     { id: "ycloud" as const, label: "☁ YCloud", active: true },
-    { id: "meta" as const, label: "🌐 Facebook/Meta", active: false },
+    { id: "meta" as const, label: "🌐 Facebook/Meta", active: true },
     { id: "evolution" as const, label: "⚡ Evolution API", active: false },
   ];
 
@@ -224,153 +225,167 @@ const WhatsAppCloud = () => {
             ))}
           </div>
 
-          {/* YCloud info banner */}
-          <div className="mb-6 flex items-center gap-2 rounded-lg bg-primary/5 border border-primary/10 px-4 py-3">
-            <span className="text-primary">ℹ</span>
-            <p className="text-xs text-muted-foreground">
-              A <strong className="text-foreground">YCloud</strong> é uma plataforma parceira que facilita a integração com a API oficial do WhatsApp.{" "}
-              <a href="https://ycloud.com" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                Criar conta na YCloud →
-              </a>
-            </p>
-          </div>
+          {activeTab === "ycloud" && (
+            <>
+              {/* YCloud info banner */}
+              <div className="mb-6 flex items-center gap-2 rounded-lg bg-primary/5 border border-primary/10 px-4 py-3">
+                <span className="text-primary">ℹ</span>
+                <p className="text-xs text-muted-foreground">
+                  A <strong className="text-foreground">YCloud</strong> é uma plataforma parceira que facilita a integração com a API oficial do WhatsApp.{" "}
+                  <a href="https://ycloud.com" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                    Criar conta na YCloud →
+                  </a>
+                </p>
+              </div>
 
-          {/* Connected state */}
-          {status === "connected" && (
-            <div className="mb-6 rounded-lg border border-success/20 bg-success/5 p-4 space-y-3">
-              <div className="flex items-center gap-2">
-                <CheckCircle className="h-5 w-5 text-success" />
-                <span className="font-semibold text-foreground">Conexão ativa</span>
-              </div>
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <span className="text-muted-foreground">Número conectado:</span>
-                  <p className="font-medium text-foreground">{phoneNumber}</p>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Provider:</span>
-                  <p className="font-medium text-foreground">YCloud</p>
-                </div>
-                {instanceData?.waba_id && (
-                  <div>
-                    <span className="text-muted-foreground">WABA ID:</span>
-                    <p className="font-medium text-foreground">{instanceData.waba_id}</p>
+              {/* Connected state */}
+              {status === "connected" && (
+                <div className="mb-6 rounded-lg border border-success/20 bg-success/5 p-4 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="h-5 w-5 text-success" />
+                    <span className="font-semibold text-foreground">Conexão ativa</span>
                   </div>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="text-muted-foreground">Número conectado:</span>
+                      <p className="font-medium text-foreground">{phoneNumber}</p>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Provider:</span>
+                      <p className="font-medium text-foreground">YCloud</p>
+                    </div>
+                    {instanceData?.waba_id && (
+                      <div>
+                        <span className="text-muted-foreground">WABA ID:</span>
+                        <p className="font-medium text-foreground">{instanceData.waba_id}</p>
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex gap-3 pt-2">
+                    <button
+                      onClick={handleTestSend}
+                      className="flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 px-4 py-2 text-sm font-medium text-primary hover:bg-primary/10"
+                    >
+                      <Send className="h-4 w-4" /> Testar envio
+                    </button>
+                    <button
+                      onClick={handleDisconnect}
+                      disabled={loading}
+                      className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-2 text-sm font-medium text-destructive hover:bg-destructive/10 disabled:opacity-50"
+                    >
+                      {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Unplug className="h-4 w-4" />}
+                      Desconectar
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Form */}
+              <div className="space-y-5">
+                <div>
+                  <label className="text-sm font-medium text-foreground">API Key da YCloud</label>
+                  <div className="relative mt-1.5">
+                    <input
+                      type={showApiKey ? "text" : "password"}
+                      value={apiKey}
+                      onChange={(e) => setApiKey(e.target.value)}
+                      placeholder="Sua API Key da YCloud"
+                      className="h-10 w-full rounded-lg border border-border bg-input pr-10 pl-4 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none"
+                    />
+                    <button
+                      onClick={() => setShowApiKey(!showApiKey)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    >
+                      {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Encontre em YCloud Dashboard → Settings → API Keys.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium text-foreground">Número do WhatsApp (remetente)</label>
+                  <input
+                    type="text"
+                    value={phoneNumber}
+                    onChange={(e) => setPhoneNumber(e.target.value)}
+                    placeholder="+5511999999999"
+                    className="mt-1.5 h-10 w-full rounded-lg border border-border bg-input px-4 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none"
+                  />
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    O número vinculado à sua conta YCloud, em formato internacional.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium text-foreground">URL de Webhook (cole na YCloud)</label>
+                  <div className="relative mt-1.5">
+                    <input
+                      type="text"
+                      readOnly
+                      value={webhookUrl}
+                      className="h-10 w-full rounded-lg border border-border bg-input pr-10 pl-4 text-sm text-muted-foreground"
+                    />
+                    <button
+                      onClick={copyWebhook}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    >
+                      <Copy className="h-4 w-4" />
+                    </button>
+                  </div>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Na YCloud, vá em Settings → Webhooks e cole esta URL para receber mensagens.
+                  </p>
+                </div>
+              </div>
+
+              {/* Action buttons */}
+              <div className="mt-6 flex items-center gap-3">
+                {status !== "connected" ? (
+                  <button
+                    onClick={handleConnect}
+                    disabled={loading || !apiKey.trim() || !phoneNumber.trim()}
+                    className="gradient-primary flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold text-primary-foreground disabled:opacity-50"
+                  >
+                    {loading ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      "🔗"
+                    )}
+                    Conectar YCloud
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleSave}
+                    disabled={saving}
+                    className="gradient-primary flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold text-primary-foreground disabled:opacity-50"
+                  >
+                    {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                    Salvar alterações
+                  </button>
                 )}
-              </div>
-              <div className="flex gap-3 pt-2">
-                <button
-                  onClick={handleTestSend}
-                  className="flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 px-4 py-2 text-sm font-medium text-primary hover:bg-primary/10"
+                <a
+                  href="https://ycloud.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 rounded-lg border border-border px-4 py-2.5 text-sm text-foreground hover:bg-muted"
                 >
-                  <Send className="h-4 w-4" /> Testar envio
-                </button>
-                <button
-                  onClick={handleDisconnect}
-                  disabled={loading}
-                  className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-2 text-sm font-medium text-destructive hover:bg-destructive/10 disabled:opacity-50"
-                >
-                  {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Unplug className="h-4 w-4" />}
-                  Desconectar
-                </button>
+                  <ExternalLink className="h-4 w-4" /> Abrir YCloud
+                </a>
               </div>
-            </div>
+            </>
           )}
 
-          {/* Form */}
-          <div className="space-y-5">
-            <div>
-              <label className="text-sm font-medium text-foreground">API Key da YCloud</label>
-              <div className="relative mt-1.5">
-                <input
-                  type={showApiKey ? "text" : "password"}
-                  value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
-                  placeholder="Sua API Key da YCloud"
-                  className="h-10 w-full rounded-lg border border-border bg-input pr-10 pl-4 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none"
-                />
-                <button
-                  onClick={() => setShowApiKey(!showApiKey)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                >
-                  {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
-              </div>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Encontre em YCloud Dashboard → Settings → API Keys.
-              </p>
-            </div>
+          {activeTab === "meta" && <MetaTab />}
 
-            <div>
-              <label className="text-sm font-medium text-foreground">Número do WhatsApp (remetente)</label>
-              <input
-                type="text"
-                value={phoneNumber}
-                onChange={(e) => setPhoneNumber(e.target.value)}
-                placeholder="+5511999999999"
-                className="mt-1.5 h-10 w-full rounded-lg border border-border bg-input px-4 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none"
-              />
-              <p className="mt-1 text-xs text-muted-foreground">
-                O número vinculado à sua conta YCloud, em formato internacional.
-              </p>
+          {activeTab === "evolution" && (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <span className="text-4xl mb-3">⚡</span>
+              <h3 className="text-lg font-semibold text-foreground mb-1">Evolution API</h3>
+              <p className="text-sm text-muted-foreground">Em breve — conexão via QR Code com Evolution API.</p>
             </div>
-
-            <div>
-              <label className="text-sm font-medium text-foreground">URL de Webhook (cole na YCloud)</label>
-              <div className="relative mt-1.5">
-                <input
-                  type="text"
-                  readOnly
-                  value={webhookUrl}
-                  className="h-10 w-full rounded-lg border border-border bg-input pr-10 pl-4 text-sm text-muted-foreground"
-                />
-                <button
-                  onClick={copyWebhook}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                >
-                  <Copy className="h-4 w-4" />
-                </button>
-              </div>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Na YCloud, vá em Settings → Webhooks e cole esta URL para receber mensagens.
-              </p>
-            </div>
-          </div>
-
-          {/* Action buttons */}
-          <div className="mt-6 flex items-center gap-3">
-            {status !== "connected" ? (
-              <button
-                onClick={handleConnect}
-                disabled={loading || !apiKey.trim() || !phoneNumber.trim()}
-                className="gradient-primary flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold text-primary-foreground disabled:opacity-50"
-              >
-                {loading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  "🔗"
-                )}
-                Conectar YCloud
-              </button>
-            ) : (
-              <button
-                onClick={handleSave}
-                disabled={saving}
-                className="gradient-primary flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold text-primary-foreground disabled:opacity-50"
-              >
-                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                Salvar alterações
-              </button>
-            )}
-            <a
-              href="https://ycloud.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2 rounded-lg border border-border px-4 py-2.5 text-sm text-foreground hover:bg-muted"
-            >
-              <ExternalLink className="h-4 w-4" /> Abrir YCloud
-            </a>
-          </div>
+          )}
         </div>
 
         {/* Info card */}
@@ -383,20 +398,10 @@ const WhatsAppCloud = () => {
             Utilize a infraestrutura oficial da Meta para garantir 100% de entrega e evitar banimentos. Suporte a botões, listas e fluxos interativos nativos.
           </p>
           <div className="space-y-2 text-xs text-primary">
-            <a
-              href="https://developers.facebook.com/docs/whatsapp"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1 hover:underline"
-            >
+            <a href="https://developers.facebook.com/docs/whatsapp" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 hover:underline">
               📄 Documentação da Meta
             </a>
-            <a
-              href="https://ycloud.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1 hover:underline"
-            >
+            <a href="https://ycloud.com" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 hover:underline">
               ☁ YCloud - WhatsApp BSP
             </a>
           </div>
