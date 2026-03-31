@@ -7,6 +7,7 @@ import { useState, useEffect } from "react";
 const TopBar = () => {
   const { profile } = useAuth();
   const { open } = useMobileSidebar();
+  const navigate = useNavigate();
 
   const [isDark, setIsDark] = useState(() => {
     if (typeof window !== "undefined") {
