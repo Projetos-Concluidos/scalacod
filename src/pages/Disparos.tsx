@@ -180,9 +180,7 @@ const Disparos = () => {
         ) : (
           <>
             <StatCard label="Alcance Total" value={totalReach.toLocaleString("pt-BR")} icon={<TrendingUp className="h-6 w-6 text-primary" />} iconBg="bg-primary/10" />
-            <StatCard label="Campanhas" value={`${campaigns.length}`} icon={<Send className="h-6 w-6 text-muted-foreground" />} iconBg="bg-muted" className="relative">
-              <span className="absolute top-4 right-16 text-[10px] text-muted-foreground">{completedCampaigns} concluídas</span>
-            </StatCard>
+            <StatCard label="Campanhas" value={`${campaigns.length} (${completedCampaigns} concluídas)`} icon={<Send className="h-6 w-6 text-muted-foreground" />} iconBg="bg-muted" />
             <StatCard label="Falhas" value={totalFailed.toLocaleString("pt-BR")} icon={<AlertTriangle className="h-6 w-6 text-destructive" />} iconBg="bg-destructive/10" />
           </>
         )}
