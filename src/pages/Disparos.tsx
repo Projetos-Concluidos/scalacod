@@ -281,12 +281,30 @@ const Disparos = () => {
               <tbody>
                 {filteredCampaigns.map(campaign => {
                   const flow = flows.find(f => f.id === campaign.flow_id);
+                  const isRunning = campaign.status === "running";
+                  const progress = isRunning && (campaign.total_recipients || 0) > 0
+                    ? Math.round(((campaign.sent_count || 0) + (campaign.failed_count || 0)) / (campaign.total_recipients || 1) * 100)
+                    : 0;
                   return (
                     <tr key={campaign.id} className="border-b border-border/50 hover:bg-muted/20 transition-colors">
                       <td className="py-4">
                         <div>
                           <p className="font-medium text-foreground">{campaign.name}</p>
                           <p className="text-xs text-muted-foreground">{flow?.name || "—"}</p>
+                          {isRunning && (
+                            <div className="mt-2 space-y-1">
+                              <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+                                <span>Enviando...</span>
+                                <span>{campaign.sent_count || 0}/{campaign.total_recipients || 0} ({progress}%)</span>
+                              </div>
+                              <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+                                <div className="h-full rounded-full bg-primary transition-all duration-500" style={{ width: `${progress}%` }} />
+                              </div>
+                              {(campaign.failed_count || 0) > 0 && (
+                                <p className="text-[10px] text-destructive">{campaign.failed_count} falhas</p>
+                              )}
+                            </div>
+                          )}
                         </div>
                       </td>
                       <td className="py-4">{getStatusBadge(campaign.status)}</td>
