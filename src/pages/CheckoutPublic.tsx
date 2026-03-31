@@ -866,7 +866,7 @@ const CheckoutPublic = () => {
                     {(["pix", "credit_card", "boleto"] as const).map((m) => (
                       <button
                         key={m}
-                        onClick={() => setPaymentMethod(m)}
+                        onClick={() => { setPaymentMethod(m); setPixData(null); setPaymentStatus(null); }}
                         className={`flex-1 px-3 py-2.5 text-xs font-medium transition-colors ${
                           paymentMethod === m ? "bg-emerald-50 text-emerald-700 border-b-2 border-emerald-500" : "bg-gray-50 text-gray-500"
                         }`}
@@ -877,40 +877,70 @@ const CheckoutPublic = () => {
                   </div>
 
                   <AnimatePresence mode="wait">
-                    {paymentMethod === "pix" && (
-                      <motion.div key="pix" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="text-center space-y-3">
-                        <div className="mx-auto h-48 w-48 rounded-xl border border-gray-200 bg-gray-50 flex items-center justify-center">
-                          <QrCode className="h-24 w-24 text-gray-300" />
+                    {paymentMethod === "pix" && !pixData && (
+                      <motion.div key="pix-btn" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-3">
+                        <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 text-center">
+                          <QrCode className="h-12 w-12 text-gray-300 mx-auto mb-2" />
+                          <p className="text-sm text-gray-700 font-medium">Pagamento instantâneo via PIX</p>
+                          <p className="text-xs text-gray-500">O QR Code será gerado ao clicar abaixo</p>
                         </div>
-                        <p className="text-xs text-gray-500">QR Code será gerado ao processar</p>
                       </motion.div>
                     )}
+
+                    {paymentMethod === "pix" && pixData && (
+                      <motion.div key="pix-qr" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="text-center space-y-3">
+                        <img src={`data:image/png;base64,${pixData.pixQrCodeBase64}`} className="mx-auto w-48 h-48 rounded-xl" alt="QR Code PIX" />
+                        <p className="text-sm font-medium text-gray-700">Escaneie o QR Code para pagar</p>
+                        <div className="flex gap-2">
+                          <input value={pixData.pixQrCode} readOnly className="flex-1 text-[10px] p-2 border border-gray-200 rounded-lg bg-gray-50 truncate" />
+                          <button onClick={() => { navigator.clipboard.writeText(pixData.pixQrCode); toast.success("Código copiado!"); }}
+                            className="px-3 py-2 bg-emerald-500 text-white rounded-lg text-xs font-medium flex items-center gap-1">
+                            <Copy className="h-3 w-3" /> Copiar
+                          </button>
+                        </div>
+                        <div className="flex items-center justify-center gap-2 text-emerald-600 text-xs font-medium">
+                          <Loader2 className="h-3 w-3 animate-spin" /> Aguardando pagamento...
+                        </div>
+                      </motion.div>
+                    )}
+
                     {paymentMethod === "credit_card" && (
                       <motion.div key="card" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-3">
-                        <div><Label className="text-xs text-gray-600">Número do Cartão</Label><Input placeholder="0000 0000 0000 0000" className="mt-1 border-gray-200" /></div>
+                        <div><Label className="text-xs text-gray-600">Número do Cartão</Label><Input value={cardForm.number} onChange={(e) => setCardForm(p => ({ ...p, number: e.target.value }))} placeholder="0000 0000 0000 0000" className="mt-1 border-gray-200" /></div>
                         <div className="grid grid-cols-2 gap-3">
-                          <div><Label className="text-xs text-gray-600">Validade</Label><Input placeholder="MM/AA" className="mt-1 border-gray-200" /></div>
-                          <div><Label className="text-xs text-gray-600">CVV</Label><Input placeholder="000" className="mt-1 border-gray-200" /></div>
+                          <div><Label className="text-xs text-gray-600">Validade</Label><Input value={cardForm.expiry} onChange={(e) => setCardForm(p => ({ ...p, expiry: e.target.value }))} placeholder="MM/AA" className="mt-1 border-gray-200" /></div>
+                          <div><Label className="text-xs text-gray-600">CVV</Label><Input value={cardForm.cvv} onChange={(e) => setCardForm(p => ({ ...p, cvv: e.target.value }))} placeholder="000" className="mt-1 border-gray-200" /></div>
                         </div>
-                        <div><Label className="text-xs text-gray-600">Nome no Cartão</Label><Input placeholder="Como impresso no cartão" className="mt-1 border-gray-200" /></div>
+                        <div><Label className="text-xs text-gray-600">Nome no Cartão</Label><Input value={cardForm.holderName} onChange={(e) => setCardForm(p => ({ ...p, holderName: e.target.value }))} placeholder="Como impresso no cartão" className="mt-1 border-gray-200" /></div>
+                        <div><Label className="text-xs text-gray-600">Parcelas</Label>
+                          <select value={cardForm.installments} onChange={(e) => setCardForm(p => ({ ...p, installments: Number(e.target.value) }))} className="mt-1 w-full h-10 rounded-lg border border-gray-200 bg-white px-3 text-sm">
+                            {[1,2,3,4,5,6,7,8,9,10,11,12].map(i => (
+                              <option key={i} value={i}>{i}x de R$ {(totalPrice / i).toFixed(2)}{i === 1 ? " (à vista)" : ""}</option>
+                            ))}
+                          </select>
+                        </div>
                       </motion.div>
                     )}
+
                     {paymentMethod === "boleto" && (
                       <motion.div key="boleto" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                         <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 text-center">
                           <p className="text-sm text-gray-900 font-medium mb-1">Boleto Bancário</p>
-                          <p className="text-xs text-gray-500">O boleto será gerado após confirmação. Validade: 3 dias úteis.</p>
+                          <p className="text-xs text-gray-500">O boleto será gerado e aberto em nova aba. Validade: 3 dias úteis.</p>
                         </div>
                       </motion.div>
                     )}
                   </AnimatePresence>
 
-                  <button onClick={handleSubmit} disabled={submitting}
-                    className="mt-5 w-full rounded-xl bg-emerald-500 py-3 text-sm font-semibold text-white hover:bg-emerald-600 shadow-md shadow-emerald-500/20 transition-all disabled:opacity-50"
-                  >
-                    {submitting && <Loader2 className="inline h-4 w-4 animate-spin mr-2" />}
-                    Confirmar Pagamento → R$ {totalPrice.toFixed(2)}
-                  </button>
+                  {/* Only show pay button if not already showing PIX QR */}
+                  {!(paymentMethod === "pix" && pixData) && (
+                    <button onClick={processPayment} disabled={paymentLoading || submitting}
+                      className="mt-5 w-full rounded-xl bg-emerald-500 py-3 text-sm font-semibold text-white hover:bg-emerald-600 shadow-md shadow-emerald-500/20 transition-all disabled:opacity-50"
+                    >
+                      {paymentLoading ? <Loader2 className="inline h-4 w-4 animate-spin mr-2" /> : null}
+                      {paymentMethod === "pix" ? "Gerar QR Code PIX" : paymentMethod === "boleto" ? "Gerar Boleto" : "Pagar"} → R$ {totalPrice.toFixed(2)}
+                    </button>
+                  )}
 
                   <button onClick={() => setStep(2)} className="w-full text-xs text-gray-400 hover:text-gray-600 text-center py-2 mt-2">← Voltar para endereço</button>
                 </div>
