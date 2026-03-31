@@ -146,6 +146,9 @@ const CheckoutPublic = () => {
     if (checkout) trackPixelEvent(checkout.user_id, checkout.id, event, meta);
   };
 
+  // Capture UTM on mount
+  useEffect(() => { captureUTM(); }, []);
+
   useEffect(() => {
     if (!slug) return;
     (async () => {
@@ -153,6 +156,24 @@ const CheckoutPublic = () => {
       if (!c) { setLoading(false); return; }
       setCheckout(c as any);
       trackPixelEvent(c.user_id, c.id, "pageview");
+
+      // Initialize Facebook Pixel
+      if ((c as any).pixel_facebook) {
+        const fbp = new FacebookPixel((c as any).pixel_facebook);
+        fbp.init();
+        fbp.pageView();
+        fbPixelRef.current = fbp;
+      }
+
+      // Initialize Google Ads / Analytics
+      const gId = (c as any).google_ads_id || (c as any).google_analytics_id;
+      if (gId) {
+        const gads = new GoogleAds(gId, (c as any).google_conversion_id || "");
+        gads.init();
+        gads.pageView();
+        gAdsRef.current = gads;
+      }
+
       if (c.offer_id) {
         const { data: o } = await supabase.from("offers").select("*").eq("id", c.offer_id).single();
         if (o) {
