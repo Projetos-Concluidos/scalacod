@@ -381,8 +381,14 @@ Deno.serve(async (req) => {
       const token = (logzz.config as any).bearer_token;
       try {
         const res = await fetch("https://app.logzz.com.br/api/offers", {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
         });
+        if (!res.ok || !(res.headers.get("content-type") || "").includes("json")) {
+          return new Response(
+            JSON.stringify({ connected: false, error: `Logzz retornou status ${res.status}. Token pode estar inválido.` }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
         const data = await res.json();
         return new Response(
           JSON.stringify({ connected: res.ok, offers_count: Array.isArray(data.data) ? data.data.length : 0 }),
