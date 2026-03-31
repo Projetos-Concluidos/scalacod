@@ -214,23 +214,52 @@ const Vozes = () => {
     }
   };
 
-  const handleBuyTokens = async (pack: typeof packs[0]) => {
-    if (!user) return;
-    if (tokenData) {
-      await supabase.from("voice_tokens").update({
-        balance: (tokenData.balance || 0) + pack.tokens,
-        total_purchased: (tokenData.total_purchased || 0) + pack.tokens,
-      }).eq("id", tokenData.id);
-    } else {
-      await supabase.from("voice_tokens").insert({
-        user_id: user.id,
-        balance: pack.tokens,
-        total_purchased: pack.tokens,
-        total_used: 0,
+  const openPurchaseModal = (pack: typeof packs[0]) => {
+    setSelectedPack(pack);
+    setPaymentMethod("pix");
+    setPixData(null);
+    setPurchaseSuccess(false);
+    setPurchaseOpen(true);
+  };
+
+  const handlePurchase = async () => {
+    if (!user || !selectedPack) return;
+    setPurchasing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("purchase-tokens", {
+        body: {
+          packId: selectedPack.id,
+          paymentMethod,
+          payerEmail: user.email,
+        },
       });
+
+      if (error) throw new Error("Erro ao processar pagamento");
+      if (data.error) throw new Error(data.error);
+
+      if (paymentMethod === "pix" && data.pixQrCode) {
+        setPixData({ qrCode: data.pixQrCode, copyPaste: data.pixCopyPaste || "" });
+      }
+
+      if (data.status === "approved") {
+        setPurchaseSuccess(true);
+        toast.success(`${selectedPack.display} tokens creditados!`);
+        fetchData();
+      } else if (paymentMethod === "pix") {
+        toast.info("PIX gerado! Escaneie o QR Code para pagar.");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao processar pagamento");
+    } finally {
+      setPurchasing(false);
     }
-    toast.success(`${pack.display} tokens adicionados!`);
-    fetchData();
+  };
+
+  const copyPixCode = () => {
+    if (pixData?.copyPaste) {
+      navigator.clipboard.writeText(pixData.copyPaste);
+      toast.success("Código PIX copiado!");
+    }
   };
 
   const filteredLibrary = libraryVoices.filter(v => {
