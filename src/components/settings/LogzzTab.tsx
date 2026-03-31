@@ -124,15 +124,20 @@ const LogzzTab = () => {
     }
   };
 
-  const handleSave = async () => {
+  const handleSave = async (forceActive?: boolean) => {
     if (!user) return;
     setSaving(true);
     try {
+      const shouldBeActive = forceActive ?? isActive;
+      // Auto-activate if both token and webhook URL are provided
+      const autoActive = !!(token.trim() && logzzWebhookUrl.trim());
+      const finalActive = forceActive !== undefined ? forceActive : (autoActive || isActive);
+      
       const payload = {
         user_id: user.id,
         type: "logzz" as const,
         config: { bearer_token: token, logzz_webhook_url: logzzWebhookUrl } as any,
-        is_active: isActive,
+        is_active: finalActive,
       };
 
       const { data: existing } = await supabase
@@ -147,6 +152,8 @@ const LogzzTab = () => {
       } else {
         await supabase.from("integrations").insert(payload);
       }
+      
+      setIsActive(finalActive);
       toast.success("Integração Logzz salva!");
     } catch {
       toast.error("Erro ao salvar integração");
