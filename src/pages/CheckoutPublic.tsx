@@ -21,6 +21,10 @@ declare global {
 interface CheckoutData {
   id: string; name: string; slug: string; type: string; offer_id: string;
   order_bump_enabled: boolean; config: any; custom_css: string | null; user_id: string;
+  pixel_facebook?: string | null; meta_capi_token?: string | null;
+  google_ads_id?: string | null; google_conversion_id?: string | null;
+  google_analytics_id?: string | null; thank_you_page_url?: string | null;
+  whatsapp_support?: string | null;
 }
 interface OfferData { id: string; name: string; price: number; original_price: number | null; product_id: string; hash: string | null; }
 interface ProductData { id: string; name: string; main_image_url: string | null; }
