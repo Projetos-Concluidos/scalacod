@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Key, Copy, RefreshCw, Loader2, ExternalLink, Clock } from "lucide-react";
+import InfoTooltip from "@/components/InfoTooltip";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
