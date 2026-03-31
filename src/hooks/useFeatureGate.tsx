@@ -40,7 +40,7 @@ export function UpgradePrompt({ reason }: { reason?: string }) {
         {reason || "Faça upgrade do seu plano para acessar este recurso."}
       </p>
       <button
-        onClick={() => navigate("/configuracoes")}
+        onClick={() => navigate("/upgrade")}
         className="mt-6 rounded-lg bg-primary px-6 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
       >
         Ver planos e fazer upgrade

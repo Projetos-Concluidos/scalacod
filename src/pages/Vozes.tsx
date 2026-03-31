@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Mic, Info, Upload, Globe, Play, Pause, Heart, Trash2, Loader2, AlertTriangle, Music, X, Check, Star } from "lucide-react";
+import { useFeatureGate, UpgradePrompt } from "@/hooks/useFeatureGate";
 import PageHeader from "@/components/PageHeader";
 import EmptyState from "@/components/EmptyState";
 import { supabase } from "@/integrations/supabase/client";
@@ -36,6 +37,7 @@ const LIBRARY_VOICES = [
 ];
 
 const Vozes = () => {
+  const gate = useFeatureGate("voices");
   const { user } = useAuth();
   const [voices, setVoices] = useState<Voice[]>([]);
   const [tokenData, setTokenData] = useState<VoiceTokens | null>(null);
@@ -165,6 +167,8 @@ const Vozes = () => {
     setCloneName("");
     setCloneFiles([]);
   };
+
+  if (!gate.allowed) return <UpgradePrompt reason={gate.reason} />;
 
   return (
     <div>

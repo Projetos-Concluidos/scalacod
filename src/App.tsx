@@ -24,6 +24,8 @@ import ForgotPassword from "@/pages/ForgotPassword";
 import ResetPassword from "@/pages/ResetPassword";
 import CheckoutPublic from "@/pages/CheckoutPublic";
 import NotFound from "@/pages/NotFound";
+import Upgrade from "@/pages/Upgrade";
+import Subscription from "@/pages/Subscription";
 import AdminOverview from "@/pages/admin/AdminOverview";
 import AdminAssinantes from "@/pages/admin/AdminAssinantes";
 import AdminPlanos from "@/pages/admin/AdminPlanos";
@@ -59,6 +61,8 @@ const App = () => (
               <Route path="/disparos" element={<Disparos />} />
               <Route path="/whatsapp-cloud" element={<WhatsAppCloud />} />
               <Route path="/configuracoes" element={<Configuracoes />} />
+              <Route path="/upgrade" element={<Upgrade />} />
+              <Route path="/subscription" element={<Subscription />} />
             </Route>
             <Route element={<AuthGuard><AdminGuard><AdminLayout /></AdminGuard></AuthGuard>}>
               <Route path="/admin" element={<AdminOverview />} />

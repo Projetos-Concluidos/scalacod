@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useFeatureGate, UpgradePrompt } from "@/hooks/useFeatureGate";
 
 const ENDPOINTS = [
   { method: "POST", path: "/api/v1/orders", desc: "Criar pedido" },
@@ -22,6 +23,7 @@ const methodColor: Record<string, string> = {
 
 const ApiTab = () => {
   const { user } = useAuth();
+  const gate = useFeatureGate("api_access");
   const [tokens, setTokens] = useState<any[]>([]);
   const [generating, setGenerating] = useState(false);
 
@@ -82,6 +84,8 @@ const ApiTab = () => {
   };
 
   const activeToken = tokens[0];
+
+  if (!gate.allowed) return <UpgradePrompt reason={gate.reason} />;
 
   return (
     <div className="space-y-6">

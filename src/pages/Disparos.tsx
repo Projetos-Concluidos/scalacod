@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Send, TrendingUp, AlertTriangle, Info, Plus, Search, Loader2, Calendar, Clock, Users, FileText, Upload, Check, ArrowLeft, ArrowRight } from "lucide-react";
+import { useFeatureGate, UpgradePrompt } from "@/hooks/useFeatureGate";
 import PageHeader from "@/components/PageHeader";
 import StatCard from "@/components/StatCard";
 import EmptyState from "@/components/EmptyState";
@@ -23,6 +24,7 @@ import { cn } from "@/lib/utils";
 type Campaign = Tables<"campaigns">;
 
 const Disparos = () => {
+  const gate = useFeatureGate("campaigns");
   const { user } = useAuth();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [flows, setFlows] = useState<Tables<"flows">[]>([]);
@@ -137,6 +139,8 @@ const Disparos = () => {
     setScheduleTime("09:00");
     setEstimatedReach(leadsCount);
   };
+
+  if (!gate.allowed) return <UpgradePrompt reason={gate.reason} />;
 
   return (
     <div>
