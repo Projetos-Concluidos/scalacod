@@ -46,17 +46,44 @@ const Fluxos = () => {
   const handleSaveFlow = async (data: any) => {
     if (!user) return;
     try {
+      // Serialize nodes/edges to plain JSON (strip React Flow internal properties)
+      const serializeNodes = (nodes: any[]) => (nodes || []).map((n: any) => ({
+        id: n.id,
+        position: n.position,
+        data: n.data,
+        style: n.style,
+        type: n.type,
+      }));
+      const serializeEdges = (edges: any[]) => (edges || []).map((e: any) => ({
+        id: e.id,
+        source: e.source,
+        target: e.target,
+        sourceHandle: e.sourceHandle,
+        targetHandle: e.targetHandle,
+        animated: e.animated,
+        style: e.style,
+        label: e.label,
+      }));
+
+      const serializedNodes = serializeNodes(data.nodes);
+      const serializedEdges = serializeEdges(data.edges);
+
       if (editingFlow && editingFlow.id) {
-        await supabase.from("flows").update({
+        const { error } = await supabase.from("flows").update({
           name: data.name,
           trigger_event: data.trigger_event,
           flow_type: data.flow_type,
           is_official: data.is_official,
-          nodes: data.nodes,
-          edges: data.edges,
-          node_count: data.node_count,
+          nodes: serializedNodes,
+          edges: serializedEdges,
+          node_count: serializedNodes.length,
           message_count: data.message_count,
         }).eq("id", editingFlow.id);
+        if (error) {
+          console.error("Update flow error:", error);
+          toast.error(`Erro ao atualizar fluxo: ${error.message}`);
+          return;
+        }
         toast.success("Fluxo atualizado!");
       } else {
         const insertPayload = {
@@ -65,12 +92,13 @@ const Fluxos = () => {
           trigger_event: data.trigger_event || "pedido_criado",
           flow_type: data.flow_type || "cod",
           is_official: data.is_official ?? false,
-          nodes: data.nodes || [],
-          edges: data.edges || [],
-          node_count: data.nodes?.length || 0,
+          nodes: serializedNodes,
+          edges: serializedEdges,
+          node_count: serializedNodes.length,
           message_count: data.message_count || 0,
           is_active: true,
         };
+        console.log("Inserting flow:", JSON.stringify(insertPayload).substring(0, 300));
         const { error } = await supabase.from("flows").insert(insertPayload);
         if (error) {
           console.error("Insert flow error:", error);
@@ -82,7 +110,8 @@ const Fluxos = () => {
       setBuilderOpen(false);
       setEditingFlow(null);
       fetchFlows();
-    } catch {
+    } catch (e: any) {
+      console.error("Save flow exception:", e);
       toast.error("Erro ao salvar fluxo");
     }
   };
