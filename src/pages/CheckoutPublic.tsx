@@ -243,9 +243,9 @@ const CheckoutPublic = () => {
       <div className="min-h-screen bg-gray-50">
         {checkout.custom_css && <style>{checkout.custom_css}</style>}
         <div className="fixed inset-x-0 top-0 z-50 h-1 bg-gray-200"><div className="h-full w-full bg-emerald-500" /></div>
-        <div className="mx-auto max-w-lg px-4 py-12">
+        <motion.div className="mx-auto max-w-lg px-4 py-12" initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}>
           <div className="rounded-2xl border border-gray-100 bg-white p-8 shadow-sm text-center">
-            <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-emerald-50">
+            <motion.div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-emerald-50" initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.2, type: "spring", stiffness: 200 }}>
               <CheckCircle className="h-10 w-10 text-emerald-500" />
             </div>
             <h1 className="text-2xl font-bold text-gray-900 mb-1">Pedido Confirmado!</h1>
