@@ -19,64 +19,38 @@ export default function AIFlowModal({ open, onClose, onGenerated }: AIFlowModalP
     if (!prompt.trim()) return;
     setLoading(true);
     try {
-      // Generate a simple flow structure based on prompt keywords
-      const nodes: any[] = [
-        { id: "start", position: { x: 250, y: 50 }, data: { label: "🚀 Início do Fluxo", type: "start" }, style: { background: "hsl(190 100% 50% / 0.15)", border: "1px solid hsl(190 100% 50% / 0.3)", borderRadius: 12, padding: 12, color: "hsl(190 100% 50%)", fontWeight: 600, fontSize: 13 } },
-      ];
-      const edges: any[] = [];
-      let y = 180;
-      let prevId = "start";
-      const nodeStyle = { background: "hsl(240 20% 7%)", border: "1px solid hsl(190 100% 50% / 0.2)", borderRadius: 12, padding: 12, color: "hsl(240 20% 97%)", fontSize: 13, minWidth: 200 };
+      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+      const res = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/ai-flow-generator`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ prompt }),
+        }
+      );
 
-      const steps = [
-        { label: "📩 Mensagem de confirmação", type: "message" },
-        { label: "⏳ Aguardar 1 hora", type: "delay" },
-        { label: "📦 Atualização de status", type: "message" },
-        { label: "⏳ Aguardar até entrega", type: "delay" },
-        { label: "⭐ Pedir avaliação", type: "message" },
-      ];
-
-      if (prompt.toLowerCase().includes("cancelado") || prompt.toLowerCase().includes("cancelamento")) {
-        steps[0].label = "😔 Lamentamos o cancelamento";
-        steps[2].label = "🔄 Oferecer alternativa";
-        steps[4].label = "📋 Feedback do cancelamento";
-      } else if (prompt.toLowerCase().includes("pós-venda") || prompt.toLowerCase().includes("pos-venda")) {
-        steps[0].label = "🎉 Parabéns pela compra!";
-        steps[2].label = "📦 Seu pedido está a caminho";
-        steps[4].label = "⭐ Como foi sua experiência?";
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Erro na API de IA");
       }
 
-      steps.forEach((s, i) => {
-        const id = `ai_node_${i}`;
-        nodes.push({ id, position: { x: 250, y }, data: { label: s.label, type: s.type, content: "" }, style: nodeStyle });
-        edges.push({ id: `e_${prevId}_${id}`, source: prevId, target: id, animated: true, style: { stroke: "hsl(190 100% 50%)" } });
-        prevId = id;
-        y += 120;
-      });
-
-      // Simulate AI delay
-      await new Promise(r => setTimeout(r, 1500));
-
-      const triggerEvent = prompt.toLowerCase().includes("cancelado") ? "pedido_cancelado"
-        : prompt.toLowerCase().includes("entregue") ? "pedido_entregue"
-        : prompt.toLowerCase().includes("agendado") ? "pedido_agendado"
-        : "pedido_criado";
+      const flowData = await res.json();
 
       onGenerated({
-        name: "Fluxo gerado por IA",
-        trigger_event: triggerEvent,
-        flow_type: "cod",
+        name: flowData.name || "Fluxo gerado por IA",
+        trigger_event: flowData.trigger_event || "pedido_criado",
+        flow_type: flowData.flow_type || "cod",
         is_official: false,
-        nodes,
-        edges,
-        node_count: nodes.length,
-        message_count: nodes.filter(n => n.data.type === "message").length,
+        nodes: flowData.nodes || [],
+        edges: flowData.edges || [],
+        node_count: flowData.node_count || 0,
+        message_count: flowData.message_count || 0,
       });
 
-      toast.success("Fluxo gerado com sucesso!");
+      toast.success("Fluxo gerado com sucesso pela IA!");
       onClose();
-    } catch {
-      toast.error("Erro ao gerar fluxo");
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao gerar fluxo");
     } finally {
       setLoading(false);
     }

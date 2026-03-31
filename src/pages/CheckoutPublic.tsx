@@ -123,18 +123,27 @@ const CheckoutPublic = () => {
 
   const checkDeliveryProvider = async (cep: string) => {
     try {
-      // Simulate Logzz check — in production this goes through edge function
-      // For now, simulate: CEPs starting with 0-3 → Logzz, rest → Coinzz
-      const firstDigit = parseInt(cep[0]);
-      if (firstDigit <= 3) {
+      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+      const res = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/checkout-api`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "check_delivery",
+            user_id: checkout?.user_id,
+            cep: cep.replace(/\D/g, ""),
+          }),
+        }
+      );
+      const data = await res.json();
+      if (data.provider === "logzz" && data.dates?.length > 0) {
         setProvider("logzz");
-        setDeliveryDates([
-          { date: getNextBusinessDay(1), type: "Express", price: 29.98 },
-          { date: getNextBusinessDay(2), type: "Padrão", price: 24.98 },
-          { date: getNextBusinessDay(3), type: "Padrão", price: 22.98 },
-        ]);
+        setDeliveryDates(data.dates);
       } else {
-        throw new Error("Logzz indisponível");
+        setProvider("coinzz");
+        setDeliveryDates([]);
+        toast.info(data.message || "Entrega via Correios — pagamento online necessário");
       }
     } catch {
       setProvider("coinzz");
