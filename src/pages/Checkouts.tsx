@@ -31,6 +31,39 @@ type CheckoutWithOffer = {
   created_at: string | null;
 };
 
+const SyncOffersButton = ({ userId, onSynced }: { userId?: string; onSynced: () => void }) => {
+  const [syncing, setSyncing] = useState(false);
+  const handleSync = async () => {
+    if (!userId) return;
+    setSyncing(true);
+    try {
+      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+      const res = await fetch(`https://${projectId}.supabase.co/functions/v1/checkout-api`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "sync_logzz_products", user_id: userId }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success(`✅ Sincronizado! ${data.synced} itens (${data.products} novos produtos, ${data.offers} novas ofertas)`);
+        onSynced();
+      } else {
+        toast.error(data.error || "Erro ao sincronizar");
+      }
+    } catch {
+      toast.error("Erro ao sincronizar ofertas da Logzz");
+    } finally {
+      setSyncing(false);
+    }
+  };
+  return (
+    <button onClick={handleSync} disabled={syncing} className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 disabled:opacity-50" title="Sincronizar ofertas da Logzz">
+      {syncing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+      {syncing ? "Sincronizando..." : "Sincronizar Logzz"}
+    </button>
+  );
+};
+
 const Checkouts = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
