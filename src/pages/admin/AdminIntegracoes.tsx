@@ -18,6 +18,11 @@ interface IntegrationSection {
   title: string;
   description: string;
   fields: IntegrationField[];
+  tutorial?: {
+    title: string;
+    steps: string[];
+    warning?: string;
+  };
 }
 
 const sections: IntegrationSection[] = [
