@@ -45,7 +45,11 @@ const SyncOffersButton = ({ userId, onSynced }: { userId?: string; onSynced: () 
       });
       const data = await res.json();
       if (data.success) {
-        toast.success(`✅ Sincronizado! ${data.synced} itens (${data.products} novos produtos, ${data.offers} novas ofertas)`);
+        if (data.api_unavailable) {
+          toast.info(data.message || "Ofertas locais carregadas. API da Logzz indisponível para listagem.", { duration: 6000 });
+        } else {
+          toast.success(`✅ Sincronizado! ${data.synced} ofertas importadas (${data.products} novos produtos, ${data.offers} novas ofertas)`);
+        }
         onSynced();
       } else {
         toast.error(data.error || "Erro ao sincronizar");

@@ -238,8 +238,6 @@ Deno.serve(async (req) => {
     }
 
     // ─── ACTION: sync_logzz_products ──────────────────
-    // Logzz does NOT have a public REST API for fetching offers.
-    // This action returns existing offers from the local database instead.
     if (action === "sync_logzz_products") {
       const logzz = getIntegration("logzz");
       if (!logzz?.config) {
@@ -249,19 +247,232 @@ Deno.serve(async (req) => {
         );
       }
 
-      // Return existing offers from the database for this user
-      const { data: existingOffers, error: offErr } = await supabase
+      const token = (logzz.config as any).bearer_token;
+      if (!token) {
+        return new Response(
+          JSON.stringify({ error: "Token Logzz ausente." }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Try multiple candidate endpoints to fetch affiliate offers
+      const candidateEndpoints = [
+        "https://app.logzz.com.br/api/affiliate/offers",
+        "https://app.logzz.com.br/api/v1/affiliate/offers",
+        "https://app.logzz.com.br/api/offers",
+        "https://app.logzz.com.br/api/v1/offers",
+        "https://app.logzz.com.br/api/products",
+        "https://app.logzz.com.br/api/v1/products",
+        "https://app.logzz.com.br/api/affiliate/products",
+      ];
+
+      let fetchedOffers: any[] | null = null;
+      let successEndpoint = "";
+
+      for (const endpoint of candidateEndpoints) {
+        try {
+          console.log(`[sync_logzz] Trying: ${endpoint}`);
+          const res = await fetch(endpoint, {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              Accept: "application/json",
+            },
+            redirect: "manual",
+          });
+
+          const status = res.status;
+          console.log(`[sync_logzz] ${endpoint} → status ${status}`);
+
+          // If redirected (301/302/303/307/308) skip — likely login page
+          if (status >= 300 && status < 400) {
+            console.log(`[sync_logzz] Redirect detected, skipping`);
+            continue;
+          }
+
+          if (status === 401 || status === 403) {
+            console.log(`[sync_logzz] Auth error, skipping`);
+            continue;
+          }
+
+          if (status === 404) {
+            console.log(`[sync_logzz] Not found, skipping`);
+            continue;
+          }
+
+          if (status !== 200) continue;
+
+          const contentType = res.headers.get("content-type") || "";
+          if (!contentType.includes("json")) {
+            const bodyPreview = await res.text();
+            console.log(`[sync_logzz] Non-JSON response: ${bodyPreview.substring(0, 100)}`);
+            continue;
+          }
+
+          const data = await res.json();
+          console.log(`[sync_logzz] JSON response type: ${typeof data}, isArray: ${Array.isArray(data)}`);
+
+          // Extract offers array from various response shapes
+          let items: any[] = [];
+          if (Array.isArray(data)) {
+            items = data;
+          } else if (data?.data && Array.isArray(data.data)) {
+            items = data.data;
+          } else if (data?.offers && Array.isArray(data.offers)) {
+            items = data.offers;
+          } else if (data?.products && Array.isArray(data.products)) {
+            items = data.products;
+          } else if (data?.items && Array.isArray(data.items)) {
+            items = data.items;
+          }
+
+          if (items.length > 0) {
+            fetchedOffers = items;
+            successEndpoint = endpoint;
+            console.log(`[sync_logzz] Found ${items.length} offers from ${endpoint}`);
+            break;
+          } else {
+            console.log(`[sync_logzz] Empty array from ${endpoint}, continuing`);
+          }
+        } catch (e) {
+          console.log(`[sync_logzz] Error on ${endpoint}: ${e.message}`);
+          continue;
+        }
+      }
+
+      // If we fetched offers, upsert them into the database
+      if (fetchedOffers && fetchedOffers.length > 0) {
+        let newProducts = 0;
+        let newOffers = 0;
+
+        for (const item of fetchedOffers) {
+          try {
+            const offerName = item.name || item.offer_name || item.title || "Oferta Logzz";
+            const offerPrice = parseFloat(item.price || item.value || item.amount || "0");
+            const offerHash = item.hash || item.id?.toString() || item.slug || null;
+            const productName = item.product_name || item.product?.name || offerName;
+            const productHash = item.product_hash || item.product?.hash || item.product_id?.toString() || null;
+
+            // Upsert product
+            let productId: string | null = null;
+
+            if (productHash) {
+              const { data: existingProd } = await supabase
+                .from("products")
+                .select("id")
+                .eq("user_id", user_id)
+                .eq("hash", productHash)
+                .maybeSingle();
+
+              if (existingProd) {
+                productId = existingProd.id;
+              }
+            }
+
+            if (!productId) {
+              const { data: prodByName } = await supabase
+                .from("products")
+                .select("id")
+                .eq("user_id", user_id)
+                .eq("name", productName)
+                .maybeSingle();
+
+              if (prodByName) {
+                productId = prodByName.id;
+              }
+            }
+
+            if (!productId) {
+              const { data: newProd, error: prodErr } = await supabase
+                .from("products")
+                .insert({ user_id, name: productName, hash: productHash, is_active: true })
+                .select("id")
+                .single();
+
+              if (prodErr) {
+                console.log(`[sync_logzz] Error creating product: ${prodErr.message}`);
+                continue;
+              }
+              productId = newProd.id;
+              newProducts++;
+            }
+
+            // Upsert offer
+            let existingOffer = null;
+            if (offerHash) {
+              const { data } = await supabase
+                .from("offers")
+                .select("id")
+                .eq("user_id", user_id)
+                .eq("hash", offerHash)
+                .maybeSingle();
+              existingOffer = data;
+            }
+
+            if (!existingOffer) {
+              const { data } = await supabase
+                .from("offers")
+                .select("id")
+                .eq("user_id", user_id)
+                .eq("name", offerName)
+                .eq("product_id", productId)
+                .maybeSingle();
+              existingOffer = data;
+            }
+
+            if (existingOffer) {
+              await supabase.from("offers").update({
+                price: offerPrice,
+                hash: offerHash,
+                is_active: true,
+              }).eq("id", existingOffer.id);
+            } else {
+              const { error: offErr } = await supabase.from("offers").insert({
+                user_id,
+                product_id: productId,
+                name: offerName,
+                price: offerPrice,
+                hash: offerHash,
+                is_active: true,
+              });
+              if (offErr) {
+                console.log(`[sync_logzz] Error creating offer: ${offErr.message}`);
+                continue;
+              }
+              newOffers++;
+            }
+          } catch (e) {
+            console.log(`[sync_logzz] Error processing item: ${e.message}`);
+          }
+        }
+
+        // Fetch all current offers to return
+        const { data: allOffers } = await supabase
+          .from("offers")
+          .select("id, name, price, hash, product_id, products(name)")
+          .eq("user_id", user_id)
+          .eq("is_active", true);
+
+        return new Response(
+          JSON.stringify({
+            success: true,
+            synced: fetchedOffers.length,
+            products: newProducts,
+            offers: newOffers,
+            items: allOffers || [],
+            source: successEndpoint,
+            message: `Importadas ${fetchedOffers.length} ofertas da Logzz (${newProducts} novos produtos, ${newOffers} novas ofertas).`,
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Fallback: no API endpoint worked, return local offers
+      const { data: existingOffers } = await supabase
         .from("offers")
         .select("id, name, price, hash, product_id, products(name)")
         .eq("user_id", user_id)
         .eq("is_active", true);
-
-      if (offErr) {
-        return new Response(
-          JSON.stringify({ error: "Erro ao buscar ofertas: " + offErr.message }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
 
       return new Response(
         JSON.stringify({
@@ -270,7 +481,8 @@ Deno.serve(async (req) => {
           products: 0,
           offers: existingOffers?.length || 0,
           items: existingOffers || [],
-          message: "Ofertas carregadas do banco de dados. Para adicionar novas ofertas, crie-as manualmente ou importe via webhook da Logzz.",
+          api_unavailable: true,
+          message: "A API da Logzz não disponibiliza endpoint público para listar ofertas de afiliado. As ofertas locais foram carregadas. Para importar novas ofertas, crie-as manualmente ou configure o webhook da Logzz para enviar dados automaticamente.",
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
