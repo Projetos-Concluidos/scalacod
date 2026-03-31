@@ -73,7 +73,8 @@ const Vozes = () => {
   const [paymentMethod, setPaymentMethod] = useState<"pix" | "credit_card">("pix");
   const [purchasing, setPurchasing] = useState(false);
   const [pixData, setPixData] = useState<{ qrCode: string; copyPaste: string } | null>(null);
-  const [purchaseSuccess, setPurchaseSuccess] = useState(false);
+  // Audio generation state per voice
+  const [generateText, setGenerateText] = useState<Record<string, string>>({});
   const [generating, setGenerating] = useState<Record<string, boolean>>({});
   const [generatedAudio, setGeneratedAudio] = useState<Record<string, string>>({});
 
