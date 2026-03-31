@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { GitBranch, Zap, Folder, Plus, MessageCircle, Tag, ChevronDown, ChevronRight, Pencil, SlidersHorizontal, Sparkles, MoreHorizontal, XCircle, Star, CheckCircle, Loader2, Power, PowerOff, Trash2 } from "lucide-react";
+import { GitBranch, Zap, Folder, Plus, MessageCircle, Tag, ChevronDown, ChevronRight, Pencil, SlidersHorizontal, Sparkles, MoreHorizontal, XCircle, Star, CheckCircle, Loader2, Power, PowerOff, Trash2, History, AlertTriangle, Clock } from "lucide-react";
 import PageHeader from "@/components/PageHeader";
 import StatCard from "@/components/StatCard";
 import NinjaBadge from "@/components/NinjaBadge";
@@ -24,7 +24,9 @@ const Fluxos = () => {
   const [builderOpen, setBuilderOpen] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
   const [editingFlow, setEditingFlow] = useState<Flow | null>(null);
-  const [subTab, setSubTab] = useState<"flows" | "templates" | "tags">("flows");
+  const [subTab, setSubTab] = useState<"flows" | "templates" | "executions" | "tags">("flows");
+  const [executions, setExecutions] = useState<any[]>([]);
+  const [execLoading, setExecLoading] = useState(false);
   const [expanded, setExpanded] = useState(true);
 
   const fetchFlows = async () => {
@@ -40,6 +42,23 @@ const Fluxos = () => {
   };
 
   useEffect(() => { fetchFlows(); }, [user]);
+
+  const fetchExecutions = async () => {
+    if (!user) return;
+    setExecLoading(true);
+    const { data } = await supabase
+      .from("flow_executions")
+      .select("*, flows(name), orders(order_number, client_name, status)")
+      .eq("user_id", user.id)
+      .order("executed_at", { ascending: false })
+      .limit(50);
+    setExecutions(data || []);
+    setExecLoading(false);
+  };
+
+  useEffect(() => {
+    if (subTab === "executions") fetchExecutions();
+  }, [subTab, user]);
 
   const activeFlows = flows.filter(f => f.is_active);
 
@@ -242,6 +261,9 @@ const Fluxos = () => {
           <button onClick={() => setSubTab("templates")} className={`flex items-center gap-2 text-sm font-medium ${subTab === "templates" ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}>
             <GitBranch className="h-4 w-4" /> Templates (API Oficial)
           </button>
+          <button onClick={() => setSubTab("executions")} className={`flex items-center gap-2 text-sm font-medium ${subTab === "executions" ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}>
+            <History className="h-4 w-4" /> Execuções
+          </button>
           <button onClick={() => setSubTab("tags")} className={`flex items-center gap-2 text-sm font-medium ${subTab === "tags" ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}>
             <Tag className="h-4 w-4" /> Tags
           </button>
@@ -344,6 +366,68 @@ const Fluxos = () => {
                     <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
                       <span>Categoria: {t.category || "—"}</span>
                       <span>Idioma: {t.language || "pt_BR"}</span>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+
+        {subTab === "executions" && (
+          <div className="space-y-2">
+            {execLoading ? (
+              Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-16 rounded-xl" />)
+            ) : executions.length === 0 ? (
+              <div className="text-center py-12">
+                <History className="h-12 w-12 mx-auto text-muted-foreground/30 mb-3" />
+                <p className="text-sm text-muted-foreground">Nenhuma execução registrada</p>
+                <p className="text-xs text-muted-foreground mt-1">Execuções aparecerão quando pedidos mudarem de status</p>
+              </div>
+            ) : (
+              executions.map((exec) => (
+                <div key={exec.id} className="flex items-center justify-between rounded-xl border border-border bg-background/50 px-4 py-3 transition-colors hover:bg-muted/30">
+                  <div className="flex items-center gap-3">
+                    <div className={`flex h-9 w-9 items-center justify-center rounded-lg ${
+                      exec.status === "completed" ? "bg-success/10" : exec.status === "failed" ? "bg-destructive/10" : "bg-warning/10"
+                    }`}>
+                      {exec.status === "completed" ? (
+                        <CheckCircle className="h-4 w-4 text-success" />
+                      ) : exec.status === "failed" ? (
+                        <AlertTriangle className="h-4 w-4 text-destructive" />
+                      ) : (
+                        <Loader2 className="h-4 w-4 text-warning animate-spin" />
+                      )}
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-semibold text-foreground">
+                          {(exec.flows as any)?.name || "Fluxo removido"}
+                        </span>
+                        <NinjaBadge variant={exec.status === "completed" ? "success" : exec.status === "failed" ? "danger" : "warning"}>
+                          {exec.status === "completed" ? "Concluído" : exec.status === "failed" ? "Falhou" : "Executando"}
+                        </NinjaBadge>
+                      </div>
+                      <div className="flex items-center gap-3 mt-0.5 text-xs text-muted-foreground">
+                        {(exec.orders as any)?.order_number && (
+                          <span>Pedido #{(exec.orders as any).order_number}</span>
+                        )}
+                        {(exec.orders as any)?.client_name && (
+                          <span>{(exec.orders as any).client_name}</span>
+                        )}
+                        <span className="flex items-center gap-1">
+                          <GitBranch className="h-3 w-3" /> {exec.nodes_executed || 0} nós
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          {exec.executed_at ? formatDistanceToNow(new Date(exec.executed_at), { addSuffix: true, locale: ptBR }) : "—"}
+                        </span>
+                      </div>
+                      {exec.error_message && (
+                        <p className="text-xs text-destructive mt-1 truncate max-w-md">
+                          ⚠ {exec.error_message}
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>
