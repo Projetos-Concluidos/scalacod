@@ -17,7 +17,6 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Authenticate user
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       return new Response(
@@ -26,11 +25,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser(authHeader.replace("Bearer ", ""));
-
+    const { data: { user }, error: authError } = await supabase.auth.getUser(authHeader.replace("Bearer ", ""));
     if (authError || !user) {
       return new Response(
         JSON.stringify({ error: "Unauthorized" }),
@@ -41,15 +36,23 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const { conversationId, content, type = "text", mediaUrl, phone, direct } = body;
 
-    if (!content?.trim()) {
+    // For media messages, content can be empty but mediaUrl is required
+    if (type === "text" && !content?.trim()) {
       return new Response(
         JSON.stringify({ error: "Content is required" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
+    if (type !== "text" && !mediaUrl) {
+      return new Response(
+        JSON.stringify({ error: "mediaUrl is required for media messages" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // Get active WhatsApp instance
-    const { data: instance, error: instErr } = await supabase
+    const { data: instance } = await supabase
       .from("whatsapp_instances")
       .select("*")
       .eq("user_id", user.id)
@@ -93,10 +96,12 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Clean phone number
     const cleanPhone = targetPhone.replace(/\D/g, "");
     let messageIdWhatsapp: string | null = null;
     let sendError: string | null = null;
+
+    // Build provider-specific payload based on message type
+    const msgType = type || "text";
 
     // ====== YCLOUD ======
     if (instance.provider === "ycloud") {
@@ -109,19 +114,34 @@ Deno.serve(async (req) => {
       }
 
       try {
-        const payload: any = {
+        let payload: any = {
           from: instance.phone_number,
           to: `+${cleanPhone}`,
-          type: "text",
-          text: { body: content },
         };
+
+        if (msgType === "text") {
+          payload.type = "text";
+          payload.text = { body: content };
+        } else if (msgType === "image") {
+          payload.type = "image";
+          payload.image = { link: mediaUrl, caption: content || undefined };
+        } else if (msgType === "audio") {
+          payload.type = "audio";
+          payload.audio = { link: mediaUrl };
+        } else if (msgType === "document") {
+          payload.type = "document";
+          payload.document = { link: mediaUrl, caption: content || undefined, filename: "document" };
+        } else if (msgType === "video") {
+          payload.type = "video";
+          payload.video = { link: mediaUrl, caption: content || undefined };
+        } else if (msgType === "sticker") {
+          payload.type = "sticker";
+          payload.sticker = { link: mediaUrl };
+        }
 
         const res = await fetch("https://api.ycloud.com/v2/whatsapp/messages", {
           method: "POST",
-          headers: {
-            "X-API-Key": apiKey,
-            "Content-Type": "application/json",
-          },
+          headers: { "X-API-Key": apiKey, "Content-Type": "application/json" },
           body: JSON.stringify(payload),
         });
 
@@ -149,21 +169,36 @@ Deno.serve(async (req) => {
       }
 
       try {
-        const payload: any = {
+        let payload: any = {
           messaging_product: "whatsapp",
           to: cleanPhone,
-          type: "text",
-          text: { body: content },
         };
+
+        if (msgType === "text") {
+          payload.type = "text";
+          payload.text = { body: content };
+        } else if (msgType === "image") {
+          payload.type = "image";
+          payload.image = { link: mediaUrl, caption: content || undefined };
+        } else if (msgType === "audio") {
+          payload.type = "audio";
+          payload.audio = { link: mediaUrl };
+        } else if (msgType === "document") {
+          payload.type = "document";
+          payload.document = { link: mediaUrl, caption: content || undefined, filename: "document" };
+        } else if (msgType === "video") {
+          payload.type = "video";
+          payload.video = { link: mediaUrl, caption: content || undefined };
+        } else if (msgType === "sticker") {
+          payload.type = "sticker";
+          payload.sticker = { link: mediaUrl };
+        }
 
         const res = await fetch(
           `https://graph.facebook.com/v21.0/${phoneNumberId}/messages`,
           {
             method: "POST",
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-              "Content-Type": "application/json",
-            },
+            headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
             body: JSON.stringify(payload),
           }
         );
@@ -193,21 +228,33 @@ Deno.serve(async (req) => {
       }
 
       try {
-        const res = await fetch(
-          `${serverUrl.replace(/\/$/, "")}/message/sendText/${instanceName}`,
-          {
-            method: "POST",
-            headers: {
-              apikey: apiKey,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              number: `${cleanPhone}@s.whatsapp.net`,
-              text: content,
-              delay: 1200,
-            }),
-          }
-        );
+        const baseUrl = serverUrl.replace(/\/$/, "");
+        const number = `${cleanPhone}@s.whatsapp.net`;
+        let endpoint = "sendText";
+        let bodyPayload: any = { number, text: content, delay: 1200 };
+
+        if (msgType === "image") {
+          endpoint = "sendMedia";
+          bodyPayload = { number, mediatype: "image", media: mediaUrl, caption: content || "", delay: 1200 };
+        } else if (msgType === "audio") {
+          endpoint = "sendWhatsAppAudio";
+          bodyPayload = { number, audio: mediaUrl, delay: 1200 };
+        } else if (msgType === "document") {
+          endpoint = "sendMedia";
+          bodyPayload = { number, mediatype: "document", media: mediaUrl, caption: content || "", fileName: "document", delay: 1200 };
+        } else if (msgType === "video") {
+          endpoint = "sendMedia";
+          bodyPayload = { number, mediatype: "video", media: mediaUrl, caption: content || "", delay: 1200 };
+        } else if (msgType === "sticker") {
+          endpoint = "sendSticker";
+          bodyPayload = { number, sticker: mediaUrl, delay: 1200 };
+        }
+
+        const res = await fetch(`${baseUrl}/message/${endpoint}/${instanceName}`, {
+          method: "POST",
+          headers: { apikey: apiKey, "Content-Type": "application/json" },
+          body: JSON.stringify(bodyPayload),
+        });
 
         const data = await res.json();
         if (res.ok) {
@@ -227,14 +274,14 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Save outbound message to DB (only for conversation-based sends)
+    // Save outbound message to DB
     if (convId) {
       await supabase.from("messages").insert({
         conversation_id: convId,
         message_id_whatsapp: messageIdWhatsapp,
         direction: "outbound",
-        type: type,
-        content: content,
+        type: msgType,
+        content: content || (mediaUrl ? `[${msgType}]` : null),
         media_url: mediaUrl || null,
         status: "sent",
         timestamp: new Date().toISOString(),
@@ -243,18 +290,14 @@ Deno.serve(async (req) => {
       await supabase
         .from("conversations")
         .update({
-          last_message: content,
+          last_message: content || `[${msgType}]`,
           last_message_at: new Date().toISOString(),
         })
         .eq("id", convId);
     }
 
     return new Response(
-      JSON.stringify({
-        success: true,
-        message_id: messageIdWhatsapp,
-        provider: instance.provider,
-      }),
+      JSON.stringify({ success: true, message_id: messageIdWhatsapp, provider: instance.provider }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (e) {
