@@ -255,8 +255,16 @@ Deno.serve(async (req) => {
 
       try {
         const res = await fetch("https://app.logzz.com.br/api/offers", {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
         });
+        
+        const contentType = res.headers.get("content-type") || "";
+        if (!contentType.includes("application/json")) {
+          const text = await res.text();
+          console.error("Logzz returned non-JSON:", res.status, text.substring(0, 200));
+          throw new Error(`Logzz retornou resposta inválida (status ${res.status}). Verifique o token.`);
+        }
+        
         const data = await res.json();
 
         if (!data.success && !data.data) {
