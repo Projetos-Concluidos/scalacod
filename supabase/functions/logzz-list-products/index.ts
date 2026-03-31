@@ -96,12 +96,13 @@ Deno.serve(async (req) => {
     console.log(`[logzz-list-products] Response type: ${typeof data}, keys: ${Object.keys(data || {}).join(",")}`);
     console.log(`[logzz-list-products] Preview: ${JSON.stringify(data).substring(0, 500)}`);
 
-    // Extract offers from role-based structure: { producer: [...], affiliate: [...], coproducer: [...] }
+    // Extract offers from role-based structure: { type, status, data: { producer: [...], affiliate: [...], coproducer: [...] } }
+    const actualData = data?.data || data;
     const roles = ["producer", "affiliate", "coproducer"];
     const offers: any[] = [];
 
     for (const role of roles) {
-      const products = data?.[role];
+      const products = actualData?.[role];
       if (!Array.isArray(products)) continue;
 
       for (const product of products) {

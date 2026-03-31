@@ -255,219 +255,197 @@ Deno.serve(async (req) => {
         );
       }
 
-      // Try multiple candidate endpoints to fetch affiliate offers
-      const candidateEndpoints = [
-        "https://app.logzz.com.br/api/affiliate/offers",
-        "https://app.logzz.com.br/api/v1/affiliate/offers",
-        "https://app.logzz.com.br/api/offers",
-        "https://app.logzz.com.br/api/v1/offers",
-        "https://app.logzz.com.br/api/products",
-        "https://app.logzz.com.br/api/v1/products",
-        "https://app.logzz.com.br/api/affiliate/products",
-      ];
+      try {
+        console.log("[sync_logzz] Calling GET /api/v1/products");
+        const res = await fetch("https://app.logzz.com.br/api/v1/products", {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: "application/json",
+          },
+          redirect: "manual",
+        });
 
-      let fetchedOffers: any[] | null = null;
-      let successEndpoint = "";
+        const status = res.status;
+        console.log(`[sync_logzz] Status: ${status}`);
 
-      for (const endpoint of candidateEndpoints) {
-        try {
-          console.log(`[sync_logzz] Trying: ${endpoint}`);
-          const res = await fetch(endpoint, {
-            method: "GET",
-            headers: {
-              Authorization: `Bearer ${token}`,
-              Accept: "application/json",
-            },
-            redirect: "manual",
-          });
-
-          const status = res.status;
-          console.log(`[sync_logzz] ${endpoint} → status ${status}`);
-
-          // If redirected (301/302/303/307/308) skip — likely login page
-          if (status >= 300 && status < 400) {
-            console.log(`[sync_logzz] Redirect detected, skipping`);
-            continue;
-          }
-
-          if (status === 401 || status === 403) {
-            console.log(`[sync_logzz] Auth error, skipping`);
-            continue;
-          }
-
-          if (status === 404) {
-            console.log(`[sync_logzz] Not found, skipping`);
-            continue;
-          }
-
-          if (status !== 200) continue;
-
-          const contentType = res.headers.get("content-type") || "";
-          if (!contentType.includes("json")) {
-            const bodyPreview = await res.text();
-            console.log(`[sync_logzz] Non-JSON response: ${bodyPreview.substring(0, 100)}`);
-            continue;
-          }
-
-          const data = await res.json();
-          console.log(`[sync_logzz] JSON response type: ${typeof data}, isArray: ${Array.isArray(data)}`);
-
-          // Extract offers array from various response shapes
-          let items: any[] = [];
-          if (Array.isArray(data)) {
-            items = data;
-          } else if (data?.data && Array.isArray(data.data)) {
-            items = data.data;
-          } else if (data?.offers && Array.isArray(data.offers)) {
-            items = data.offers;
-          } else if (data?.products && Array.isArray(data.products)) {
-            items = data.products;
-          } else if (data?.items && Array.isArray(data.items)) {
-            items = data.items;
-          }
-
-          if (items.length > 0) {
-            fetchedOffers = items;
-            successEndpoint = endpoint;
-            console.log(`[sync_logzz] Found ${items.length} offers from ${endpoint}`);
-            break;
-          } else {
-            console.log(`[sync_logzz] Empty array from ${endpoint}, continuing`);
-          }
-        } catch (e) {
-          console.log(`[sync_logzz] Error on ${endpoint}: ${e.message}`);
-          continue;
+        if (status >= 300 && status < 400) {
+          throw new Error("Logzz redirecionou (token pode estar expirado)");
         }
-      }
 
-      // If we fetched offers, upsert them into the database
-      if (fetchedOffers && fetchedOffers.length > 0) {
-        let newProducts = 0;
-        let newOffers = 0;
+        if (status !== 200) {
+          throw new Error(`Logzz retornou status ${status}`);
+        }
 
-        for (const item of fetchedOffers) {
-          try {
-            const offerName = item.name || item.offer_name || item.title || "Oferta Logzz";
-            const offerPrice = parseFloat(item.price || item.value || item.amount || "0");
-            const offerHash = item.hash || item.id?.toString() || item.slug || null;
-            const productName = item.product_name || item.product?.name || offerName;
-            const productHash = item.product_hash || item.product?.hash || item.product_id?.toString() || null;
+        const contentType = res.headers.get("content-type") || "";
+        if (!contentType.includes("json")) {
+          throw new Error("Logzz retornou HTML. Token pode estar expirado.");
+        }
 
-            // Upsert product
-            let productId: string | null = null;
+        const data = await res.json();
+        console.log(`[sync_logzz] Response keys: ${Object.keys(data || {}).join(",")}`);
 
-            if (productHash) {
-              const { data: existingProd } = await supabase
-                .from("products")
-                .select("id")
-                .eq("user_id", user_id)
-                .eq("hash", productHash)
-                .maybeSingle();
+        // Logzz wraps response: { type, status, data: { producer: [...], affiliate: [...], coproducer: [...] } }
+        const actualData = data?.data || data;
+        const roles = ["producer", "affiliate", "coproducer"];
+        const fetchedOffers: any[] = [];
 
-              if (existingProd) {
-                productId = existingProd.id;
+        for (const role of roles) {
+          const products = actualData?.[role];
+          if (!Array.isArray(products)) continue;
+
+          for (const product of products) {
+            const productName = product.name || "Produto Logzz";
+            const productHash = product.hash || null;
+            const productOffers = product.offers;
+
+            if (Array.isArray(productOffers)) {
+              for (const offer of productOffers) {
+                fetchedOffers.push({
+                  product_name: productName,
+                  product_hash: productHash,
+                  offer_name: offer.name || productName,
+                  offer_hash: offer.hash || null,
+                  price: parseFloat(offer.price || "0"),
+                  role,
+                });
               }
-            }
-
-            if (!productId) {
-              const { data: prodByName } = await supabase
-                .from("products")
-                .select("id")
-                .eq("user_id", user_id)
-                .eq("name", productName)
-                .maybeSingle();
-
-              if (prodByName) {
-                productId = prodByName.id;
-              }
-            }
-
-            if (!productId) {
-              const { data: newProd, error: prodErr } = await supabase
-                .from("products")
-                .insert({ user_id, name: productName, hash: productHash, is_active: true })
-                .select("id")
-                .single();
-
-              if (prodErr) {
-                console.log(`[sync_logzz] Error creating product: ${prodErr.message}`);
-                continue;
-              }
-              productId = newProd.id;
-              newProducts++;
-            }
-
-            // Upsert offer
-            let existingOffer = null;
-            if (offerHash) {
-              const { data } = await supabase
-                .from("offers")
-                .select("id")
-                .eq("user_id", user_id)
-                .eq("hash", offerHash)
-                .maybeSingle();
-              existingOffer = data;
-            }
-
-            if (!existingOffer) {
-              const { data } = await supabase
-                .from("offers")
-                .select("id")
-                .eq("user_id", user_id)
-                .eq("name", offerName)
-                .eq("product_id", productId)
-                .maybeSingle();
-              existingOffer = data;
-            }
-
-            if (existingOffer) {
-              await supabase.from("offers").update({
-                price: offerPrice,
-                hash: offerHash,
-                is_active: true,
-              }).eq("id", existingOffer.id);
             } else {
-              const { error: offErr } = await supabase.from("offers").insert({
-                user_id,
-                product_id: productId,
-                name: offerName,
-                price: offerPrice,
-                hash: offerHash,
-                is_active: true,
+              fetchedOffers.push({
+                product_name: productName,
+                product_hash: productHash,
+                offer_name: productName,
+                offer_hash: productHash,
+                price: parseFloat(product.price || "0"),
+                role,
               });
-              if (offErr) {
-                console.log(`[sync_logzz] Error creating offer: ${offErr.message}`);
-                continue;
-              }
-              newOffers++;
             }
-          } catch (e) {
-            console.log(`[sync_logzz] Error processing item: ${e.message}`);
           }
         }
 
-        // Fetch all current offers to return
-        const { data: allOffers } = await supabase
-          .from("offers")
-          .select("id, name, price, hash, product_id, products(name)")
-          .eq("user_id", user_id)
-          .eq("is_active", true);
+        console.log(`[sync_logzz] Extracted ${fetchedOffers.length} offers`);
 
-        return new Response(
-          JSON.stringify({
-            success: true,
-            synced: fetchedOffers.length,
-            products: newProducts,
-            offers: newOffers,
-            items: allOffers || [],
-            source: successEndpoint,
-            message: `Importadas ${fetchedOffers.length} ofertas da Logzz (${newProducts} novos produtos, ${newOffers} novas ofertas).`,
-          }),
-          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        if (fetchedOffers.length > 0) {
+          let newProducts = 0;
+          let newOffers = 0;
+
+          for (const item of fetchedOffers) {
+            try {
+              const offerName = item.offer_name;
+              const offerPrice = item.price;
+              const offerHash = item.offer_hash;
+              const productName = item.product_name;
+              const productHash = item.product_hash;
+
+              // Upsert product
+              let productId: string | null = null;
+
+              if (productHash) {
+                const { data: existingProd } = await supabase
+                  .from("products")
+                  .select("id")
+                  .eq("user_id", user_id)
+                  .eq("hash", productHash)
+                  .maybeSingle();
+                if (existingProd) productId = existingProd.id;
+              }
+
+              if (!productId) {
+                const { data: prodByName } = await supabase
+                  .from("products")
+                  .select("id")
+                  .eq("user_id", user_id)
+                  .eq("name", productName)
+                  .maybeSingle();
+                if (prodByName) productId = prodByName.id;
+              }
+
+              if (!productId) {
+                const { data: newProd, error: prodErr } = await supabase
+                  .from("products")
+                  .insert({ user_id, name: productName, hash: productHash, is_active: true })
+                  .select("id")
+                  .single();
+                if (prodErr) {
+                  console.log(`[sync_logzz] Error creating product: ${prodErr.message}`);
+                  continue;
+                }
+                productId = newProd.id;
+                newProducts++;
+              }
+
+              // Upsert offer
+              let existingOffer = null;
+              if (offerHash) {
+                const { data } = await supabase
+                  .from("offers")
+                  .select("id")
+                  .eq("user_id", user_id)
+                  .eq("hash", offerHash)
+                  .maybeSingle();
+                existingOffer = data;
+              }
+
+              if (!existingOffer) {
+                const { data } = await supabase
+                  .from("offers")
+                  .select("id")
+                  .eq("user_id", user_id)
+                  .eq("name", offerName)
+                  .eq("product_id", productId)
+                  .maybeSingle();
+                existingOffer = data;
+              }
+
+              if (existingOffer) {
+                await supabase.from("offers").update({
+                  price: offerPrice,
+                  hash: offerHash,
+                  is_active: true,
+                }).eq("id", existingOffer.id);
+              } else {
+                const { error: offErr } = await supabase.from("offers").insert({
+                  user_id,
+                  product_id: productId,
+                  name: offerName,
+                  price: offerPrice,
+                  hash: offerHash,
+                  is_active: true,
+                });
+                if (offErr) {
+                  console.log(`[sync_logzz] Error creating offer: ${offErr.message}`);
+                  continue;
+                }
+                newOffers++;
+              }
+            } catch (e) {
+              console.log(`[sync_logzz] Error processing item: ${e.message}`);
+            }
+          }
+
+          const { data: allOffers } = await supabase
+            .from("offers")
+            .select("id, name, price, hash, product_id, products(name)")
+            .eq("user_id", user_id)
+            .eq("is_active", true);
+
+          return new Response(
+            JSON.stringify({
+              success: true,
+              synced: fetchedOffers.length,
+              products: newProducts,
+              offers: newOffers,
+              items: allOffers || [],
+              message: `Importadas ${fetchedOffers.length} ofertas da Logzz (${newProducts} novos produtos, ${newOffers} novas ofertas).`,
+            }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+      } catch (e) {
+        console.log(`[sync_logzz] Error: ${e.message}`);
       }
 
-      // Fallback: no API endpoint worked, return local offers
+      // Fallback: return local offers
       const { data: existingOffers } = await supabase
         .from("offers")
         .select("id, name, price, hash, product_id, products(name)")
