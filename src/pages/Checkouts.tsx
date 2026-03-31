@@ -483,6 +483,44 @@ const Checkouts = () => {
 
           {wizardStep === 3 && (
             <div className="space-y-4">
+              <div className="rounded-lg border border-primary/10 bg-primary/5 p-3 mb-2">
+                <p className="text-xs text-muted-foreground"><strong className="text-foreground">📊 Tracking & Pixels</strong> — Configure os pixels de rastreamento para medir conversões do checkout.</p>
+              </div>
+              <div>
+                <Label>Facebook Pixel ID</Label>
+                <Input value={formPixelFacebook} onChange={(e) => setFormPixelFacebook(e.target.value)} placeholder="Ex: 1234567890" className="bg-input border-border" />
+                <p className="text-xs text-muted-foreground mt-1">Encontre em: Meta Business → Gerenciador de Eventos → Pixel</p>
+              </div>
+              <div>
+                <Label>Meta CAPI Token (Conversions API)</Label>
+                <Input value={formMetaCapiToken} onChange={(e) => setFormMetaCapiToken(e.target.value)} placeholder="EAAXXXXX..." type="password" className="bg-input border-border" />
+                <p className="text-xs text-muted-foreground mt-1">Gere em: Gerenciador de Eventos → Configurações → Token de acesso</p>
+              </div>
+              <div>
+                <Label>Google Ads ID</Label>
+                <Input value={formGoogleAdsId} onChange={(e) => setFormGoogleAdsId(e.target.value)} placeholder="AW-XXXXXXXXXX" className="bg-input border-border" />
+              </div>
+              <div>
+                <Label>Google Conversion ID</Label>
+                <Input value={formGoogleConversionId} onChange={(e) => setFormGoogleConversionId(e.target.value)} placeholder="XXXXXXXX" className="bg-input border-border" />
+              </div>
+              <div>
+                <Label>Google Analytics ID</Label>
+                <Input value={formGoogleAnalyticsId} onChange={(e) => setFormGoogleAnalyticsId(e.target.value)} placeholder="G-XXXXXXXXXX" className="bg-input border-border" />
+              </div>
+              <div>
+                <Label>URL pós-compra (Thank You Page)</Label>
+                <Input value={formThankYouUrl} onChange={(e) => setFormThankYouUrl(e.target.value)} placeholder="https://seusite.com/obrigado" className="bg-input border-border" />
+              </div>
+              <div>
+                <Label>WhatsApp Suporte</Label>
+                <Input value={formWhatsappSupport} onChange={(e) => setFormWhatsappSupport(e.target.value)} placeholder="5511999999999" className="bg-input border-border" />
+              </div>
+            </div>
+          )}
+
+          {wizardStep === 4 && (
+            <div className="space-y-4">
               <div>
                 <Label>CSS Customizado</Label>
                 <Textarea
