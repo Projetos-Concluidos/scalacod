@@ -138,9 +138,9 @@ const Disparos = () => {
         status: scheduleType === "now" ? "draft" : "scheduled",
         total_recipients: estimatedReach,
         scheduled_at: scheduledAt,
-        segment_filter: segmentFilter,
+        segment_filter: segmentFilter as any,
         message_template: messageTemplate,
-      }).select().single();
+      } as any).select().single();
 
       if (error) throw error;
 
