@@ -182,8 +182,6 @@ const Disparos = () => {
     setEstimatedReach(leadsCount);
     setMessageTemplate("Olá {{nome}}! Confira nossas novidades 🔥");
   };
-    setEstimatedReach(leadsCount);
-  };
 
   if (!gate.allowed) return <UpgradePrompt reason={gate.reason} />;
 
