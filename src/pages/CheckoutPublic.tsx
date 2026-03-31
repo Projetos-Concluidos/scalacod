@@ -963,16 +963,16 @@ const CheckoutPublic = () => {
                     <h2 className="text-sm font-bold text-gray-900">Forma de Pagamento</h2>
                   </div>
 
-                  <div className="mb-4 flex rounded-xl border border-gray-200 overflow-hidden">
-                    {(["pix", "credit_card", "boleto"] as const).map((m) => (
+                  <div className="mb-4 grid grid-cols-4 gap-1 rounded-xl border border-gray-200 overflow-hidden">
+                    {(["pix", "credit_card", "boleto", "wallet"] as const).map((m) => (
                       <button
                         key={m}
                         onClick={() => { setPaymentMethod(m); setPixData(null); setPaymentStatus(null); }}
-                        className={`flex-1 px-3 py-2.5 text-xs font-medium transition-colors ${
+                        className={`px-2 py-2.5 text-xs font-medium transition-colors ${
                           paymentMethod === m ? "bg-emerald-50 text-emerald-700 border-b-2 border-emerald-500" : "bg-gray-50 text-gray-500"
                         }`}
                       >
-                        {m === "pix" ? "📱 PIX" : m === "credit_card" ? "💳 Cartão" : "📄 Boleto"}
+                        {m === "pix" ? "📱 PIX" : m === "credit_card" ? "💳 Cartão" : m === "boleto" ? "📄 Boleto" : "💰 Saldo MP"}
                       </button>
                     ))}
                   </div>
