@@ -84,6 +84,10 @@ const CheckoutPublic = () => {
   const [showMobileSummary, setShowMobileSummary] = useState(false);
   const [cpfValidating, setCpfValidating] = useState(false);
   const [cpfResult, setCpfResult] = useState<{ valid: boolean; status: string; message: string; source?: string; customer_name?: string | null } | null>(null);
+  const [pixData, setPixData] = useState<{ pixQrCode: string; pixQrCodeBase64: string; paymentId: string } | null>(null);
+  const [paymentLoading, setPaymentLoading] = useState(false);
+  const [paymentStatus, setPaymentStatus] = useState<string | null>(null);
+  const [cardForm, setCardForm] = useState({ number: "", expiry: "", cvv: "", holderName: "", installments: 1 });
 
   const [form, setForm] = useState({
     name: "", cpf: "", email: "", phone: "",
