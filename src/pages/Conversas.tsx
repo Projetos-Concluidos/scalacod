@@ -654,7 +654,7 @@ const Conversas = () => {
                     return (
                       <button
                         key={flow.id}
-                        onClick={() => sendTemplateMessage(flow)}
+                        onClick={() => selectTemplateFlow(flow)}
                         disabled={sendingTemplate}
                         className="w-full text-left p-2.5 hover:bg-primary/5 rounded-lg text-sm mb-1 transition-colors border border-transparent hover:border-primary/20 disabled:opacity-50"
                       >
