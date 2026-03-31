@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Mic, Info, Upload, Globe, Play, Pause, Heart, Trash2, Loader2, AlertTriangle, Music, X, Check, Star, Volume2, Send } from "lucide-react";
+import { Mic, Info, Upload, Globe, Play, Pause, Heart, Trash2, Loader2, AlertTriangle, Music, X, Check, Star, Volume2, Send, CreditCard, QrCode, Copy, CheckCircle } from "lucide-react";
 import { useFeatureGate, UpgradePrompt } from "@/hooks/useFeatureGate";
 import PageHeader from "@/components/PageHeader";
 import EmptyState from "@/components/EmptyState";
@@ -31,10 +31,10 @@ interface LibraryVoice {
 }
 
 const packs = [
-  { name: "Pack Iniciante", tokens: 5000, display: "5.000", price: "R$ 19,90", popular: false },
-  { name: "Pack Essencial", tokens: 10000, display: "10.000", price: "R$ 39,90", popular: false },
-  { name: "Pack Profissional", tokens: 50000, display: "50.000", price: "R$ 197,00", popular: true },
-  { name: "Pack Enterprise", tokens: 100000, display: "100.000", price: "R$ 397,00", popular: false },
+  { id: "starter", name: "Pack Iniciante", tokens: 5000, display: "5.000", price: "R$ 19,90", amount: 19.90, popular: false },
+  { id: "essencial", name: "Pack Essencial", tokens: 10000, display: "10.000", price: "R$ 39,90", amount: 39.90, popular: false },
+  { id: "profissional", name: "Pack Profissional", tokens: 50000, display: "50.000", price: "R$ 197,00", amount: 197.00, popular: true },
+  { id: "enterprise", name: "Pack Enterprise", tokens: 100000, display: "100.000", price: "R$ 397,00", amount: 397.00, popular: false },
 ];
 
 const FALLBACK_LIBRARY: LibraryVoice[] = [
@@ -66,6 +66,14 @@ const Vozes = () => {
   const [libFilter, setLibFilter] = useState({ lang: "", gender: "" });
   const [libraryVoices, setLibraryVoices] = useState<LibraryVoice[]>(FALLBACK_LIBRARY);
   const [libLoading, setLibLoading] = useState(false);
+
+  // Purchase modal state
+  const [purchaseOpen, setPurchaseOpen] = useState(false);
+  const [selectedPack, setSelectedPack] = useState<typeof packs[0] | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<"pix" | "credit_card">("pix");
+  const [purchasing, setPurchasing] = useState(false);
+  const [pixData, setPixData] = useState<{ qrCode: string; copyPaste: string } | null>(null);
+  const [purchaseSuccess, setPurchaseSuccess] = useState(false);
 
   // Audio generation state per voice
   const [generateText, setGenerateText] = useState<Record<string, string>>({});
@@ -208,23 +216,52 @@ const Vozes = () => {
     }
   };
 
-  const handleBuyTokens = async (pack: typeof packs[0]) => {
-    if (!user) return;
-    if (tokenData) {
-      await supabase.from("voice_tokens").update({
-        balance: (tokenData.balance || 0) + pack.tokens,
-        total_purchased: (tokenData.total_purchased || 0) + pack.tokens,
-      }).eq("id", tokenData.id);
-    } else {
-      await supabase.from("voice_tokens").insert({
-        user_id: user.id,
-        balance: pack.tokens,
-        total_purchased: pack.tokens,
-        total_used: 0,
+  const openPurchaseModal = (pack: typeof packs[0]) => {
+    setSelectedPack(pack);
+    setPaymentMethod("pix");
+    setPixData(null);
+    setPurchaseSuccess(false);
+    setPurchaseOpen(true);
+  };
+
+  const handlePurchase = async () => {
+    if (!user || !selectedPack) return;
+    setPurchasing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("purchase-tokens", {
+        body: {
+          packId: selectedPack.id,
+          paymentMethod,
+          payerEmail: user.email,
+        },
       });
+
+      if (error) throw new Error("Erro ao processar pagamento");
+      if (data.error) throw new Error(data.error);
+
+      if (paymentMethod === "pix" && data.pixQrCode) {
+        setPixData({ qrCode: data.pixQrCode, copyPaste: data.pixCopyPaste || "" });
+      }
+
+      if (data.status === "approved") {
+        setPurchaseSuccess(true);
+        toast.success(`${selectedPack.display} tokens creditados!`);
+        fetchData();
+      } else if (paymentMethod === "pix") {
+        toast.info("PIX gerado! Escaneie o QR Code para pagar.");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao processar pagamento");
+    } finally {
+      setPurchasing(false);
     }
-    toast.success(`${pack.display} tokens adicionados!`);
-    fetchData();
+  };
+
+  const copyPixCode = () => {
+    if (pixData?.copyPaste) {
+      navigator.clipboard.writeText(pixData.copyPaste);
+      toast.success("Código PIX copiado!");
+    }
   };
 
   const filteredLibrary = libraryVoices.filter(v => {
@@ -306,7 +343,7 @@ const Vozes = () => {
             <p className="text-3xl font-bold text-foreground">{pack.display}</p>
             <p className="text-xs font-semibold text-primary mb-1">Tokens</p>
             <p className="text-lg font-bold text-foreground mb-4">{pack.price}</p>
-            <button onClick={() => handleBuyTokens(pack)} className={`w-full rounded-lg py-2.5 text-sm font-semibold transition-all ${
+            <button onClick={() => openPurchaseModal(pack)} className={`w-full rounded-lg py-2.5 text-sm font-semibold transition-all ${
               pack.popular
                 ? "gradient-primary text-primary-foreground hover:opacity-90"
                 : "border border-border text-foreground hover:bg-muted"
@@ -471,6 +508,125 @@ const Vozes = () => {
           </div>
         </>
       )}
+
+      {/* Purchase Modal */}
+      <Dialog open={purchaseOpen} onOpenChange={v => { if (!v) { setPurchaseOpen(false); setPixData(null); setPurchaseSuccess(false); } }}>
+        <DialogContent className="max-w-md bg-card border-border">
+          <DialogHeader>
+            <DialogTitle className="text-foreground">
+              {purchaseSuccess ? "Pagamento Confirmado!" : `Comprar ${selectedPack?.display || ""} Tokens`}
+            </DialogTitle>
+          </DialogHeader>
+
+          {purchaseSuccess ? (
+            <div className="text-center py-8 space-y-4">
+              <div className="h-14 w-14 mx-auto rounded-full bg-success/10 flex items-center justify-center">
+                <CheckCircle className="h-7 w-7 text-success" />
+              </div>
+              <p className="text-lg font-bold text-foreground">{selectedPack?.display} tokens creditados!</p>
+              <p className="text-sm text-muted-foreground">Seus tokens já estão disponíveis para gerar áudios.</p>
+              <Button onClick={() => setPurchaseOpen(false)} className="gradient-primary text-primary-foreground">
+                Fechar
+              </Button>
+            </div>
+          ) : pixData ? (
+            <div className="space-y-4">
+              <div className="text-center">
+                <p className="text-sm text-muted-foreground mb-3">Escaneie o QR Code ou copie o código PIX</p>
+                <div className="bg-white p-4 rounded-xl inline-block mx-auto">
+                  <img
+                    src={`data:image/png;base64,${pixData.qrCode}`}
+                    alt="QR Code PIX"
+                    className="h-48 w-48 mx-auto"
+                  />
+                </div>
+              </div>
+              {pixData.copyPaste && (
+                <div className="flex items-center gap-2">
+                  <Input
+                    value={pixData.copyPaste}
+                    readOnly
+                    className="text-xs font-mono"
+                  />
+                  <Button size="sm" variant="outline" onClick={copyPixCode}>
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+              <div className="rounded-lg bg-primary/5 border border-primary/10 p-3">
+                <p className="text-xs text-muted-foreground">
+                  Após o pagamento, seus tokens serão creditados automaticamente em até 1 minuto.
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => { setPixData(null); }} className="flex-1">
+                  Voltar
+                </Button>
+                <Button onClick={() => { setPurchaseOpen(false); fetchData(); }} className="flex-1">
+                  Já Paguei
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-5">
+              <div className="rounded-xl bg-muted/50 p-4 text-center">
+                <p className="text-2xl font-bold text-foreground">{selectedPack?.display} tokens</p>
+                <p className="text-lg font-bold text-primary">{selectedPack?.price}</p>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold">Método de Pagamento</Label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    onClick={() => setPaymentMethod("pix")}
+                    className={`flex items-center gap-2 rounded-xl border-2 p-3 text-sm font-medium transition-all ${
+                      paymentMethod === "pix"
+                        ? "border-primary bg-primary/5 text-foreground"
+                        : "border-border text-muted-foreground hover:border-muted-foreground"
+                    }`}
+                  >
+                    <QrCode className="h-5 w-5" />
+                    PIX
+                  </button>
+                  <button
+                    onClick={() => setPaymentMethod("credit_card")}
+                    className={`flex items-center gap-2 rounded-xl border-2 p-3 text-sm font-medium transition-all ${
+                      paymentMethod === "credit_card"
+                        ? "border-primary bg-primary/5 text-foreground"
+                        : "border-border text-muted-foreground hover:border-muted-foreground"
+                    }`}
+                  >
+                    <CreditCard className="h-5 w-5" />
+                    Cartão
+                  </button>
+                </div>
+              </div>
+
+              {paymentMethod === "credit_card" && (
+                <div className="rounded-lg bg-warning/5 border border-warning/20 p-3">
+                  <p className="text-xs text-muted-foreground">
+                    ⚠️ Pagamento com cartão de crédito em breve. Use PIX por enquanto.
+                  </p>
+                </div>
+              )}
+
+              <Button
+                onClick={handlePurchase}
+                disabled={purchasing || paymentMethod === "credit_card"}
+                className="w-full gradient-primary text-primary-foreground"
+              >
+                {purchasing ? (
+                  <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Processando...</>
+                ) : paymentMethod === "pix" ? (
+                  <><QrCode className="h-4 w-4 mr-2" /> Gerar QR Code PIX</>
+                ) : (
+                  <><CreditCard className="h-4 w-4 mr-2" /> Pagar com Cartão</>
+                )}
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Clone Modal */}
       <Dialog open={cloneOpen} onOpenChange={v => !v && resetClone()}>
