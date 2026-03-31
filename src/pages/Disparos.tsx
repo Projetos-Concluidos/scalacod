@@ -24,6 +24,7 @@ import { cn } from "@/lib/utils";
 type Campaign = Tables<"campaigns">;
 
 const Disparos = () => {
+  const gate = useFeatureGate("campaigns");
   const { user } = useAuth();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [flows, setFlows] = useState<Tables<"flows">[]>([]);
