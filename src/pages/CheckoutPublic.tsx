@@ -90,7 +90,39 @@ const CheckoutPublic = () => {
     cep: "", street: "", number: "", complement: "", district: "", city: "", state: "",
   });
 
-  const track = (event: string, meta: Record<string, any> = {}) => {
+  // Debounced CPF validation via Logzz
+  useEffect(() => {
+    const digits = form.cpf.replace(/\D/g, "");
+    if (digits.length !== 11) {
+      setCpfResult(null);
+      return;
+    }
+    if (!validateCpf(form.cpf)) {
+      setCpfResult({ valid: false, status: "invalid", message: "CPF inválido" });
+      return;
+    }
+    if (!checkout) return;
+
+    setCpfValidating(true);
+    const timer = setTimeout(async () => {
+      try {
+        const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+        const res = await fetch(`https://${projectId}.supabase.co/functions/v1/checkout-api`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "validate_cpf", user_id: checkout.user_id, cpf: digits }),
+        });
+        const data = await res.json();
+        setCpfResult(data);
+      } catch {
+        setCpfResult({ valid: true, status: "approved", message: "CPF válido", source: "local" });
+      }
+      setCpfValidating(false);
+    }, 600);
+
+    return () => { clearTimeout(timer); setCpfValidating(false); };
+  }, [form.cpf, checkout]);
+
     if (checkout) trackPixelEvent(checkout.user_id, checkout.id, event, meta);
   };
 
