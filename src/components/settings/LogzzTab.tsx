@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Truck, Eye, EyeOff, Copy, CheckCircle, XCircle, Loader2, MapPin, Package, ExternalLink } from "lucide-react";
+import { Truck, Eye, EyeOff, Copy, CheckCircle, XCircle, Loader2, MapPin, Package, ExternalLink, Circle, PauseCircle } from "lucide-react";
 import InfoTooltip from "@/components/InfoTooltip";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -27,6 +27,9 @@ const LogzzTab = () => {
   const [cep, setCep] = useState("");
   const [checkingCep, setCheckingCep] = useState(false);
   const [cepResult, setCepResult] = useState<CepResult | null>(null);
+  const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
+
+  const isConfigured = !!(token.trim() && logzzWebhookUrl.trim());
 
   const webhookUrl = user
     ? `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/logzz-webhook?store=${user.id}`
@@ -80,20 +83,53 @@ const LogzzTab = () => {
     if (!token.trim()) { toast.error("Insira o Bearer Token da Logzz"); return; }
     if (!logzzWebhookUrl.trim()) { toast.error("Insira a URL de Importação de Pedidos da Logzz"); return; }
     setTesting(true);
+    setTestResult(null);
     try {
       await handleSave(true);
-      const data = await callCheckoutApi("test_connection");
-      if (data.connected) {
-        toast.success(`✅ ${data.message || "Conexão OK!"}`);
+      // Real test via edge function
+      const { data, error } = await supabase.functions.invoke("test-integration", {
+        body: { provider: "logzz_tenant", credentials: { bearer_token: token } },
+      });
+      if (error) throw error;
+      setTestResult(data);
+      if (data.success) {
+        toast.success(data.message);
         setIsActive(true);
+        const { data: existing } = await supabase
+          .from("integrations").select("id").eq("user_id", user!.id).eq("type", "logzz").maybeSingle();
+        if (existing) await supabase.from("integrations").update({ is_active: true }).eq("id", existing.id);
       } else {
-        toast.error(`❌ ${data.error || "Falha ao testar conexão"}`);
+        toast.error(data.message);
       }
     } catch (e: any) {
-      toast.error(`❌ Erro: ${e.message || "Erro ao testar conexão"}`);
+      const result = { success: false, message: e.message || "Erro ao testar conexão" };
+      setTestResult(result);
+      toast.error(result.message);
     } finally {
       setTesting(false);
     }
+  };
+
+  const renderStatus = () => {
+    if (!isConfigured) {
+      return (
+        <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <Circle className="h-2 w-2" /> Não configurado
+        </span>
+      );
+    }
+    if (!isActive) {
+      return (
+        <span className="flex items-center gap-1.5 text-xs text-warning">
+          <PauseCircle className="h-3 w-3" /> Configurado mas inativo
+        </span>
+      );
+    }
+    return (
+      <span className="flex items-center gap-1.5 text-xs text-success">
+        <CheckCircle className="h-3 w-3" /> Ativo e configurado
+      </span>
+    );
   };
 
   const handleSave = async (forceActive?: boolean) => {
@@ -185,6 +221,7 @@ const LogzzTab = () => {
                 />
               </div>
               <p className="text-xs text-muted-foreground">Logística para vendas COD</p>
+              {renderStatus()}
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -237,6 +274,14 @@ const LogzzTab = () => {
             Cole a URL de importação/webhook da Logzz. Usada para enviar pedidos do ScalaNinja para a Logzz.
           </p>
         </div>
+
+        {/* Test result */}
+        {testResult && (
+          <div className={`mb-4 rounded-lg border p-3 text-sm ${testResult.success ? "border-success/30 bg-success/10 text-success" : "border-destructive/30 bg-destructive/10 text-destructive"}`}>
+            {testResult.success ? <CheckCircle className="inline h-4 w-4 mr-1" /> : <XCircle className="inline h-4 w-4 mr-1" />}
+            {testResult.message}
+          </div>
+        )}
 
         <div className="flex gap-3">
           <Button variant="outline" onClick={handleTestConnection} disabled={testing || !token.trim()}>

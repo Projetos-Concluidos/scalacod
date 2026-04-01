@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Eye, EyeOff, Save, Wifi, WifiOff, Loader2, Zap } from "lucide-react";
+import { Eye, EyeOff, Save, Wifi, WifiOff, Loader2, Zap, Circle, PauseCircle, CheckCircle } from "lucide-react";
 import { useState, useEffect } from "react";
 import InfoTooltip from "@/components/InfoTooltip";
 import NinjaBadge from "@/components/NinjaBadge";
@@ -120,6 +120,22 @@ const AdminIntegracoes = () => {
     return section.fields.every((f) => !!savedValues[f.key]?.trim());
   };
 
+  const renderSectionStatus = (section: IntegrationSection) => {
+    const configured = isSectionActive(section);
+    if (!configured) {
+      return (
+        <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <Circle className="h-2 w-2" /> Não configurado
+        </span>
+      );
+    }
+    return (
+      <span className="flex items-center gap-1.5 text-xs text-success">
+        <CheckCircle className="h-3 w-3" /> Configurado
+      </span>
+    );
+  };
+
   const handleSave = async (section: IntegrationSection) => {
     setSaving((s) => ({ ...s, [section.provider]: true }));
     try {
@@ -224,6 +240,7 @@ const AdminIntegracoes = () => {
                   </NinjaBadge>
                 </div>
                 <p className="text-sm text-muted-foreground">{section.description}</p>
+                {renderSectionStatus(section)}
               </CardHeader>
               <CardContent className="space-y-4">
                 {section.fields.map((field) => (

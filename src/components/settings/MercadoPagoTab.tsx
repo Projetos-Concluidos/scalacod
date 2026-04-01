@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { CreditCard, Eye, EyeOff, CheckCircle, Loader2, ExternalLink } from "lucide-react";
+import { CreditCard, Eye, EyeOff, CheckCircle, XCircle, Loader2, ExternalLink, Circle, PauseCircle } from "lucide-react";
 import InfoTooltip from "@/components/InfoTooltip";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -16,6 +16,7 @@ const MercadoPagoTab = () => {
   const [isActive, setIsActive] = useState(false);
   const [testing, setTesting] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -35,6 +36,8 @@ const MercadoPagoTab = () => {
     };
     load();
   }, [user]);
+
+  const isConfigured = !!(accessToken.trim() && publicKey.trim());
 
   const handleToggle = async (checked: boolean) => {
     setIsActive(checked);
@@ -57,18 +60,32 @@ const MercadoPagoTab = () => {
       return;
     }
     setTesting(true);
+    setTestResult(null);
     try {
-      await new Promise((r) => setTimeout(r, 1500));
-      toast.success("✅ Credenciais salvas! A conexão será validada ao processar pagamentos.");
-      setIsActive(true);
-    } catch {
-      toast.error("❌ Erro ao testar conexão");
+      // Save first
+      await handleSave(true);
+      // Then test via edge function
+      const { data, error } = await supabase.functions.invoke("test-integration", {
+        body: { provider: "mercadopago_tenant", credentials: { access_token: accessToken } },
+      });
+      if (error) throw error;
+      setTestResult(data);
+      if (data.success) {
+        toast.success(data.message);
+        setIsActive(true);
+      } else {
+        toast.error(data.message);
+      }
+    } catch (e: any) {
+      const result = { success: false, message: e.message || "Erro ao testar conexão" };
+      setTestResult(result);
+      toast.error(result.message);
     } finally {
       setTesting(false);
     }
   };
 
-  const handleSave = async () => {
+  const handleSave = async (silent?: boolean) => {
     if (!user) return;
     setSaving(true);
     try {
@@ -89,12 +106,34 @@ const MercadoPagoTab = () => {
       } else {
         await supabase.from("integrations").insert(payload);
       }
-      toast.success("Integração MercadoPago salva!");
+      if (!silent) toast.success("Integração MercadoPago salva!");
     } catch {
       toast.error("Erro ao salvar integração");
     } finally {
       setSaving(false);
     }
+  };
+
+  const renderStatus = () => {
+    if (!isConfigured) {
+      return (
+        <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <Circle className="h-2 w-2" /> Não configurado
+        </span>
+      );
+    }
+    if (!isActive) {
+      return (
+        <span className="flex items-center gap-1.5 text-xs text-warning">
+          <PauseCircle className="h-3 w-3" /> Configurado mas inativo
+        </span>
+      );
+    }
+    return (
+      <span className="flex items-center gap-1.5 text-xs text-success">
+        <CheckCircle className="h-3 w-3" /> Ativo e configurado
+      </span>
+    );
   };
 
   return (
@@ -119,6 +158,7 @@ const MercadoPagoTab = () => {
               />
             </div>
             <p className="text-xs text-muted-foreground">Processador de pagamentos para pedidos Coinzz</p>
+            {renderStatus()}
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -168,12 +208,20 @@ const MercadoPagoTab = () => {
         </p>
       </div>
 
+      {/* Test result */}
+      {testResult && (
+        <div className={`mb-4 rounded-lg border p-3 text-sm ${testResult.success ? "border-success/30 bg-success/10 text-success" : "border-destructive/30 bg-destructive/10 text-destructive"}`}>
+          {testResult.success ? <CheckCircle className="inline h-4 w-4 mr-1" /> : <XCircle className="inline h-4 w-4 mr-1" />}
+          {testResult.message}
+        </div>
+      )}
+
       <div className="mb-6 flex gap-3">
         <Button variant="outline" onClick={handleTestConnection} disabled={testing || !accessToken.trim()}>
           {testing ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
           Testar Conexão
         </Button>
-        <Button onClick={handleSave} disabled={saving} className="gradient-primary text-primary-foreground">
+        <Button onClick={() => handleSave()} disabled={saving} className="gradient-primary text-primary-foreground">
           {saving ? "Salvando..." : "Salvar"}
         </Button>
       </div>
@@ -182,34 +230,20 @@ const MercadoPagoTab = () => {
       <div className="rounded-lg border border-primary/10 bg-primary/5 px-4 py-3">
         <p className="mb-2 text-xs font-medium text-foreground">Métodos de pagamento disponíveis no checkout Coinzz:</p>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-          <div className="flex items-center gap-2 rounded-md border border-border bg-secondary/30 px-3 py-2">
-            <span className="text-lg">📱</span>
-            <div>
-              <p className="text-xs font-medium text-foreground">PIX</p>
-              <p className="text-[10px] text-muted-foreground">QR Code + Copia e Cola</p>
+          {[
+            { emoji: "📱", name: "PIX", desc: "QR Code + Copia e Cola" },
+            { emoji: "💳", name: "Cartão", desc: "Bricks SDK (PCI)" },
+            { emoji: "📄", name: "Boleto", desc: "3 dias úteis" },
+            { emoji: "💰", name: "Saldo MP", desc: "Redirect checkout" },
+          ].map((m) => (
+            <div key={m.name} className="flex items-center gap-2 rounded-md border border-border bg-secondary/30 px-3 py-2">
+              <span className="text-lg">{m.emoji}</span>
+              <div>
+                <p className="text-xs font-medium text-foreground">{m.name}</p>
+                <p className="text-[10px] text-muted-foreground">{m.desc}</p>
+              </div>
             </div>
-          </div>
-          <div className="flex items-center gap-2 rounded-md border border-border bg-secondary/30 px-3 py-2">
-            <span className="text-lg">💳</span>
-            <div>
-              <p className="text-xs font-medium text-foreground">Cartão</p>
-              <p className="text-[10px] text-muted-foreground">Bricks SDK (PCI)</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 rounded-md border border-border bg-secondary/30 px-3 py-2">
-            <span className="text-lg">📄</span>
-            <div>
-              <p className="text-xs font-medium text-foreground">Boleto</p>
-              <p className="text-[10px] text-muted-foreground">3 dias úteis</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 rounded-md border border-border bg-secondary/30 px-3 py-2">
-            <span className="text-lg">💰</span>
-            <div>
-              <p className="text-xs font-medium text-foreground">Saldo MP</p>
-              <p className="text-[10px] text-muted-foreground">Redirect checkout</p>
-            </div>
-          </div>
+          ))}
         </div>
       </div>
     </div>

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Package, Eye, EyeOff, Copy, CheckCircle, Loader2, ExternalLink } from "lucide-react";
+import { Package, Eye, EyeOff, Copy, CheckCircle, XCircle, Loader2, ExternalLink, Circle, PauseCircle } from "lucide-react";
 import InfoTooltip from "@/components/InfoTooltip";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -15,6 +15,7 @@ const CoinzzTab = () => {
   const [isActive, setIsActive] = useState(false);
   const [testing, setTesting] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
 
   const webhookUrl = user
     ? `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/coinzz-webhook?store=${user.id}`
@@ -38,6 +39,8 @@ const CoinzzTab = () => {
     load();
   }, [user]);
 
+  const isConfigured = !!token.trim();
+
   const handleToggle = async (checked: boolean) => {
     setIsActive(checked);
     if (!user) return;
@@ -59,18 +62,42 @@ const CoinzzTab = () => {
       return;
     }
     setTesting(true);
+    setTestResult(null);
     try {
-      await new Promise((r) => setTimeout(r, 1500));
-      toast.success("✅ Token salvo! A conexão será validada ao criar pedidos.");
-      setIsActive(true);
-    } catch {
-      toast.error("❌ Erro ao testar conexão");
+      // Save first
+      await handleSave(true);
+      // Test via edge function
+      const { data, error } = await supabase.functions.invoke("test-integration", {
+        body: { provider: "coinzz_tenant", credentials: { bearer_token: token } },
+      });
+      if (error) throw error;
+      setTestResult(data);
+      if (data.success) {
+        toast.success(data.message);
+        setIsActive(true);
+        // Update is_active in DB
+        const { data: existing } = await supabase
+          .from("integrations")
+          .select("id")
+          .eq("user_id", user!.id)
+          .eq("type", "coinzz")
+          .maybeSingle();
+        if (existing) {
+          await supabase.from("integrations").update({ is_active: true }).eq("id", existing.id);
+        }
+      } else {
+        toast.error(data.message);
+      }
+    } catch (e: any) {
+      const result = { success: false, message: e.message || "Erro ao testar conexão" };
+      setTestResult(result);
+      toast.error(result.message);
     } finally {
       setTesting(false);
     }
   };
 
-  const handleSave = async () => {
+  const handleSave = async (silent?: boolean) => {
     if (!user) return;
     setSaving(true);
     try {
@@ -91,7 +118,7 @@ const CoinzzTab = () => {
       } else {
         await supabase.from("integrations").insert(payload);
       }
-      toast.success("Integração Coinzz salva!");
+      if (!silent) toast.success("Integração Coinzz salva!");
     } catch {
       toast.error("Erro ao salvar integração");
     } finally {
@@ -102,6 +129,28 @@ const CoinzzTab = () => {
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
     toast.success("Copiado!");
+  };
+
+  const renderStatus = () => {
+    if (!isConfigured) {
+      return (
+        <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <Circle className="h-2 w-2" /> Não configurado
+        </span>
+      );
+    }
+    if (!isActive) {
+      return (
+        <span className="flex items-center gap-1.5 text-xs text-warning">
+          <PauseCircle className="h-3 w-3" /> Configurado mas inativo
+        </span>
+      );
+    }
+    return (
+      <span className="flex items-center gap-1.5 text-xs text-success">
+        <CheckCircle className="h-3 w-3" /> Ativo e configurado
+      </span>
+    );
   };
 
   return (
@@ -121,11 +170,12 @@ const CoinzzTab = () => {
                     <>Acesse <a href="https://app.coinzz.com.br" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-medium">app.coinzz.com.br <ExternalLink className="inline h-3 w-3" /></a></>,
                     "Vá em Configurações → API → Token",
                     "Copie o Bearer Token e cole no campo abaixo",
-                    "Clique em Salvar — pedidos sem Logzz são roteados automaticamente",
+                    "Clique em Testar Conexão para validar o token",
                   ]}
                 />
               </div>
               <p className="text-xs text-muted-foreground">Fallback logístico via Correios + pagamento online</p>
+              {renderStatus()}
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -156,12 +206,20 @@ const CoinzzTab = () => {
           </div>
         </div>
 
+        {/* Test result */}
+        {testResult && (
+          <div className={`mb-4 rounded-lg border p-3 text-sm ${testResult.success ? "border-success/30 bg-success/10 text-success" : "border-destructive/30 bg-destructive/10 text-destructive"}`}>
+            {testResult.success ? <CheckCircle className="inline h-4 w-4 mr-1" /> : <XCircle className="inline h-4 w-4 mr-1" />}
+            {testResult.message}
+          </div>
+        )}
+
         <div className="flex gap-3">
           <Button variant="outline" onClick={handleTestConnection} disabled={testing || !token.trim()}>
             {testing ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
             Testar Conexão
           </Button>
-          <Button onClick={handleSave} disabled={saving} className="gradient-primary text-primary-foreground">
+          <Button onClick={() => handleSave()} disabled={saving} className="gradient-primary text-primary-foreground">
             {saving ? "Salvando..." : "Salvar"}
           </Button>
         </div>
