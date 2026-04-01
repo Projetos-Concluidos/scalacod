@@ -86,7 +86,7 @@ const EvolutionTab = () => {
             return;
           }
         } catch (e) {
-          console.log("Live status check failed (instance may not exist yet):", e);
+          if (import.meta.env.DEV) console.log("Live status check failed (instance may not exist yet):", e);
         }
       }
 
