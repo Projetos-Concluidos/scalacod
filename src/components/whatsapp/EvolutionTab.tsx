@@ -25,6 +25,8 @@ const EvolutionTab = () => {
 
   useEffect(() => {
     if (user) {
+      const generatedName = `scalaninja_${user.id.substring(0, 8)}`;
+      setInstanceName(generatedName);
       fetchGlobalConfig();
       fetchInstance();
     }
@@ -80,10 +82,6 @@ const EvolutionTab = () => {
   };
 
   const handleCreateInstance = async () => {
-    if (!instanceName.trim()) {
-      toast.error("Preencha o nome da instância");
-      return;
-    }
     setLoading(true);
     setStatus("creating");
 
@@ -323,20 +321,11 @@ const EvolutionTab = () => {
 
       {/* Form — only instance name */}
       {status !== "connected" && status !== "qr_ready" && apiConfigured && (
-        <div className="space-y-5">
-          <div>
-            <label className="text-sm font-medium text-foreground">Nome da Instância</label>
-            <input
-              type="text"
-              value={instanceName}
-              onChange={(e) => setInstanceName(e.target.value)}
-              placeholder="minha_loja_scalaninja"
-              className="mt-1.5 h-10 w-full rounded-lg border border-border bg-input px-4 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none"
-            />
-            <p className="mt-1 text-xs text-muted-foreground">
-              Nome único para identificar esta conexão WhatsApp
-            </p>
-          </div>
+        <div className="rounded-lg border border-border bg-muted/30 p-4">
+          <p className="text-sm text-muted-foreground">
+            Sua instância será criada automaticamente como:
+          </p>
+          <p className="mt-1 font-mono text-sm font-semibold text-foreground">{instanceName}</p>
         </div>
       )}
 
@@ -361,7 +350,7 @@ const EvolutionTab = () => {
         <div className="flex items-center gap-3">
           <button
             onClick={handleCreateInstance}
-            disabled={loading || !instanceName.trim()}
+            disabled={loading}
             className="gradient-primary flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold text-primary-foreground disabled:opacity-50"
           >
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "⚡"}
