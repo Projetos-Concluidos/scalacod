@@ -900,11 +900,22 @@ const CheckoutPublic = () => {
                         {form.city} - {form.state} - CEP: {form.cep}
                       </motion.div>
                     )}
-                    {deliveryChecked && (
-                      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className={`rounded-lg border px-3 py-2 text-xs font-medium ${
-                        provider === "logzz" ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-blue-200 bg-blue-50 text-blue-700"
-                      }`}>
-                        {provider === "logzz" ? "✅ Entrega disponível — Pagamento na entrega (COD)" : "📦 Entrega via Correios — Pagamento online"}
+                    {deliveryChecked && provider === "logzz" && (
+                      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-700">
+                        ✅ Entrega disponível — Pagamento na entrega (COD)
+                      </motion.div>
+                    )}
+                    {deliveryChecked && provider === "coinzz" && (
+                      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="rounded-xl border border-amber-200 bg-amber-50 p-3">
+                        <div className="flex items-start gap-2">
+                          <span className="text-lg">📦</span>
+                          <div>
+                            <p className="font-semibold text-amber-800 text-sm">Entrega pelos Correios</p>
+                            <p className="text-amber-700 text-xs mt-0.5">
+                              Este endereço é atendido pelos Correios. O pagamento será realizado online (PIX, Cartão ou Boleto).
+                            </p>
+                          </div>
+                        </div>
                       </motion.div>
                     )}
                     <div>
