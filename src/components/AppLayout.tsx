@@ -17,7 +17,7 @@ const AppLayout = () => {
         <AppSidebar />
         <div className="flex flex-1 flex-col min-w-0 md:ml-[220px]">
           <TopBar />
-          <main id="main-content" className="flex-1 overflow-y-auto overflow-x-hidden px-4 pb-6 md:px-6 lg:px-8 md:pb-8">
+          <main id="main-content" className="flex-1 overflow-y-auto overflow-x-hidden px-4 pt-6 pb-6 md:px-6 lg:px-8 md:pb-8">
             <Outlet />
           </main>
         </div>

@@ -61,7 +61,11 @@ const TopBar = () => {
           {isDark ? <Sun className="h-[18px] w-[18px]" /> : <Moon className="h-[18px] w-[18px]" />}
         </button>
         <NotificationBell />
-        <button className="hidden h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground sm:flex">
+        <button
+          onClick={() => navigate("/suporte")}
+          className="hidden h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground sm:flex"
+          title="Suporte"
+        >
           <HelpCircle className="h-[18px] w-[18px]" />
         </button>
         {profile?.role === "superadmin" && (
