@@ -507,7 +507,23 @@ const Checkouts = () => {
                                     toast.error("Erro ao salvar produto/oferta no banco");
                                   }
                                 }}
-                              </div>
+                              >
+                                <Check className={`mr-2 h-4 w-4 ${selectedLogzzOffer?.offer_hash === o.offer_hash ? "opacity-100" : "opacity-0"}`} />
+                                <div className="flex flex-col min-w-0">
+                                  <span className="text-sm font-medium truncate">{o.product_name} — {o.offer_name}</span>
+                                  <span className="text-xs text-muted-foreground">R$ {o.price.toFixed(2)} · {o.role} · {o.offer_hash}</span>
+                                </div>
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                ) : (
+                  <p className="text-xs text-muted-foreground">Clique em ↻ para buscar ofertas da Logzz (produtor, afiliado, coprodutor).</p>
+                )}
+              </div>
               <div>
                 <Label>Nome do Checkout</Label>
                 <Input value={formName} onChange={(e) => setFormName(e.target.value)} placeholder="Ex: Checkout Principal" className="bg-input border-border" />
