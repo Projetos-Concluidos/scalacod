@@ -232,7 +232,8 @@ async function executeNode(
   ctx: Record<string, string>,
   phone: string,
   userId: string,
-  supabase: any
+  supabase: any,
+  meta?: { orderId?: string; flowId?: string }
 ) {
   const nodeType = node.type || node.data?.type;
 
@@ -240,7 +241,7 @@ async function executeNode(
     case "text": {
       const message = interpolateVariables(node.data?.content || "", ctx);
       console.log(`[execute-flow] Sending text to ${phone}: "${message.substring(0, 80)}..."`);
-      await sendWhatsApp(userId, phone, message, supabase);
+      await sendWhatsApp(userId, phone, message, supabase, meta);
       break;
     }
 
