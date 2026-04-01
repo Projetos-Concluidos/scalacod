@@ -1048,25 +1048,38 @@ const CheckoutPublic = () => {
 
                   {orderBumps.length > 0 && (
                     <div className="mb-4">
-                      <h3 className="text-xs font-bold text-gray-700 mb-2">🎁 Adicione ao seu pedido</h3>
+                      <h3 className="text-sm font-bold text-gray-800 mb-3 flex items-center gap-2">⚡ Adicione ao seu pedido!</h3>
                       <div className="space-y-2">
-                        {orderBumps.map((bump) => (
-                          <button
-                            key={bump.id}
-                            onClick={() => toggleBump(bump.id)}
-                            className={`w-full rounded-lg border p-3 text-left transition-colors ${
-                              selectedBumps.has(bump.id) ? "border-emerald-500 bg-emerald-50" : "border-gray-200 bg-gray-50 hover:border-gray-300"
-                            }`}
-                          >
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <p className="text-sm font-medium text-gray-900">{bump.name}</p>
-                                {bump.description && <p className="text-xs text-gray-500">{bump.description}</p>}
+                        {orderBumps.map((bump) => {
+                          const isSelected = selectedBumps.has(bump.id);
+                          return (
+                            <button
+                              key={bump.id}
+                              onClick={() => toggleBump(bump.id)}
+                              className={`w-full rounded-2xl border-2 p-4 text-left transition-all ${
+                                isSelected ? "border-emerald-500 bg-emerald-50 shadow-md shadow-emerald-500/10" : "border-dashed border-gray-200 bg-white hover:border-emerald-300"
+                              }`}
+                            >
+                              <div className="flex items-center gap-3">
+                                <div className="flex-1 min-w-0">
+                                  {(bump as any).label_bump && (
+                                    <span className="text-[10px] bg-emerald-500 text-white px-2 py-0.5 rounded-full font-semibold inline-block mb-1">
+                                      {(bump as any).label_bump}
+                                    </span>
+                                  )}
+                                  <p className="text-sm font-semibold text-gray-900">{bump.name}</p>
+                                  {bump.description && <p className="text-xs text-gray-500 mt-0.5">{bump.description}</p>}
+                                  <p className="text-emerald-600 font-bold mt-1">+ R$ {Number(bump.current_price || bump.price || 0).toFixed(2)}</p>
+                                </div>
+                                <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 transition-colors ${
+                                  isSelected ? "bg-emerald-500 text-white" : "border-2 border-gray-300"
+                                }`}>
+                                  {isSelected ? <CheckCircle className="h-4 w-4" /> : <Plus className="h-4 w-4 text-gray-400" />}
+                                </div>
                               </div>
-                              <p className="text-sm font-bold text-emerald-600">R$ {Number(bump.current_price || bump.price || 0).toFixed(2)}</p>
-                            </div>
-                          </button>
-                        ))}
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
                   )}
