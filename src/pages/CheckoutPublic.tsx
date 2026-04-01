@@ -508,19 +508,28 @@ const CheckoutPublic = () => {
       }
 
       if (data.status === "approved") {
+        console.log("[Payment] ✅ Pagamento aprovado imediatamente");
         track("payment_approved", { method: paymentMethod });
         setStep(4);
       } else if (paymentMethod === "pix") {
-        setPixData({ pixQrCode: data.pixQrCode, pixQrCodeBase64: data.pixQrCodeBase64, paymentId: data.paymentId });
-        startPixPolling(data.paymentId);
+        console.log("[Payment] PIX gerado. QR:", !!data.pixQrCode, "Base64:", !!data.pixQrCodeBase64, "PaymentId:", data.paymentId);
+        if (!data.pixQrCodeBase64) {
+          toast.error("Erro: QR Code PIX não foi gerado. Verifique as credenciais MercadoPago.");
+          console.error("[Payment] pixQrCodeBase64 ausente na resposta:", data);
+        } else {
+          setPixData({ pixQrCode: data.pixQrCode, pixQrCodeBase64: data.pixQrCodeBase64, paymentId: data.paymentId });
+          startPixPolling(data.paymentId);
+        }
       } else if (paymentMethod === "boleto") {
+        console.log("[Payment] Boleto gerado:", data.boletoUrl);
         if (data.boletoUrl) window.open(data.boletoUrl, "_blank");
         toast.success("Boleto gerado! Aguardando pagamento.");
         startPixPolling(data.paymentId);
       } else if (paymentMethod === "wallet" && data.walletRedirectUrl) {
+        console.log("[Payment] Redirecionando para wallet:", data.walletRedirectUrl);
         window.location.href = data.walletRedirectUrl;
       } else {
-        // credit_card pending
+        console.log("[Payment] Pagamento pendente, polling...", data);
         toast.info("Pagamento em processamento...");
         startPixPolling(data.paymentId);
       }
