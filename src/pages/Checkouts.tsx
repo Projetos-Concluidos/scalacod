@@ -215,7 +215,7 @@ const Checkouts = () => {
     setFormName("");
     setFormType("hybrid");
     setFormOfferId("");
-    setFormPixelId("");
+    
     setFormOrderBump(false);
     setFormUpsell(false);
     setFormCustomCss("");
