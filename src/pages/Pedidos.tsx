@@ -340,6 +340,34 @@ const Pedidos = () => {
                                   >
                                     <Eye className="h-3.5 w-3.5" />
                                   </Button>
+                                  {order.logistics_type === "logzz" && !order.logzz_order_id && (
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-7 w-7 text-muted-foreground hover:text-primary"
+                                      title="Enviar para Logzz"
+                                      onClick={async (e) => {
+                                        e.stopPropagation();
+                                        toast.loading("Enviando para Logzz...", { id: `logzz-${order.id}` });
+                                        try {
+                                          const { data, error } = await supabase.functions.invoke("checkout-api", {
+                                            body: { action: "send_to_logzz", order_id: order.id, user_id: user?.id },
+                                          });
+                                          if (error) throw error;
+                                          if (data?.success) {
+                                            toast.success(`Pedido enviado para Logzz! ID: ${data.logzz_order_id || "OK"}`, { id: `logzz-${order.id}` });
+                                            refetch();
+                                          } else {
+                                            toast.error(`Erro Logzz: ${data?.logzz_status || "falha"} — ${(data?.logzz_response || data?.error || "").slice(0, 100)}`, { id: `logzz-${order.id}` });
+                                          }
+                                        } catch (err: any) {
+                                          toast.error(`Erro: ${err.message}`, { id: `logzz-${order.id}` });
+                                        }
+                                      }}
+                                    >
+                                      <Truck className="h-3.5 w-3.5" />
+                                    </Button>
+                                  )}
                                   <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground ml-auto">
                                     <MoreHorizontal className="h-3.5 w-3.5" />
                                   </Button>

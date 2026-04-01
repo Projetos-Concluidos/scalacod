@@ -101,8 +101,12 @@ Deno.serve(async (req) => {
       if (orderBumps && orderBumps.length > 0) {
         const bumpsPayload = [];
         for (const bump of orderBumps) {
+          if (!bump.hash) {
+            console.warn("[logzz-create-order] Skipping bump with null hash");
+            continue;
+          }
           const bumpEntry: any = { hash: bump.hash };
-          // Fetch variations for this bump's product
+          // Fetch variations for this bump's product (only if product_id exists)
           if (bump.product_id) {
             const { data: vars } = await admin
               .from("product_variations")
@@ -115,7 +119,9 @@ Deno.serve(async (req) => {
           }
           bumpsPayload.push(bumpEntry);
         }
-        logzzPayload.bumps = bumpsPayload;
+        if (bumpsPayload.length > 0) {
+          logzzPayload.bumps = bumpsPayload;
+        }
       }
 
       // Fetch main product variations
