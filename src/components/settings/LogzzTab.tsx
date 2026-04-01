@@ -280,9 +280,9 @@ const LogzzTab = () => {
         )}
 
         <div className="flex gap-3">
-          <Button variant="outline" onClick={handleTestConnection} disabled={testing || !token.trim()}>
-            {testing ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
-            Testar Conexão
+          <Button variant="outline" onClick={handleTestMapping} disabled={testing || !token.trim() || !logzzWebhookUrl.trim()}>
+            {testing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Truck className="h-4 w-4" />}
+            Disparar Mapeamento
           </Button>
           <Button onClick={() => handleSave()} disabled={saving} className="gradient-primary text-primary-foreground">
             {saving ? "Salvando..." : "Salvar"}
