@@ -275,10 +275,20 @@ serve(async (req) => {
           phoneNumber = inst?.instance?.owner || "";
         }
 
-        await supabaseAdmin.from("whatsapp_instances")
-          .update({ status: "connected", phone_number: phoneNumber, qr_code: null })
+        // Update or insert whatsapp_instances
+        const { data: existingWi } = await supabaseAdmin
+          .from("whatsapp_instances")
+          .select("id")
           .eq("user_id", user.id)
-          .eq("provider", "evolution");
+          .eq("provider", "evolution")
+          .maybeSingle();
+
+        const wiPayload = { status: "connected", phone_number: phoneNumber, qr_code: null, instance_name: instanceName };
+        if (existingWi) {
+          await supabaseAdmin.from("whatsapp_instances").update(wiPayload).eq("id", existingWi.id);
+        } else {
+          await supabaseAdmin.from("whatsapp_instances").insert({ ...wiPayload, user_id: user.id, provider: "evolution" });
+        }
 
         // Upsert integrations table
         const { data: existing } = await supabaseAdmin

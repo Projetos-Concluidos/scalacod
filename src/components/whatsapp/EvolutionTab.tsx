@@ -49,12 +49,14 @@ const EvolutionTab = () => {
   };
 
   const fetchInstance = async () => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("whatsapp_instances")
       .select("*")
       .eq("user_id", user!.id)
       .eq("provider", "evolution")
       .maybeSingle();
+
+    console.log("[EvolutionTab] fetchInstance DB result:", { data, error });
 
     if (data) {
       setInstanceData(data);
