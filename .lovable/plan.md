@@ -1,85 +1,51 @@
 
 
-## Plano: Efeito Gradient Animado Emerald no Highlight Word do Hero
+## Plano: Fix "Failed to fetch dynamically imported module" (Erro Intermitente)
 
-### O que muda
+### Causa Raiz
 
-A palavra destacada no Hero (ex: "Ninja") ganha um efeito premium com gradiente animado em tons de **Emerald**, mantendo a identidade visual do ScalaCOD. São 3 camadas sobrepostas:
+Este erro ocorre quando o Vite faz hot-reload ou um novo deploy e os chunks antigos (URLs dos módulos lazy-loaded) ficam inválidos no cache do browser. O `lazy(() => import(...))` tenta buscar uma URL que não existe mais → falha → ErrorBoundary mostra "Algo deu errado".
 
-1. **Texto com gradiente animado** — radial-gradient que se move (emerald claro → emerald → emerald escuro)
-2. **Glow blur** — cópia com `blur(10px)` criando brilho difuso verde
-3. **Noise overlay** — textura sutil com SVG inline
+É um problema **conhecido** do Vite com code-splitting + lazy routes.
 
-### Paleta de cores (Emerald)
+### Solução
 
-```text
-Original:  rgb(208,178,255) → rgb(255,238,216) → rgb(232,64,13)
-                roxo              dourado             laranja
-
-Novo:      rgb(167,243,208) → rgb(16,185,129)  → rgb(6,95,70)
-           emerald-200          emerald-500         emerald-800
-```
-
-O gradiente vai de um verde claro luminoso, passando pelo emerald principal, até um verde escuro profundo — criando profundidade e movimento premium sem sair da identidade visual.
+Criar uma função `lazyWithRetry` que envolve cada `lazy()` com lógica de retry: se o import falhar, faz `window.location.reload()` uma única vez (usando sessionStorage para evitar loop infinito).
 
 ### Alterações
 
-#### 1. `src/index.css` — Keyframes do gradiente
+#### 1. `src/lib/lazyWithRetry.ts` — Nova utility (criar)
 
-```css
-@keyframes gradient-shift {
-  0%, 100% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-}
-.animate-gradient-shift {
-  animation: gradient-shift 4s ease infinite;
+```typescript
+import { lazy, ComponentType } from "react";
+
+export function lazyWithRetry(
+  factory: () => Promise<{ default: ComponentType<any> }>
+) {
+  return lazy(async () => {
+    const key = "page-has-been-force-refreshed";
+    try {
+      return await factory();
+    } catch (error) {
+      const hasRefreshed = sessionStorage.getItem(key);
+      if (!hasRefreshed) {
+        sessionStorage.setItem(key, "true");
+        window.location.reload();
+        return { default: () => null }; // nunca renderiza
+      }
+      sessionStorage.removeItem(key);
+      throw error; // ErrorBoundary captura
+    }
+  });
 }
 ```
 
-#### 2. `src/pages/Home.tsx` — Span do highlight_word com 3 camadas
+#### 2. `src/App.tsx` — Substituir `lazy()` por `lazyWithRetry()`
 
-Trocar o `<span className="text-emerald-500">` por:
-
-```tsx
-<span className="relative inline-block">
-  {/* Camada 1: texto com gradiente emerald animado */}
-  <span
-    className="animate-gradient-shift"
-    style={{
-      backgroundClip: 'text',
-      WebkitBackgroundClip: 'text',
-      color: 'transparent',
-      backgroundSize: '200% 200%',
-      backgroundImage: 'radial-gradient(80% 109% at 44% 35%,
-        rgb(167,243,208) 0%,
-        rgb(16,185,129) 43%,
-        rgb(6,95,70) 88%)',
-    }}
-  >
-    {highlightWord}
-  </span>
-  {/* Camada 2: glow blur */}
-  <span aria-hidden="true" style={{
-    position:'absolute', inset:0,
-    backgroundClip:'text', color:'transparent',
-    backgroundSize:'200% 200%',
-    backgroundImage: 'radial-gradient(...mesmo gradiente...)',
-    filter:'blur(10px)', mixBlendMode:'screen', opacity:0.8,
-    pointerEvents:'none', zIndex:2,
-  }} className="animate-gradient-shift">
-    {highlightWord}
-  </span>
-  {/* Camada 3: noise overlay (SVG inline) */}
-  <span style={{
-    backgroundImage:'url("data:image/svg+xml,...")',
-    backgroundSize:'60%', borderRadius:'8px',
-    inset:'-6px 0 0 -6px', mixBlendMode:'overlay',
-    position:'absolute', zIndex:3, pointerEvents:'none',
-  }} />
-</span>
-```
+Trocar todas as 18 chamadas `lazy(() => import(...))` por `lazyWithRetry(() => import(...))`.
 
 ### Escopo
-- 2 arquivos: `src/index.css`, `src/pages/Home.tsx`
+- 1 arquivo novo: `src/lib/lazyWithRetry.ts`
+- 1 arquivo editado: `src/App.tsx`
 - Sem banco, sem edge functions
 
