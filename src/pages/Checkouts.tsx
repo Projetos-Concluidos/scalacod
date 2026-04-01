@@ -37,9 +37,20 @@ type CheckoutWithOffer = {
 type LogzzOffer = {
   product_name: string;
   product_hash: string | null;
+  product_description: string | null;
+  product_image_url: string | null;
+  product_weight: number | null;
+  product_width: number | null;
+  product_height: number | null;
+  product_length: number | null;
+  product_warranty_days: number | null;
+  product_categories: any[];
   offer_name: string;
   offer_hash: string | null;
   price: number;
+  original_price: number;
+  scheduling_checkout_url: string | null;
+  expedition_checkout_url: string | null;
   role: string;
 };
 
@@ -405,11 +416,96 @@ const Checkouts = () => {
                               <CommandItem
                                 key={o.offer_hash || i}
                                 value={`${o.product_name} ${o.offer_name} ${o.offer_hash} ${o.price} ${o.role}`}
-                                onSelect={() => {
+                              onSelect={async () => {
                                   setSelectedLogzzOffer(o);
-                                  setFormName(o.product_name);
                                   setLogzzPopoverOpen(false);
-                                  toast.success(`Produto "${o.product_name}" importado!`);
+
+                                  // Auto-fill checkout name + slug
+                                  const slug = `${o.product_name}-${o.offer_hash || ""}`.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "").slice(0, 60);
+                                  setFormName(o.offer_name || o.product_name);
+
+                                  // Upsert product in DB
+                                  try {
+                                    const { data: existingProd } = await supabase
+                                      .from("products")
+                                      .select("id")
+                                      .eq("user_id", user!.id)
+                                      .eq("hash", o.product_hash)
+                                      .maybeSingle();
+
+                                    let productId = existingProd?.id;
+                                    if (!productId) {
+                                      const { data: newProd } = await supabase.from("products").insert({
+                                        user_id: user!.id,
+                                        name: o.product_name,
+                                        hash: o.product_hash,
+                                        description: o.product_description,
+                                        main_image_url: o.product_image_url,
+                                        weight: o.product_weight,
+                                        width: o.product_width,
+                                        height: o.product_height,
+                                        length: o.product_length,
+                                        warranty_days: o.product_warranty_days,
+                                        categories: o.product_categories,
+                                      }).select("id").single();
+                                      productId = newProd?.id;
+                                    } else {
+                                      await supabase.from("products").update({
+                                        name: o.product_name,
+                                        description: o.product_description,
+                                        main_image_url: o.product_image_url,
+                                        weight: o.product_weight,
+                                        width: o.product_width,
+                                        height: o.product_height,
+                                        length: o.product_length,
+                                        warranty_days: o.product_warranty_days,
+                                        categories: o.product_categories,
+                                      }).eq("id", productId);
+                                    }
+
+                                    if (productId) {
+                                      // Upsert offer
+                                      const { data: existingOffer } = await supabase
+                                        .from("offers")
+                                        .select("id")
+                                        .eq("user_id", user!.id)
+                                        .eq("hash", o.offer_hash)
+                                        .maybeSingle();
+
+                                      let offerId = existingOffer?.id;
+                                      if (!offerId) {
+                                        const { data: newOffer } = await supabase.from("offers").insert({
+                                          user_id: user!.id,
+                                          product_id: productId,
+                                          name: o.offer_name,
+                                          hash: o.offer_hash,
+                                          price: o.price,
+                                          original_price: o.original_price || o.price,
+                                          scheduling_checkout_url: o.scheduling_checkout_url,
+                                          expedition_checkout_url: o.expedition_checkout_url,
+                                        }).select("id").single();
+                                        offerId = newOffer?.id;
+                                      } else {
+                                        await supabase.from("offers").update({
+                                          name: o.offer_name,
+                                          price: o.price,
+                                          original_price: o.original_price || o.price,
+                                          scheduling_checkout_url: o.scheduling_checkout_url,
+                                          expedition_checkout_url: o.expedition_checkout_url,
+                                        }).eq("id", offerId);
+                                      }
+
+                                      if (offerId) {
+                                        setFormOfferId(offerId);
+                                        queryClient.invalidateQueries({ queryKey: ["offers"] });
+                                        queryClient.invalidateQueries({ queryKey: ["products"] });
+                                      }
+                                    }
+                                    toast.success(`Oferta "${o.offer_name}" importada com todos os dados!`);
+                                  } catch (err: any) {
+                                    console.error("[Logzz Import]", err);
+                                    toast.error("Erro ao salvar produto/oferta no banco");
+                                  }
                                 }}
                               >
                                 <Check className={`mr-2 h-4 w-4 ${selectedLogzzOffer?.offer_hash === o.offer_hash ? "opacity-100" : "opacity-0"}`} />
@@ -427,24 +523,6 @@ const Checkouts = () => {
                 ) : (
                   <p className="text-xs text-muted-foreground">Clique em ↻ para buscar ofertas da Logzz (produtor, afiliado, coprodutor).</p>
                 )}
-              </div>
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <Label>Oferta Local (banco)</Label>
-                </div>
-                <Select value={formOfferId} onValueChange={(v) => {
-                  setFormOfferId(v);
-                  const o = offers.find((x) => x.id === v);
-                  if (o && !formName) setFormName(o.name);
-                }}>
-                  <SelectTrigger className="bg-input border-border"><SelectValue placeholder="Selecione uma oferta salva" /></SelectTrigger>
-                  <SelectContent>
-                    {offers.map((o) => {
-                      const prod = products.find((p) => p.id === o.product_id);
-                      return <SelectItem key={o.id} value={o.id}>{prod ? `${prod.name} — ` : ""}{o.name} — R$ {Number(o.price).toFixed(2)}</SelectItem>;
-                    })}
-                  </SelectContent>
-                </Select>
               </div>
               <div>
                 <Label>Nome do Checkout</Label>
