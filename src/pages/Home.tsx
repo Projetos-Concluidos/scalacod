@@ -15,6 +15,16 @@ export default function Home() {
   const { data: s, isLoading } = useHomeSettings();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [plans, setPlans] = useState<any[]>([]);
+
+  useEffect(() => {
+    supabase
+      .from("plans")
+      .select("*")
+      .eq("is_active", true)
+      .order("sort_order")
+      .then(({ data }) => { if (data) setPlans(data); });
+  }, []);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
