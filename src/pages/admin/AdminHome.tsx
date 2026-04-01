@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Save, RefreshCw, Zap, Type, Image, List, MessageSquare, CreditCard, ArrowDown, LayoutGrid } from "lucide-react";
+import { Save, RefreshCw, Zap, Type, Image, List, MessageSquare, CreditCard, ArrowDown, LayoutGrid, Upload, Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,7 @@ const sectionMeta: Record<string, { label: string; icon: any; description: strin
   testimonials: { label: "Depoimentos", icon: MessageSquare, description: "Depoimentos de clientes com citação, autor e detalhe" },
   cta_final: { label: "CTA Final", icon: ArrowDown, description: "Call-to-action final antes do footer — convida o usuário a se cadastrar" },
   footer: { label: "Footer", icon: Type, description: "Rodapé com links, contato, copyright e tagline" },
+  images: { label: "Imagens", icon: Upload, description: "Upload de imagens da Home Page (Hero, Features)" },
 };
 
 const fieldDescriptions: Record<string, Record<string, string>> = {
@@ -40,7 +41,7 @@ const fieldDescriptions: Record<string, Record<string, string>> = {
     cta_secondary: "Texto do botão secundário (borda)",
     social_proof_text: "Texto de prova social (ex: Mais de 500 lojistas)",
     social_proof_rating: "Nota de avaliação (ex: 4.9/5)",
-    screenshot_url: "URL da imagem/screenshot do painel (deixe vazio para não exibir)",
+    screenshot_url: "URL da imagem/screenshot do painel (deixe vazio para placeholder)",
   },
   logos: {
     title: "Título acima dos logos",
@@ -69,11 +70,20 @@ const fieldDescriptions: Record<string, Record<string, string>> = {
   },
 };
 
+const IMAGE_SLOTS = [
+  { key: "hero_image", label: "Screenshot Principal (Hero)", desc: "Imagem do painel na seção principal. Recomendado: 1200×700px", sectionKey: "hero", field: "screenshot_url" },
+  { key: "feature_1_image", label: "Feature 1 — Checkout Inteligente", desc: "Screenshot do checkout. Recomendado: 800×600px", sectionKey: "features", featureIndex: 0 },
+  { key: "feature_2_image", label: "Feature 2 — WhatsApp Automation", desc: "Screenshot dos Fluxos. Recomendado: 800×600px", sectionKey: "features", featureIndex: 1 },
+  { key: "feature_3_image", label: "Feature 3 — Analytics", desc: "Screenshot do Dashboard. Recomendado: 800×600px", sectionKey: "features", featureIndex: 2 },
+];
+
 export default function AdminHome() {
   const [sections, setSections] = useState<Record<string, SectionData>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState("navbar");
+  const [imageUrls, setImageUrls] = useState<Record<string, string>>({});
+  const [uploading, setUploading] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -88,6 +98,16 @@ export default function AdminHome() {
       map[row.section_key] = row.content as SectionData;
     }
     setSections(map);
+
+    // Load image URLs from hero.screenshot_url and features items
+    const urls: Record<string, string> = {};
+    if (map.hero?.screenshot_url) urls.hero_image = map.hero.screenshot_url;
+    const features = map.features?.items || [];
+    features.forEach((f: any, i: number) => {
+      if (f.image_url) urls[`feature_${i + 1}_image`] = f.image_url;
+    });
+    setImageUrls(urls);
+
     setLoading(false);
   };
 
@@ -112,6 +132,54 @@ export default function AdminHome() {
       ...prev,
       [sectionKey]: { ...prev[sectionKey], [field]: value },
     }));
+  };
+
+  const uploadImage = async (slotKey: string, file: File) => {
+    setUploading(slotKey);
+    const ext = file.name.split(".").pop();
+    const path = `home/${slotKey}-${Date.now()}.${ext}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("home-images")
+      .upload(path, file, { upsert: true });
+
+    if (uploadError) {
+      toast.error("Erro no upload: " + uploadError.message);
+      setUploading(null);
+      return;
+    }
+
+    const { data: urlData } = supabase.storage.from("home-images").getPublicUrl(path);
+    const publicUrl = urlData.publicUrl;
+
+    // Find the slot config
+    const slot = IMAGE_SLOTS.find((s) => s.key === slotKey);
+    if (!slot) return;
+
+    if (slot.field) {
+      // Hero screenshot
+      const heroData = { ...(sections.hero || {}), screenshot_url: publicUrl };
+      await supabase
+        .from("home_settings")
+        .upsert({ section_key: "hero", content: heroData, updated_at: new Date().toISOString() }, { onConflict: "section_key" });
+      setSections((prev) => ({ ...prev, hero: heroData }));
+    } else if (slot.featureIndex !== undefined) {
+      const items = [...(sections.features?.items || [])];
+      while (items.length <= slot.featureIndex) {
+        items.push({ title: "", description: "", bullets: [], image_url: "", image_side: slot.featureIndex % 2 === 0 ? "left" : "right" });
+      }
+      items[slot.featureIndex] = { ...items[slot.featureIndex], image_url: publicUrl };
+      const featData = { ...sections.features, items };
+      await supabase
+        .from("home_settings")
+        .upsert({ section_key: "features", content: featData, updated_at: new Date().toISOString() }, { onConflict: "section_key" });
+      setSections((prev) => ({ ...prev, features: featData }));
+    }
+
+    setImageUrls((prev) => ({ ...prev, [slotKey]: publicUrl }));
+    queryClient.invalidateQueries({ queryKey: ["home-settings"] });
+    toast.success("Imagem atualizada!");
+    setUploading(null);
   };
 
   const renderArrayField = (sectionKey: string, field: string, label: string, desc: string) => {
@@ -200,7 +268,7 @@ export default function AdminHome() {
               </div>
               <div>
                 <Label>URL da Imagem</Label>
-                <p className="text-xs text-muted-foreground mb-1">URL de um screenshot ou imagem ilustrativa (deixe vazio para placeholder)</p>
+                <p className="text-xs text-muted-foreground mb-1">URL de um screenshot ou imagem ilustrativa (ou use a aba Imagens para upload)</p>
                 <Input value={feat.image_url} onChange={(e) => {
                   const copy = [...items]; copy[i] = { ...copy[i], image_url: e.target.value };
                   updateField("features", "items", copy);
@@ -280,6 +348,64 @@ export default function AdminHome() {
     );
   };
 
+  const renderImagesTab = () => {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {IMAGE_SLOTS.map((slot) => (
+          <Card key={slot.key}>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm">{slot.label}</CardTitle>
+              <CardDescription className="text-xs">{slot.desc}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {imageUrls[slot.key] ? (
+                <div className="relative rounded-lg overflow-hidden mb-3 border">
+                  <img src={imageUrls[slot.key]} className="w-full h-40 object-cover" alt={slot.label} />
+                  <button
+                    onClick={() => setImageUrls((prev) => {
+                      const copy = { ...prev };
+                      delete copy[slot.key];
+                      return copy;
+                    })}
+                    className="absolute top-2 right-2 w-7 h-7 bg-destructive rounded-full flex items-center justify-center text-destructive-foreground text-xs"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              ) : (
+                <div className="w-full h-40 rounded-lg border-2 border-dashed border-muted flex items-center justify-center mb-3">
+                  <div className="text-center text-muted-foreground">
+                    <Image className="h-6 w-6 mx-auto mb-1" />
+                    <p className="text-xs">Sem imagem</p>
+                  </div>
+                </div>
+              )}
+              <label className="cursor-pointer">
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) uploadImage(slot.key, file);
+                  }}
+                />
+                <span className="flex items-center justify-center gap-2 w-full py-2.5 bg-primary text-primary-foreground text-sm font-medium rounded-lg transition-colors cursor-pointer hover:bg-primary/90">
+                  {uploading === slot.key ? (
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Upload className="h-4 w-4" />
+                  )}
+                  {imageUrls[slot.key] ? "Trocar imagem" : "Fazer upload"}
+                </span>
+              </label>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    );
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -313,6 +439,24 @@ export default function AdminHome() {
 
         {sectionKeys.map((key) => {
           const meta = sectionMeta[key];
+          if (key === "images") {
+            return (
+              <TabsContent key={key} value={key}>
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Upload className="h-5 w-5 text-primary" />
+                      Gerenciar Imagens
+                    </CardTitle>
+                    <CardDescription>Faça upload das imagens que aparecem na página inicial pública.</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {renderImagesTab()}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            );
+          }
           return (
             <TabsContent key={key} value={key}>
               <Card>
