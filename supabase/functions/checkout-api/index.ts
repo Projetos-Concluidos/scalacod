@@ -977,7 +977,7 @@ Deno.serve(async (req) => {
       }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // ── send_to_logzz: manually push an existing order to Logzz ──
+    // ── send_to_logzz: delegate to dedicated logzz-create-order function ──
     if (action === "send_to_logzz") {
       const { order_id } = body;
       if (!order_id) {
@@ -986,158 +986,31 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Fetch the order
-      const { data: order, error: orderErr } = await supabase
-        .from("orders").select("*").eq("id", order_id).maybeSingle();
-      if (orderErr || !order) {
-        return new Response(JSON.stringify({ error: "Order not found" }), {
-          status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
+      try {
+        const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+        const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+        console.log("[send_to_logzz] Delegating to logzz-create-order for order:", order_id);
 
-      // Fetch Logzz integration for the order's user
-      const { data: integrations } = await supabase
-        .from("integrations").select("*").eq("user_id", order.user_id);
-      const logzzInt = (integrations || []).find((i: any) => i.type === "logzz" && i.is_active);
-      const logzzCfg = logzzInt?.config as any;
-      const webhookUrl = logzzCfg?.logzz_webhook_url;
-      const bearerToken = logzzCfg?.bearer_token;
-
-      if (!webhookUrl) {
-        return new Response(JSON.stringify({ error: "Logzz webhook URL not configured" }), {
-          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      // Get offer hash
-      let offerHash = "";
-      if (order.offer_id) {
-        const { data: offerData } = await supabase.from("offers").select("hash").eq("id", order.offer_id).maybeSingle();
-        offerHash = offerData?.hash || "";
-      }
-
-      const logzzPayload = {
-        external_id: order.id,
-        full_name: order.client_name,
-        phone: order.client_phone?.replace(/\D/g, ""),
-        customer_document: order.client_document?.replace(/\D/g, "") || "",
-        postal_code: order.client_zip_code?.replace(/\D/g, ""),
-        street: order.client_address,
-        neighborhood: order.client_address_district,
-        city: order.client_address_city,
-        state: order.client_address_state?.toLowerCase(),
-        house_number: order.client_address_number,
-        complement: order.client_address_comp || "",
-        delivery_date: order.delivery_date || "",
-        offer: offerHash,
-        affiliate_email: order.affiliate_email || "",
-      };
-
-      // Fetch order bumps if any
-      const { data: orderBumps } = await supabase
-        .from("order_bumps")
-        .select("hash, product_id")
-        .eq("offer_id", order.offer_id || "");
-
-      // Add bumps to payload if present
-      if (orderBumps && orderBumps.length > 0) {
-        const bumps = orderBumps.map((b: any) => {
-          const bump: any = { hash: b.hash };
-          return bump;
-        });
-        (logzzPayload as any).bumps = bumps;
-      }
-
-      console.log("[send_to_logzz] Payload:", JSON.stringify(logzzPayload));
-
-      // Try API v1 first, fallback to webhook if 403
-      const logzzApiUrl = "https://app.logzz.com.br/api/v1/orders";
-      const browserUA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
-      const logzzHeaders: Record<string, string> = {
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-        "User-Agent": browserUA,
-      };
-      if (bearerToken) logzzHeaders["Authorization"] = `bearer ${bearerToken}`;
-
-      // Attempt 1: API v1
-      console.log("[send_to_logzz] Attempt 1 - API v1:", logzzApiUrl);
-      let logzzRes = await fetch(logzzApiUrl, {
-        method: "POST",
-        headers: logzzHeaders,
-        body: JSON.stringify(logzzPayload),
-      });
-      let logzzBody = await logzzRes.text();
-      let endpoint = "api_v1";
-      console.log("[send_to_logzz] API v1 response:", logzzRes.status, logzzBody.substring(0, 300));
-
-      // If API v1 fails with 403, try webhook URL
-      if (logzzRes.status === 403 && webhookUrl) {
-        console.log("[send_to_logzz] Attempt 2 - Webhook:", webhookUrl);
-        logzzRes = await fetch(webhookUrl, {
+        const logzzRes = await fetch(`${supabaseUrl}/functions/v1/logzz-create-order`, {
           method: "POST",
-          headers: logzzHeaders,
-          body: JSON.stringify(logzzPayload),
-          redirect: "manual",
-        });
-        logzzBody = await logzzRes.text();
-        endpoint = "webhook";
-        console.log("[send_to_logzz] Webhook response:", logzzRes.status, logzzBody.substring(0, 300));
-      }
-
-      // If both fail with 403, try API v1 with capital Bearer
-      if (logzzRes.status === 403) {
-        console.log("[send_to_logzz] Attempt 3 - API v1 with Bearer (capital)");
-        const altHeaders = { ...logzzHeaders };
-        if (bearerToken) altHeaders["Authorization"] = `Bearer ${bearerToken}`;
-        logzzRes = await fetch(logzzApiUrl, {
-          method: "POST",
-          headers: altHeaders,
-          body: JSON.stringify(logzzPayload),
-        });
-        logzzBody = await logzzRes.text();
-        endpoint = "api_v1_capital";
-        console.log("[send_to_logzz] Capital Bearer response:", logzzRes.status, logzzBody.substring(0, 300));
-      }
-      console.log("[send_to_logzz] Webhook response:", logzzRes.status, logzzBody.substring(0, 500));
-
-      if (logzzRes.status === 200 || logzzRes.status === 201) {
-        let logzzOrderId: string | null = null;
-        try {
-          const parsed = JSON.parse(logzzBody);
-          logzzOrderId = parsed?.id || parsed?.order_id || parsed?.logzz_order_id || parsed?.data?.id || null;
-        } catch { /* not JSON */ }
-
-        const prevStatus = order.status;
-
-        await supabase.from("orders").update({
-          logzz_order_id: logzzOrderId,
-          status: "Agendado",
-          updated_at: new Date().toISOString(),
-        }).eq("id", order.id);
-
-        await supabase.from("order_status_history").insert({
-          order_id: order.id,
-          from_status: prevStatus,
-          to_status: "Agendado",
-          source: "send_to_logzz",
-          raw_payload: { endpoint, logzz_status: logzzRes.status, logzz_body: logzzBody.substring(0, 500) },
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${serviceKey}`,
+          },
+          body: JSON.stringify({ order_id, user_id }),
         });
 
-        return new Response(JSON.stringify({
-          success: true,
-          endpoint,
-          logzz_order_id: logzzOrderId,
-          logzz_status: logzzRes.status,
-          logzz_response: logzzBody.substring(0, 500),
-        }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      } else {
-        return new Response(JSON.stringify({
-          success: false,
-          endpoint,
-          logzz_status: logzzRes.status,
-          logzz_response: logzzBody.substring(0, 1000),
-        }), { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        const result = await logzzRes.json();
+        console.log("[send_to_logzz] Result:", JSON.stringify(result));
+
+        return new Response(JSON.stringify(result), {
+          status: logzzRes.status,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      } catch (e: any) {
+        return new Response(JSON.stringify({ error: e.message }), {
+          status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
     }
 
