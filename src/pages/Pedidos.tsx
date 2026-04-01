@@ -86,7 +86,7 @@ const Pedidos = () => {
         to_status: status,
         source: "kanban_drag",
       }).then(({ error: histErr }) => {
-        if (histErr) console.warn("Status history insert error:", histErr);
+        if (histErr && import.meta.env.DEV) console.warn("Status history insert error:", histErr);
       });
 
       // Trigger automation flows for this status change
