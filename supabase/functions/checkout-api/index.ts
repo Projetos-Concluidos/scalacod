@@ -260,19 +260,19 @@ Deno.serve(async (req) => {
                 affiliate_email: "",
               };
 
-              console.log("[create_order] Sending to Logzz webhook:", webhookUrl);
+              // Use API v1 (not webhook) to bypass Cloudflare
+              const logzzApiUrl = "https://app.logzz.com.br/api/v1/orders";
+              console.log("[create_order] Sending to Logzz API v1:", logzzApiUrl);
               const logzzHeaders: Record<string, string> = {
                 "Content-Type": "application/json",
                 "Accept": "application/json",
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
               };
-              if (bearerToken) logzzHeaders["Authorization"] = `bearer ${bearerToken}`;
+              if (bearerToken) logzzHeaders["Authorization"] = `Bearer ${bearerToken}`;
 
-              const logzzRes = await fetch(webhookUrl, {
+              const logzzRes = await fetch(logzzApiUrl, {
                 method: "POST",
                 headers: logzzHeaders,
                 body: JSON.stringify(logzzPayload),
-                redirect: "manual",
               });
 
               const logzzBody = await logzzRes.text();
