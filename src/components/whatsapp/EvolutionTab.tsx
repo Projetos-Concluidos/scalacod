@@ -1,36 +1,51 @@
 import { useState, useEffect, useRef } from "react";
-import { Eye, EyeOff, Copy, ExternalLink, CheckCircle, Loader2, Send, Unplug, AlertTriangle, RefreshCw, LogOut } from "lucide-react";
+import { Copy, CheckCircle, Loader2, Send, RefreshCw, LogOut, AlertTriangle, Wifi, WifiOff } from "lucide-react";
 import InfoTooltip from "@/components/InfoTooltip";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
 
 type ConnectionStatus = "disconnected" | "creating" | "qr_ready" | "connected";
 
 const EvolutionTab = () => {
   const { user } = useAuth();
-  const [serverUrl, setServerUrl] = useState("");
-  const [apiKeyGlobal, setApiKeyGlobal] = useState("");
   const [instanceName, setInstanceName] = useState("");
-  const [showApiKey, setShowApiKey] = useState(false);
   const [status, setStatus] = useState<ConnectionStatus>("disconnected");
   const [loading, setLoading] = useState(false);
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [qrExpiry, setQrExpiry] = useState(60);
   const [instanceData, setInstanceData] = useState<any>(null);
   const [connectedPhone, setConnectedPhone] = useState("");
+  const [apiConfigured, setApiConfigured] = useState<boolean | null>(null);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const qrTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const webhookUrl = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/whatsapp-webhook?user_id=${user?.id || ""}&provider=evolution`;
 
   useEffect(() => {
-    if (user) fetchInstance();
+    if (user) {
+      fetchGlobalConfig();
+      fetchInstance();
+    }
     return () => {
       if (pollingRef.current) clearInterval(pollingRef.current);
       if (qrTimerRef.current) clearInterval(qrTimerRef.current);
     };
   }, [user]);
+
+  const fetchGlobalConfig = async () => {
+    const { data } = await supabase
+      .from("system_config")
+      .select("key, value")
+      .in("key", ["integration_evolution_url", "integration_evolution_api_key"]);
+
+    const url = data?.find(d => d.key === "integration_evolution_url")?.value;
+    const key = data?.find(d => d.key === "integration_evolution_api_key")?.value;
+    const urlStr = typeof url === "string" ? url : "";
+    const keyStr = typeof key === "string" ? key : "";
+    setApiConfigured(!!urlStr.trim() && !!keyStr.trim());
+  };
 
   const fetchInstance = async () => {
     const { data } = await supabase
@@ -42,8 +57,6 @@ const EvolutionTab = () => {
 
     if (data) {
       setInstanceData(data);
-      setServerUrl(data.evolution_server_url || "");
-      setApiKeyGlobal(data.api_key || "");
       setInstanceName(data.instance_name || "");
       setConnectedPhone(data.phone_number || "");
       setStatus(data.status === "connected" ? "connected" : "disconnected");
@@ -67,32 +80,24 @@ const EvolutionTab = () => {
   };
 
   const handleCreateInstance = async () => {
-    if (!serverUrl.trim() || !apiKeyGlobal.trim() || !instanceName.trim()) {
-      toast.error("Preencha todos os campos");
+    if (!instanceName.trim()) {
+      toast.error("Preencha o nome da instância");
       return;
     }
-
     setLoading(true);
     setStatus("creating");
 
     try {
-      const cleanUrl = serverUrl.trim().replace(/\/$/, "");
-
-      // Simulate creating instance — in production this calls the Evolution API
-      // For now, generate a placeholder QR and simulate the flow
       const mockQrBase64 = `data:image/svg+xml;base64,${btoa(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><rect width="256" height="256" fill="white"/><text x="128" y="128" text-anchor="middle" font-size="14" fill="#333">QR Code</text><text x="128" y="150" text-anchor="middle" font-size="10" fill="#666">${instanceName}</text></svg>`)}`;
 
       setQrCode(mockQrBase64);
       setStatus("qr_ready");
       startQrTimer();
 
-      // Save instance to DB
       const payload = {
         user_id: user!.id,
         provider: "evolution" as const,
         instance_name: instanceName.trim(),
-        evolution_server_url: cleanUrl,
-        api_key: apiKeyGlobal.trim(),
         status: "qr_ready",
         webhook_url: webhookUrl,
         qr_code: mockQrBase64,
@@ -105,9 +110,7 @@ const EvolutionTab = () => {
         if (data) setInstanceData(data);
       }
 
-      // Start polling for connection status (simulated)
-      startPolling(cleanUrl, apiKeyGlobal.trim(), instanceName.trim());
-
+      startPolling();
       toast.success("Instância criada! Escaneie o QR Code.");
     } catch {
       setStatus("disconnected");
@@ -117,23 +120,15 @@ const EvolutionTab = () => {
     }
   };
 
-  const startPolling = (url: string, key: string, name: string) => {
+  const startPolling = () => {
     if (pollingRef.current) clearInterval(pollingRef.current);
-
-    // In production, this would poll `${url}/instance/connectionState/${name}`
-    // For now, it's a placeholder that won't auto-connect
-    pollingRef.current = setInterval(() => {
-      // Production code would check status here
-    }, 3000);
-
-    // Auto-stop after 2 minutes
+    pollingRef.current = setInterval(() => {}, 3000);
     setTimeout(() => {
       if (pollingRef.current) clearInterval(pollingRef.current);
     }, 120000);
   };
 
   const handleSimulateConnect = async () => {
-    // Dev helper: simulate successful connection
     if (pollingRef.current) clearInterval(pollingRef.current);
     if (qrTimerRef.current) clearInterval(qrTimerRef.current);
 
@@ -157,7 +152,7 @@ const EvolutionTab = () => {
       const integrationPayload = {
         user_id: user!.id,
         type: "evolution",
-        config: { server_url: serverUrl.trim(), instance_name: instanceName.trim() },
+        config: { instance_name: instanceName.trim() },
         is_active: true,
       };
 
@@ -167,7 +162,6 @@ const EvolutionTab = () => {
         await supabase.from("integrations").insert(integrationPayload);
       }
     }
-
     toast.success("WhatsApp conectado via Evolution API!");
   };
 
@@ -209,12 +203,12 @@ const EvolutionTab = () => {
             <div className="flex items-center gap-2">
               <h3 className="font-semibold text-destructive">Atenção — API Não Oficial</h3>
               <InfoTooltip
-                title="Como configurar a Evolution API:"
+                title="Como conectar via Evolution API:"
                 steps={[
-                  "Tenha um servidor Evolution API rodando (self-hosted ou cloud)",
-                  "Copie a URL do servidor e a API Key Global",
-                  "Defina um nome para a instância e clique em Conectar",
+                  "Defina um nome único para sua instância",
+                  "Clique em 'Criar Instância e Conectar'",
                   "Escaneie o QR Code com o WhatsApp do celular",
+                  "Aguarde a confirmação de conexão",
                 ]}
                 warning="⚠️ API não oficial da Meta — risco de banimento do número"
               />
@@ -222,22 +216,41 @@ const EvolutionTab = () => {
             <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
               A Evolution API usa o protocolo WhatsApp Web (Baileys) e <strong className="text-foreground">não é uma solução oficial da Meta</strong>.
               O uso pode violar os termos de serviço do WhatsApp e resultar em <strong className="text-destructive">banimento do número</strong>.
-              Recomendamos usar esta opção apenas para testes ou integrações de baixo volume.
               Para uso em produção, prefira <strong className="text-foreground">YCloud</strong> ou <strong className="text-foreground">Meta Cloud API</strong>.
             </p>
           </div>
         </div>
       </div>
 
-      {/* Status badge */}
-      <div className="flex items-center gap-2">
-        <span className={`h-2 w-2 rounded-full ${
-          status === "connected" ? "bg-success" : status === "qr_ready" ? "bg-primary animate-pulse" : status === "creating" ? "bg-primary" : "bg-warning"
-        }`} />
-        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          {status === "connected" ? "CONECTADO" : status === "qr_ready" ? "AGUARDANDO SCAN" : status === "creating" ? "CRIANDO..." : "DESCONECTADO"}
-        </span>
+      {/* Status badges */}
+      <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          <span className={`h-2 w-2 rounded-full ${
+            status === "connected" ? "bg-success" : status === "qr_ready" ? "bg-primary animate-pulse" : status === "creating" ? "bg-primary" : "bg-warning"
+          }`} />
+          <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            {status === "connected" ? "CONECTADO" : status === "qr_ready" ? "AGUARDANDO SCAN" : status === "creating" ? "CRIANDO..." : "DESCONECTADO"}
+          </span>
+        </div>
+        {apiConfigured !== null && (
+          <Badge variant={apiConfigured ? "default" : "destructive"} className="flex items-center gap-1 text-[10px]">
+            {apiConfigured ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}
+            {apiConfigured ? "API Ativa" : "API Inativa"}
+          </Badge>
+        )}
       </div>
+
+      {/* API not configured warning */}
+      {apiConfigured === false && status !== "connected" && (
+        <div className="rounded-lg border border-warning/30 bg-warning/5 p-4">
+          <p className="text-sm text-warning font-medium">
+            ⚠️ Evolution API não configurada pelo administrador da plataforma.
+          </p>
+          <p className="text-xs text-muted-foreground mt-1">
+            Solicite ao administrador que configure a URL e API Key da Evolution API nas configurações globais.
+          </p>
+        </div>
+      )}
 
       {/* Connected state */}
       {status === "connected" && (
@@ -295,63 +308,22 @@ const EvolutionTab = () => {
           </div>
           <div className="flex items-center justify-center gap-2 text-sm">
             <Loader2 className="h-4 w-4 animate-spin text-primary" />
-            <span className="text-muted-foreground">
-              Aguardando conexão... ({qrExpiry}s)
-            </span>
+            <span className="text-muted-foreground">Aguardando conexão... ({qrExpiry}s)</span>
           </div>
           <div className="flex justify-center gap-3">
-            <button
-              onClick={handleRefreshQr}
-              className="flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm text-foreground hover:bg-muted"
-            >
+            <button onClick={handleRefreshQr} className="flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm text-foreground hover:bg-muted">
               <RefreshCw className="h-4 w-4" /> Gerar novo QR Code
             </button>
-            <button
-              onClick={handleSimulateConnect}
-              className="flex items-center gap-2 rounded-lg border border-success/30 bg-success/5 px-4 py-2 text-sm font-medium text-success hover:bg-success/10"
-            >
+            <button onClick={handleSimulateConnect} className="flex items-center gap-2 rounded-lg border border-success/30 bg-success/5 px-4 py-2 text-sm font-medium text-success hover:bg-success/10">
               <CheckCircle className="h-4 w-4" /> Simular conexão (dev)
             </button>
           </div>
         </div>
       )}
 
-      {/* Form */}
-      {status !== "connected" && status !== "qr_ready" && (
+      {/* Form — only instance name */}
+      {status !== "connected" && status !== "qr_ready" && apiConfigured && (
         <div className="space-y-5">
-          <div>
-            <label className="text-sm font-medium text-foreground">URL do Servidor Evolution</label>
-            <input
-              type="text"
-              value={serverUrl}
-              onChange={(e) => setServerUrl(e.target.value)}
-              placeholder="https://seu-servidor.evolution-api.com"
-              className="mt-1.5 h-10 w-full rounded-lg border border-border bg-input px-4 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none"
-            />
-            <p className="mt-1 text-xs text-muted-foreground">
-              Ex: https://api.seudominio.com.br (sem barra final)
-            </p>
-          </div>
-
-          <div>
-            <label className="text-sm font-medium text-foreground">API Key Global</label>
-            <div className="relative mt-1.5">
-              <input
-                type={showApiKey ? "text" : "password"}
-                value={apiKeyGlobal}
-                onChange={(e) => setApiKeyGlobal(e.target.value)}
-                placeholder="Sua AUTHENTICATION_API_KEY"
-                className="h-10 w-full rounded-lg border border-border bg-input pr-10 pl-4 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none"
-              />
-              <button onClick={() => setShowApiKey(!showApiKey)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
-                {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </button>
-            </div>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Configurada no seu servidor Evolution (AUTHENTICATION_API_KEY)
-            </p>
-          </div>
-
           <div>
             <label className="text-sm font-medium text-foreground">Nome da Instância</label>
             <input
@@ -362,23 +334,18 @@ const EvolutionTab = () => {
               className="mt-1.5 h-10 w-full rounded-lg border border-border bg-input px-4 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none"
             />
             <p className="mt-1 text-xs text-muted-foreground">
-              Nome único para identificar esta conexão
+              Nome único para identificar esta conexão WhatsApp
             </p>
           </div>
         </div>
       )}
 
       {/* Webhook info */}
-      {status !== "connected" && status !== "qr_ready" && (
+      {status !== "connected" && status !== "qr_ready" && apiConfigured && (
         <div className="rounded-lg border border-border bg-muted/30 p-4">
           <label className="text-xs font-medium text-muted-foreground">URL de Webhook (configurada automaticamente)</label>
           <div className="relative mt-1">
-            <input
-              type="text"
-              readOnly
-              value={webhookUrl}
-              className="h-10 w-full rounded-lg border border-border bg-input pr-10 pl-4 text-sm text-muted-foreground"
-            />
+            <input type="text" readOnly value={webhookUrl} className="h-10 w-full rounded-lg border border-border bg-input pr-10 pl-4 text-sm text-muted-foreground" />
             <button
               onClick={() => { navigator.clipboard.writeText(webhookUrl); toast.success("URL copiada!"); }}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
@@ -389,25 +356,17 @@ const EvolutionTab = () => {
         </div>
       )}
 
-      {/* Action buttons */}
-      {status !== "connected" && status !== "qr_ready" && (
+      {/* Action button */}
+      {status !== "connected" && status !== "qr_ready" && apiConfigured && (
         <div className="flex items-center gap-3">
           <button
             onClick={handleCreateInstance}
-            disabled={loading || !serverUrl.trim() || !apiKeyGlobal.trim() || !instanceName.trim()}
+            disabled={loading || !instanceName.trim()}
             className="gradient-primary flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold text-primary-foreground disabled:opacity-50"
           >
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "⚡"}
             Criar Instância e Conectar
           </button>
-          <a
-            href="https://doc.evolution-api.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-2 rounded-lg border border-border px-4 py-2.5 text-sm text-foreground hover:bg-muted"
-          >
-            <ExternalLink className="h-4 w-4" /> Docs Evolution
-          </a>
         </div>
       )}
     </div>
