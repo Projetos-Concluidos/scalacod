@@ -478,7 +478,7 @@ const CheckoutPublic = () => {
       // Create order first
       if (import.meta.env.DEV) console.log("[Payment] Criando pedido...");
       const oid = await createOrder();
-      if (!oid) { console.error("[Payment] Falha ao criar pedido"); setPaymentLoading(false); return; }
+      if (!oid) { if (import.meta.env.DEV) console.error("[Payment] Falha ao criar pedido"); setPaymentLoading(false); return; }
       if (import.meta.env.DEV) console.log("[Payment] Pedido criado:", oid);
 
       const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
