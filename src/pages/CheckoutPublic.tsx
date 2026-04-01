@@ -1252,12 +1252,17 @@ const CheckoutPublic = () => {
                   {/* Only show pay button if not already showing PIX QR and not credit_card (Bricks handles its own submit) */}
                   {!(paymentMethod === "pix" && pixData) && paymentMethod !== "credit_card" && (
                     <button onClick={() => processPayment()} disabled={paymentLoading || submitting}
-                      className="mt-5 w-full rounded-xl bg-emerald-500 py-3 text-sm font-semibold text-white hover:bg-emerald-600 shadow-md shadow-emerald-500/20 transition-all disabled:opacity-50"
+                      className="mt-5 w-full rounded-2xl bg-emerald-500 py-4 font-bold text-base text-white hover:bg-emerald-600 shadow-lg shadow-emerald-500/25 transition-all disabled:opacity-50 active:scale-[0.98] flex items-center justify-center gap-2"
                     >
-                      {paymentLoading ? <Loader2 className="inline h-4 w-4 animate-spin mr-2" /> : null}
+                      {paymentLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Lock className="h-5 w-5" />}
                       {paymentMethod === "pix" ? "Gerar QR Code PIX" : paymentMethod === "boleto" ? "Gerar Boleto" : paymentMethod === "wallet" ? "Pagar com Saldo MP" : "Pagar"} → R$ {totalPrice.toFixed(2)}
                     </button>
                   )}
+
+                  <div className="flex items-center justify-center gap-4 mt-3 text-[10px] text-gray-400">
+                    <span className="flex items-center gap-1"><ShieldCheck className="h-3 w-3 text-emerald-400" /> Dados protegidos</span>
+                    <span className="flex items-center gap-1"><Lock className="h-3 w-3 text-emerald-400" /> Compra segura</span>
+                  </div>
 
                   <button onClick={() => setStep(2)} className="w-full text-xs text-gray-400 hover:text-gray-600 text-center py-2 mt-2">← Voltar para endereço</button>
                 </div>
