@@ -1,10 +1,14 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useHomeSettings } from "@/hooks/useHomeSettings";
-import { Star, Check, Menu, X, ChevronRight, MessageSquare, ShoppingCart, BarChart3, Zap } from "lucide-react";
-import { useState } from "react";
+import { Star, Check, Menu, X, Zap, ShoppingCart, MessageSquare, BarChart3, CheckCircle, Monitor, Image as ImageIcon } from "lucide-react";
+import heroMock from "@/assets/home-hero-mock.jpg";
+import featureCheckout from "@/assets/home-feature-checkout.jpg";
+import featureWhatsapp from "@/assets/home-feature-whatsapp.jpg";
+import featureAnalytics from "@/assets/home-feature-analytics.jpg";
 
 const featureIcons = [ShoppingCart, MessageSquare, BarChart3];
+const featureFallbacks = [featureCheckout, featureWhatsapp, featureAnalytics];
 
 export default function Home() {
   const { data: s, isLoading } = useHomeSettings();
@@ -65,30 +69,46 @@ export default function Home() {
         )}
       </nav>
 
-      {/* HERO */}
+      {/* HERO — Premium */}
       <section className="relative overflow-hidden pt-28 pb-16 md:pt-36 md:pb-24">
-        <div className="mx-auto max-w-5xl px-4 text-center">
-          <div className="reveal mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-1.5">
-            <Zap className="h-4 w-4 text-emerald-500" />
-            <span className="text-sm font-semibold text-emerald-700">{s.hero.badge}</span>
+        <div className="absolute inset-0 bg-gradient-to-b from-emerald-50/50 to-white pointer-events-none" />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-emerald-100/30 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="relative mx-auto max-w-6xl px-4 text-center">
+          {/* Social proof badge */}
+          <div className="reveal mb-6 inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2">
+            <span className="flex -space-x-1.5">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <div key={i} className="h-6 w-6 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 border-2 border-white" />
+              ))}
+            </span>
+            <span className="text-sm font-semibold text-emerald-700">{s.hero.social_proof_text}</span>
           </div>
-          <h1 className="reveal text-4xl font-black leading-tight text-gray-900 sm:text-5xl md:text-7xl">
+
+          <h1 className="reveal text-5xl font-black leading-[1.05] text-gray-900 sm:text-6xl md:text-7xl lg:text-8xl tracking-tight">
             {s.hero.title_line1}{" "}
             <span className="text-emerald-500">{s.hero.highlight_word}</span>
             <br />
             {s.hero.title_line2}
           </h1>
-          <p className="reveal mx-auto mt-6 max-w-2xl text-lg text-gray-500 md:text-xl">{s.hero.subtitle}</p>
-          <div className="reveal mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
-            <button onClick={() => navigate("/register")} className="rounded-2xl bg-emerald-500 px-8 py-4 text-lg font-bold text-white shadow-lg shadow-emerald-500/25 transition hover:bg-emerald-600 hover:shadow-emerald-500/40">
+
+          <p className="reveal mx-auto mt-6 max-w-3xl text-lg text-gray-500 md:text-xl leading-relaxed">
+            {s.hero.subtitle}
+          </p>
+
+          <div className="reveal mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
+            <button
+              onClick={() => navigate("/register")}
+              className="rounded-2xl bg-emerald-500 px-8 py-4 text-lg font-bold text-white shadow-lg shadow-emerald-500/25 transition-all hover:bg-emerald-600 hover:shadow-emerald-500/40 hover:-translate-y-0.5"
+            >
               {s.hero.cta_primary}
             </button>
-            <button className="rounded-2xl border border-gray-200 px-8 py-4 text-lg font-medium text-gray-700 transition hover:border-emerald-300 hover:text-emerald-600">
+            <button className="rounded-2xl border-2 border-gray-200 px-8 py-4 text-lg font-medium text-gray-700 transition-all hover:border-emerald-300 hover:text-emerald-600">
               {s.hero.cta_secondary}
             </button>
           </div>
-          <div className="reveal mt-10 flex items-center justify-center gap-4 text-sm text-gray-500">
-            <span>{s.hero.social_proof_text}</span>
+
+          <div className="reveal mt-6 flex items-center justify-center gap-4 text-sm text-gray-500">
             <div className="flex items-center gap-1">
               {[1, 2, 3, 4, 5].map((i) => (
                 <Star key={i} className="h-4 w-4 fill-amber-400 text-amber-400" />
@@ -96,11 +116,21 @@ export default function Home() {
               <span className="ml-1 font-semibold text-gray-700">{s.hero.social_proof_rating}</span>
             </div>
           </div>
-          {s.hero.screenshot_url && (
-            <div className="reveal mt-12">
-              <img src={s.hero.screenshot_url} alt="ScalaNinja Dashboard" className="mx-auto rounded-2xl border border-gray-200 shadow-2xl" loading="lazy" />
+
+          {/* Hero screenshot */}
+          <div className="reveal relative mt-14 max-w-5xl mx-auto">
+            <div className="absolute -inset-4 bg-gradient-to-r from-emerald-200/20 via-emerald-100/10 to-emerald-200/20 rounded-3xl blur-2xl pointer-events-none" />
+            <div className="relative rounded-2xl overflow-hidden border border-gray-200 shadow-2xl shadow-gray-300/50">
+              <img
+                src={s.hero.screenshot_url || heroMock}
+                alt="ScalaNinja Dashboard"
+                className="w-full"
+                width={1200}
+                height={700}
+              />
+              <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-white to-transparent pointer-events-none" />
             </div>
-          )}
+          </div>
         </div>
       </section>
 
@@ -116,30 +146,37 @@ export default function Home() {
         </div>
       </section>
 
-      {/* FEATURES */}
-      <section id="features" className="py-20 md:py-28">
-        <div className="mx-auto max-w-6xl px-4">
+      {/* FEATURES — alternating with fallback images */}
+      <section id="features" className="py-24 md:py-32">
+        <div className="mx-auto max-w-6xl px-4 space-y-28">
           {s.features.items.map((feat, i) => {
             const Icon = featureIcons[i] || Zap;
             const isRight = feat.image_side === "right";
+            const fallbackImg = featureFallbacks[i];
             return (
-              <div key={i} className={`reveal mb-20 flex flex-col items-center gap-12 last:mb-0 md:flex-row ${isRight ? "md:flex-row-reverse" : ""}`}>
+              <div key={i} className={`reveal flex flex-col items-center gap-12 lg:gap-16 md:flex-row ${isRight ? "md:flex-row-reverse" : ""}`}>
                 <div className="flex-1">
-                  {feat.image_url ? (
-                    <img src={feat.image_url} alt={feat.title} className="rounded-2xl border border-gray-200 shadow-xl" loading="lazy" />
-                  ) : (
-                    <div className="flex aspect-video items-center justify-center rounded-2xl border border-gray-200 bg-gradient-to-br from-gray-50 to-emerald-50">
-                      <Icon className="h-16 w-16 text-emerald-300" />
-                    </div>
-                  )}
+                  <div className="rounded-2xl overflow-hidden border border-gray-200 shadow-xl">
+                    <img
+                      src={feat.image_url || fallbackImg}
+                      alt={feat.title}
+                      className="w-full"
+                      loading="lazy"
+                      width={800}
+                      height={600}
+                    />
+                  </div>
                 </div>
-                <div className="flex-1 space-y-4">
-                  <h3 className="text-2xl font-extrabold text-gray-900 md:text-3xl">{feat.title}</h3>
+                <div className="flex-1 space-y-5">
+                  <span className="text-xs font-bold text-emerald-600 tracking-wider uppercase">
+                    {i === 0 ? "CHECKOUT INTELIGENTE" : i === 1 ? "WHATSAPP AUTOMATION" : "ANALYTICS COMPLETO"}
+                  </span>
+                  <h3 className="text-3xl font-black text-gray-900 leading-tight md:text-4xl">{feat.title}</h3>
                   <p className="text-base text-gray-500 leading-relaxed">{feat.description}</p>
-                  <ul className="space-y-2">
+                  <ul className="space-y-3">
                     {feat.bullets.map((b, j) => (
-                      <li key={j} className="flex items-center gap-2 text-sm text-gray-600">
-                        <Check className="h-4 w-4 text-emerald-500 flex-shrink-0" />
+                      <li key={j} className="flex items-center gap-3 text-gray-700">
+                        <CheckCircle className="h-[18px] w-[18px] text-emerald-500 flex-shrink-0" />
                         {b}
                       </li>
                     ))}
@@ -171,7 +208,7 @@ export default function Home() {
             <h2 className="reveal mb-12 text-center text-3xl font-extrabold text-gray-900">O que nossos clientes dizem</h2>
             <div className="grid gap-8 md:grid-cols-3">
               {s.testimonials.items.map((t, i) => (
-                <div key={i} className="reveal rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
+                <div key={i} className="reveal rounded-2xl border border-gray-100 bg-white p-6 shadow-sm hover:shadow-md transition-shadow">
                   <div className="mb-4 flex gap-1">
                     {[1, 2, 3, 4, 5].map((s) => (
                       <Star key={s} className="h-4 w-4 fill-amber-400 text-amber-400" />
@@ -192,10 +229,10 @@ export default function Home() {
       {/* CTA FINAL */}
       <section className="bg-gray-900 py-20 md:py-28">
         <div className="mx-auto max-w-3xl px-4 text-center">
-          <h2 className="reveal text-3xl font-extrabold text-white md:text-4xl">{s.cta_final.title}</h2>
+          <h2 className="reveal text-3xl font-extrabold text-white md:text-5xl">{s.cta_final.title}</h2>
           <p className="reveal mt-4 text-lg text-gray-400">{s.cta_final.subtitle}</p>
           <div className="reveal mt-8">
-            <button onClick={() => navigate("/register")} className="rounded-2xl bg-emerald-500 px-10 py-4 text-lg font-bold text-white shadow-lg shadow-emerald-500/25 transition hover:bg-emerald-600">
+            <button onClick={() => navigate("/register")} className="rounded-2xl bg-emerald-500 px-10 py-4 text-lg font-bold text-white shadow-lg shadow-emerald-500/25 transition-all hover:bg-emerald-600 hover:-translate-y-0.5">
               {s.cta_final.cta_text}
             </button>
           </div>
