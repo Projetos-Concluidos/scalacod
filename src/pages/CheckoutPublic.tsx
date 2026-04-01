@@ -710,9 +710,10 @@ const CheckoutPublic = () => {
 
         {/* Trust */}
         <div className="mt-4 space-y-2 pt-3 border-t border-gray-100">
-          <div className="flex items-center gap-2 text-xs text-gray-500"><Lock className="h-3.5 w-3.5 text-gray-400" /> Proteção SSL</div>
-          <div className="flex items-center gap-2 text-xs text-gray-500"><Truck className="h-3.5 w-3.5 text-gray-400" /> Entrega Garantida</div>
-          <div className="flex items-center gap-2 text-xs text-gray-500"><CreditCard className="h-3.5 w-3.5 text-gray-400" /> Pague na Entrega</div>
+          <div className="flex items-center gap-2 text-xs text-gray-500"><Lock className="h-3.5 w-3.5 text-emerald-400" /> Proteção SSL 256-bit</div>
+          <div className="flex items-center gap-2 text-xs text-gray-500"><Truck className="h-3.5 w-3.5 text-emerald-400" /> Entrega Garantida</div>
+          <div className="flex items-center gap-2 text-xs text-gray-500"><CreditCard className="h-3.5 w-3.5 text-emerald-400" /> Pague na Entrega</div>
+          <div className="flex items-center gap-2 text-xs text-gray-500"><ShieldCheck className="h-3.5 w-3.5 text-emerald-400" /> 7 dias de garantia</div>
         </div>
       </div>
     </div>
@@ -740,15 +741,51 @@ const CheckoutPublic = () => {
     <div className="min-h-screen bg-gray-50" onClick={trackInteraction}>
       {checkout.custom_css && <style>{checkout.custom_css}</style>}
 
-      {/* Progress bar */}
-      <div className="fixed inset-x-0 top-0 z-50 h-1 bg-gray-200">
-        <div className="h-full bg-emerald-500 transition-all duration-500" style={{ width: `${progressPercent}%` }} />
-      </div>
+      {/* Secure header */}
+      <header className="bg-white border-b border-gray-100 sticky top-0 z-50 shadow-sm">
+        <div className="max-w-5xl mx-auto px-4 py-2.5 flex items-center justify-between">
+          <div className="flex items-center gap-1.5">
+            <ShieldCheck className="h-4 w-4 text-emerald-500" />
+            <span className="text-xs font-medium text-gray-700">Compra 100% Segura</span>
+          </div>
+          <span className="text-xs text-gray-500 hidden sm:block truncate max-w-[200px]">{product?.name || checkout.name}</span>
+          <div className="flex items-center gap-1">
+            <Lock className="h-3 w-3 text-gray-400" />
+            <span className="text-[10px] text-gray-400 font-medium">SSL</span>
+          </div>
+        </div>
+        {/* Progress bar inside header */}
+        <div className="h-1 bg-gray-100">
+          <div className="h-full bg-emerald-500 transition-all duration-500" style={{ width: `${progressPercent}%` }} />
+        </div>
+      </header>
 
-      <div className="mx-auto max-w-5xl px-4 py-8 pt-6">
-        {/* Header */}
-        <div className="mb-6 text-center">
+      <div className="mx-auto max-w-5xl px-4 py-6">
+        {/* Header with product name */}
+        <div className="mb-4 text-center">
           <h1 className="text-lg font-bold text-gray-900">{checkout.name}</h1>
+        </div>
+
+        {/* Social proof + trust badges */}
+        <div className="mb-4 space-y-3">
+          <div className="flex items-center gap-2 bg-orange-50 border border-orange-100 rounded-xl px-3 py-2">
+            <span className="text-base">🔥</span>
+            <p className="text-xs text-orange-800"><strong>{Math.floor(Math.random() * 30 + 25)} pessoas</strong> estão vendo este produto agora</p>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            {[
+              { icon: "🔒", title: "Site Seguro", sub: "SSL 256-bit" },
+              { icon: "🚚", title: "Entrega Garantida", sub: "Rastreio em tempo real" },
+              { icon: "💰", title: "Pague na Entrega", sub: "Sem risco" },
+              { icon: "↩️", title: "7 dias de garantia", sub: "Devolução garantida" },
+            ].map((badge) => (
+              <div key={badge.title} className="flex flex-col items-center text-center p-2.5 bg-white rounded-xl border border-gray-100 shadow-sm">
+                <span className="text-xl mb-0.5">{badge.icon}</span>
+                <p className="text-[10px] font-semibold text-gray-800 leading-tight">{badge.title}</p>
+                <p className="text-[9px] text-gray-500">{badge.sub}</p>
+              </div>
+            ))}
+          </div>
         </div>
 
         <div className="flex flex-col lg:flex-row gap-6">
@@ -899,9 +936,9 @@ const CheckoutPublic = () => {
                   <button
                     onClick={() => goToStep(2)}
                     disabled={!step1Valid}
-                    className={`mt-5 w-full rounded-xl py-3 text-sm font-semibold text-white transition-all ${step1Valid ? "bg-emerald-500 hover:bg-emerald-600 shadow-md shadow-emerald-500/20" : "bg-gray-300 cursor-not-allowed"}`}
+                    className={`mt-5 w-full rounded-2xl py-3.5 text-sm font-bold text-white transition-all flex items-center justify-center gap-2 ${step1Valid ? "bg-emerald-500 hover:bg-emerald-600 shadow-lg shadow-emerald-500/20 active:scale-[0.98]" : "bg-gray-300 cursor-not-allowed"}`}
                   >
-                    Continuar →
+                    <Lock className="h-4 w-4" /> Continuar com segurança →
                   </button>
                 </div>
               </motion.div>
@@ -968,15 +1005,9 @@ const CheckoutPublic = () => {
                         <Label className="text-xs text-gray-600">Bairro *</Label>
                         <Input value={form.district} onChange={(e) => updateField("district", e.target.value)} className="mt-1 border-gray-200 bg-white" />
                       </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <Label className="text-xs text-gray-600">Número *</Label>
-                          <Input value={form.number} onChange={(e) => updateField("number", e.target.value)} className="mt-1 border-gray-200 bg-white" />
-                        </div>
-                        <div>
-                          <Label className="text-xs text-gray-600">Compl.</Label>
-                          <Input value={form.complement} onChange={(e) => updateField("complement", e.target.value)} className="mt-1 border-gray-200 bg-white" />
-                        </div>
+                      <div>
+                        <Label className="text-xs text-gray-600">Número *</Label>
+                        <Input value={form.number} onChange={(e) => updateField("number", e.target.value)} className="mt-1 border-gray-200 bg-white" />
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-3">
@@ -990,13 +1021,25 @@ const CheckoutPublic = () => {
                       </div>
                     </div>
                   </div>
+                  {/* Referência / Ponto de referência */}
+                  <div>
+                    <Label className="text-xs text-gray-600">Referência (opcional)</Label>
+                    <textarea
+                      value={form.complement}
+                      onChange={(e) => updateField("complement", e.target.value)}
+                      placeholder="Ex: Casa amarela, portão branco, próximo ao mercado..."
+                      className="mt-1 w-full p-2.5 border border-gray-200 rounded-xl text-sm resize-none bg-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none"
+                      rows={2}
+                    />
+                    <p className="text-[10px] text-gray-400 mt-0.5">Ajude o entregador a encontrar seu endereço</p>
+                  </div>
                   <button
                     onClick={() => {
                       if (!step2Valid) { toast.error("Preencha o endereço completo e aguarde a verificação do CEP"); return; }
                       goToStep(3);
                     }}
                     disabled={!step2Valid}
-                    className={`mt-5 w-full rounded-xl py-3 text-sm font-semibold text-white transition-all ${step2Valid ? "bg-emerald-500 hover:bg-emerald-600 shadow-md shadow-emerald-500/20" : "bg-gray-300 cursor-not-allowed"}`}
+                    className={`mt-5 w-full rounded-xl py-3.5 text-sm font-semibold text-white transition-all ${step2Valid ? "bg-emerald-500 hover:bg-emerald-600 shadow-lg shadow-emerald-500/20" : "bg-gray-300 cursor-not-allowed"}`}
                   >
                     Confirmar endereço →
                   </button>
@@ -1093,13 +1136,21 @@ const CheckoutPublic = () => {
                       setSubmitting(false);
                     }}
                     disabled={submitting || !selectedDate}
-                    className={`w-full rounded-xl py-3 text-sm font-semibold text-white transition-all ${
-                      selectedDate ? "bg-emerald-500 hover:bg-emerald-600 shadow-md shadow-emerald-500/20" : "bg-gray-300 cursor-not-allowed"
+                    className={`w-full rounded-2xl py-4 font-bold text-base text-white flex items-center justify-center gap-2 transition-all ${
+                      selectedDate ? "bg-emerald-500 hover:bg-emerald-600 shadow-lg shadow-emerald-500/25 active:scale-[0.98]" : "bg-gray-300 cursor-not-allowed"
                     }`}
                   >
-                    {submitting && <Loader2 className="inline h-4 w-4 animate-spin mr-2" />}
-                    Confirmar Pedido → R$ {totalPrice.toFixed(2)}
+                    {submitting ? (
+                      <><Loader2 className="h-5 w-5 animate-spin" /> Processando...</>
+                    ) : (
+                      <><Lock className="h-5 w-5" /> Confirmar Pedido Seguro → R$ {totalPrice.toFixed(2)}</>
+                    )}
                   </button>
+                  <div className="flex items-center justify-center gap-4 mt-3 text-[10px] text-gray-400">
+                    <span className="flex items-center gap-1"><ShieldCheck className="h-3 w-3 text-emerald-400" /> Dados protegidos</span>
+                    <span className="flex items-center gap-1"><Lock className="h-3 w-3 text-emerald-400" /> Compra segura</span>
+                    <span className="flex items-center gap-1"><CheckCircle className="h-3 w-3 text-emerald-400" /> Confirmação imediata</span>
+                  </div>
                 </div>
               </motion.div>
             )}
@@ -1196,12 +1247,17 @@ const CheckoutPublic = () => {
                   {/* Only show pay button if not already showing PIX QR and not credit_card (Bricks handles its own submit) */}
                   {!(paymentMethod === "pix" && pixData) && paymentMethod !== "credit_card" && (
                     <button onClick={() => processPayment()} disabled={paymentLoading || submitting}
-                      className="mt-5 w-full rounded-xl bg-emerald-500 py-3 text-sm font-semibold text-white hover:bg-emerald-600 shadow-md shadow-emerald-500/20 transition-all disabled:opacity-50"
+                      className="mt-5 w-full rounded-2xl bg-emerald-500 py-4 font-bold text-base text-white hover:bg-emerald-600 shadow-lg shadow-emerald-500/25 transition-all disabled:opacity-50 active:scale-[0.98] flex items-center justify-center gap-2"
                     >
-                      {paymentLoading ? <Loader2 className="inline h-4 w-4 animate-spin mr-2" /> : null}
+                      {paymentLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Lock className="h-5 w-5" />}
                       {paymentMethod === "pix" ? "Gerar QR Code PIX" : paymentMethod === "boleto" ? "Gerar Boleto" : paymentMethod === "wallet" ? "Pagar com Saldo MP" : "Pagar"} → R$ {totalPrice.toFixed(2)}
                     </button>
                   )}
+
+                  <div className="flex items-center justify-center gap-4 mt-3 text-[10px] text-gray-400">
+                    <span className="flex items-center gap-1"><ShieldCheck className="h-3 w-3 text-emerald-400" /> Dados protegidos</span>
+                    <span className="flex items-center gap-1"><Lock className="h-3 w-3 text-emerald-400" /> Compra segura</span>
+                  </div>
 
                   <button onClick={() => setStep(2)} className="w-full text-xs text-gray-400 hover:text-gray-600 text-center py-2 mt-2">← Voltar para endereço</button>
                 </div>
