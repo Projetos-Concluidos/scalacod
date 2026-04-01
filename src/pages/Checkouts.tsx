@@ -66,7 +66,7 @@ const Checkouts = () => {
   const [formName, setFormName] = useState("");
   const [formType, setFormType] = useState("hybrid");
   const [formOfferId, setFormOfferId] = useState("");
-  const [formPixelId, setFormPixelId] = useState("");
+  
   const [formOrderBump, setFormOrderBump] = useState(false);
   const [formUpsell, setFormUpsell] = useState(false);
   const [formCustomCss, setFormCustomCss] = useState("");
