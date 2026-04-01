@@ -1006,9 +1006,8 @@ const CheckoutPublic = () => {
                         <Input value={form.district} onChange={(e) => updateField("district", e.target.value)} className="mt-1 border-gray-200 bg-white" />
                       </div>
                       <div>
-                          <Label className="text-xs text-gray-600">Número *</Label>
-                          <Input value={form.number} onChange={(e) => updateField("number", e.target.value)} className="mt-1 border-gray-200 bg-white" />
-                        </div>
+                        <Label className="text-xs text-gray-600">Número *</Label>
+                        <Input value={form.number} onChange={(e) => updateField("number", e.target.value)} className="mt-1 border-gray-200 bg-white" />
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-3">
