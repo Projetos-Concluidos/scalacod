@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from "react";
-import { Copy, CheckCircle, Loader2, Send, RefreshCw, LogOut, AlertTriangle, Wifi, WifiOff } from "lucide-react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { CheckCircle, Loader2, Send, RefreshCw, LogOut, AlertTriangle, Wifi, WifiOff } from "lucide-react";
 import InfoTooltip from "@/components/InfoTooltip";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -21,8 +21,7 @@ const EvolutionTab = () => {
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const qrTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const webhookUrl = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/whatsapp-webhook?user_id=${user?.id || ""}&provider=evolution`;
-
+  // Auto-generate instance name from user ID
   useEffect(() => {
     if (user) {
       const generatedName = `scalaninja_${user.id.substring(0, 8)}`;
@@ -59,7 +58,7 @@ const EvolutionTab = () => {
 
     if (data) {
       setInstanceData(data);
-      setInstanceName(data.instance_name || "");
+      if (data.instance_name) setInstanceName(data.instance_name);
       setConnectedPhone(data.phone_number || "");
       setStatus(data.status === "connected" ? "connected" : "disconnected");
     }
@@ -81,86 +80,90 @@ const EvolutionTab = () => {
     }, 1000);
   };
 
+  const callEvolutionFunction = useCallback(async (action: string) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) throw new Error("Sessão expirada");
+
+    const res = await supabase.functions.invoke("evolution-instance", {
+      body: { action, instance_name: instanceName },
+    });
+
+    if (res.error) throw new Error(res.error.message);
+    return res.data;
+  }, [instanceName]);
+
+  const startPolling = useCallback(() => {
+    if (pollingRef.current) clearInterval(pollingRef.current);
+    pollingRef.current = setInterval(async () => {
+      try {
+        const data = await callEvolutionFunction("status");
+        if (data.connected) {
+          if (pollingRef.current) clearInterval(pollingRef.current);
+          if (qrTimerRef.current) clearInterval(qrTimerRef.current);
+          setStatus("connected");
+          setQrCode(null);
+          // Refresh instance data to get phone
+          await fetchInstance();
+          toast.success("WhatsApp conectado via Evolution API!");
+        }
+      } catch (e) {
+        console.error("Polling error:", e);
+      }
+    }, 4000);
+
+    // Stop polling after 2 minutes
+    setTimeout(() => {
+      if (pollingRef.current) clearInterval(pollingRef.current);
+    }, 120000);
+  }, [callEvolutionFunction]);
+
   const handleCreateInstance = async () => {
     setLoading(true);
     setStatus("creating");
 
     try {
-      const mockQrBase64 = `data:image/svg+xml;base64,${btoa(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><rect width="256" height="256" fill="white"/><text x="128" y="128" text-anchor="middle" font-size="14" fill="#333">QR Code</text><text x="128" y="150" text-anchor="middle" font-size="10" fill="#666">${instanceName}</text></svg>`)}`;
+      const data = await callEvolutionFunction("create");
 
-      setQrCode(mockQrBase64);
-      setStatus("qr_ready");
-      startQrTimer();
-
-      const payload = {
-        user_id: user!.id,
-        provider: "evolution" as const,
-        instance_name: instanceName.trim(),
-        status: "qr_ready",
-        webhook_url: webhookUrl,
-        qr_code: mockQrBase64,
-      };
-
-      if (instanceData) {
-        await supabase.from("whatsapp_instances").update(payload).eq("id", instanceData.id);
+      if (data.qrcode) {
+        // base64 QR from Evolution API
+        const qrSrc = data.qrcode.startsWith("data:") ? data.qrcode : `data:image/png;base64,${data.qrcode}`;
+        setQrCode(qrSrc);
+        setStatus("qr_ready");
+        startQrTimer();
+        startPolling();
+        toast.success("Instância criada! Escaneie o QR Code.");
       } else {
-        const { data } = await supabase.from("whatsapp_instances").insert(payload).select().single();
-        if (data) setInstanceData(data);
+        // No QR returned — instance may already be connected
+        setStatus("disconnected");
+        toast.warning("QR Code não retornado. Tente gerar novo QR.");
       }
-
-      startPolling();
-      toast.success("Instância criada! Escaneie o QR Code.");
-    } catch {
+    } catch (err: any) {
+      console.error("Create instance error:", err);
       setStatus("disconnected");
-      toast.error("Erro ao criar instância");
+      toast.error(err.message || "Erro ao criar instância");
     } finally {
       setLoading(false);
     }
   };
 
-  const startPolling = () => {
-    if (pollingRef.current) clearInterval(pollingRef.current);
-    pollingRef.current = setInterval(() => {}, 3000);
-    setTimeout(() => {
-      if (pollingRef.current) clearInterval(pollingRef.current);
-    }, 120000);
-  };
-
-  const handleSimulateConnect = async () => {
-    if (pollingRef.current) clearInterval(pollingRef.current);
-    if (qrTimerRef.current) clearInterval(qrTimerRef.current);
-
-    setStatus("connected");
-    setQrCode(null);
-    setConnectedPhone("+5511999999999");
-
-    if (instanceData) {
-      await supabase
-        .from("whatsapp_instances")
-        .update({ status: "connected", phone_number: "+5511999999999", qr_code: null })
-        .eq("id", instanceData.id);
-
-      const { data: existing } = await supabase
-        .from("integrations")
-        .select("id")
-        .eq("user_id", user!.id)
-        .eq("type", "evolution")
-        .maybeSingle();
-
-      const integrationPayload = {
-        user_id: user!.id,
-        type: "evolution",
-        config: { instance_name: instanceName.trim() },
-        is_active: true,
-      };
-
-      if (existing) {
-        await supabase.from("integrations").update(integrationPayload).eq("id", existing.id);
+  const handleRefreshQr = async () => {
+    setLoading(true);
+    try {
+      const data = await callEvolutionFunction("connect");
+      if (data.qrcode) {
+        const qrSrc = data.qrcode.startsWith("data:") ? data.qrcode : `data:image/png;base64,${data.qrcode}`;
+        setQrCode(qrSrc);
+        startQrTimer();
+        startPolling();
+        toast.info("Novo QR Code gerado");
       } else {
-        await supabase.from("integrations").insert(integrationPayload);
+        toast.warning("QR Code não disponível. Tente novamente.");
       }
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao gerar QR Code");
+    } finally {
+      setLoading(false);
     }
-    toast.success("WhatsApp conectado via Evolution API!");
   };
 
   const handleDisconnect = async () => {
@@ -170,25 +173,29 @@ const EvolutionTab = () => {
     if (qrTimerRef.current) clearInterval(qrTimerRef.current);
 
     try {
-      await supabase.from("whatsapp_instances").update({ status: "disconnected", qr_code: null }).eq("id", instanceData.id);
-      await supabase.from("integrations").update({ is_active: false }).eq("user_id", user!.id).eq("type", "evolution");
+      await callEvolutionFunction("disconnect");
       setStatus("disconnected");
       setQrCode(null);
       setConnectedPhone("");
       setInstanceData({ ...instanceData, status: "disconnected" });
       toast.success("Evolution API desconectada");
-    } catch {
-      toast.error("Erro ao desconectar");
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao desconectar");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleRefreshQr = () => {
-    const mockQrBase64 = `data:image/svg+xml;base64,${btoa(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><rect width="256" height="256" fill="white"/><text x="128" y="128" text-anchor="middle" font-size="14" fill="#333">QR Code</text><text x="128" y="150" text-anchor="middle" font-size="10" fill="#666">${instanceName} (novo)</text></svg>`)}`;
-    setQrCode(mockQrBase64);
-    startQrTimer();
-    toast.info("Novo QR Code gerado");
+  const handleRestart = async () => {
+    setLoading(true);
+    try {
+      await callEvolutionFunction("restart");
+      toast.success("Instância reiniciada");
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao reiniciar");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -203,7 +210,6 @@ const EvolutionTab = () => {
               <InfoTooltip
                 title="Como conectar via Evolution API:"
                 steps={[
-                  "Defina um nome único para sua instância",
                   "Clique em 'Criar Instância e Conectar'",
                   "Escaneie o QR Code com o WhatsApp do celular",
                   "Aguarde a confirmação de conexão",
@@ -260,11 +266,11 @@ const EvolutionTab = () => {
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
               <span className="text-muted-foreground">Número conectado:</span>
-              <p className="font-medium text-foreground">{connectedPhone}</p>
+              <p className="font-medium text-foreground">{connectedPhone || "—"}</p>
             </div>
             <div>
               <span className="text-muted-foreground">Instância:</span>
-              <p className="font-medium text-foreground">{instanceName}</p>
+              <p className="font-mono text-sm font-medium text-foreground">{instanceName}</p>
             </div>
           </div>
           <div className="flex gap-3 pt-2">
@@ -275,10 +281,12 @@ const EvolutionTab = () => {
               <Send className="h-4 w-4" /> Testar envio
             </button>
             <button
-              onClick={() => toast.info("Reiniciar instância — em breve")}
-              className="flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-muted"
+              onClick={handleRestart}
+              disabled={loading}
+              className="flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-muted disabled:opacity-50"
             >
-              <RefreshCw className="h-4 w-4" /> Reiniciar
+              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+              Reiniciar
             </button>
             <button
               onClick={handleDisconnect}
@@ -309,54 +317,39 @@ const EvolutionTab = () => {
             <span className="text-muted-foreground">Aguardando conexão... ({qrExpiry}s)</span>
           </div>
           <div className="flex justify-center gap-3">
-            <button onClick={handleRefreshQr} className="flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm text-foreground hover:bg-muted">
-              <RefreshCw className="h-4 w-4" /> Gerar novo QR Code
-            </button>
-            <button onClick={handleSimulateConnect} className="flex items-center gap-2 rounded-lg border border-success/30 bg-success/5 px-4 py-2 text-sm font-medium text-success hover:bg-success/10">
-              <CheckCircle className="h-4 w-4" /> Simular conexão (dev)
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Form — only instance name */}
-      {status !== "connected" && status !== "qr_ready" && apiConfigured && (
-        <div className="rounded-lg border border-border bg-muted/30 p-4">
-          <p className="text-sm text-muted-foreground">
-            Sua instância será criada automaticamente como:
-          </p>
-          <p className="mt-1 font-mono text-sm font-semibold text-foreground">{instanceName}</p>
-        </div>
-      )}
-
-      {/* Webhook info */}
-      {status !== "connected" && status !== "qr_ready" && apiConfigured && (
-        <div className="rounded-lg border border-border bg-muted/30 p-4">
-          <label className="text-xs font-medium text-muted-foreground">URL de Webhook (configurada automaticamente)</label>
-          <div className="relative mt-1">
-            <input type="text" readOnly value={webhookUrl} className="h-10 w-full rounded-lg border border-border bg-input pr-10 pl-4 text-sm text-muted-foreground" />
             <button
-              onClick={() => { navigator.clipboard.writeText(webhookUrl); toast.success("URL copiada!"); }}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              onClick={handleRefreshQr}
+              disabled={loading}
+              className="flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm text-foreground hover:bg-muted disabled:opacity-50"
             >
-              <Copy className="h-4 w-4" />
+              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+              Gerar novo QR Code
             </button>
           </div>
         </div>
       )}
 
-      {/* Action button */}
+      {/* Instance info + action button — disconnected state */}
       {status !== "connected" && status !== "qr_ready" && apiConfigured && (
-        <div className="flex items-center gap-3">
-          <button
-            onClick={handleCreateInstance}
-            disabled={loading}
-            className="gradient-primary flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold text-primary-foreground disabled:opacity-50"
-          >
-            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "⚡"}
-            Criar Instância e Conectar
-          </button>
-        </div>
+        <>
+          <div className="rounded-lg border border-border bg-muted/30 p-4">
+            <p className="text-sm text-muted-foreground">
+              Sua instância será criada automaticamente como:
+            </p>
+            <p className="mt-1 font-mono text-sm font-semibold text-foreground">{instanceName}</p>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleCreateInstance}
+              disabled={loading}
+              className="gradient-primary flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold text-primary-foreground disabled:opacity-50"
+            >
+              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "⚡"}
+              Criar Instância e Conectar
+            </button>
+          </div>
+        </>
       )}
     </div>
   );
