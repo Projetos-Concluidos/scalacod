@@ -33,6 +33,8 @@ import AdminCobrancas from "@/pages/admin/AdminCobrancas";
 import AdminTokens from "@/pages/admin/AdminTokens";
 import AdminIntegracoes from "@/pages/admin/AdminIntegracoes";
 import AdminLogs from "@/pages/admin/AdminLogs";
+import AdminHome from "@/pages/admin/AdminHome";
+import HomePub from "@/pages/Home";
 
 const queryClient = new QueryClient();
 
@@ -49,7 +51,8 @@ const App = () => (
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/c/:slug" element={<CheckoutPublic />} />
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/" element={<HomePub />} />
+            <Route path="/home" element={<HomePub />} />
             <Route element={<AuthGuard><AppLayout /></AuthGuard>}>
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/checkouts" element={<Checkouts />} />
@@ -71,6 +74,7 @@ const App = () => (
               <Route path="/admin/cobrancas" element={<AdminCobrancas />} />
               <Route path="/admin/tokens" element={<AdminTokens />} />
               <Route path="/admin/integracoes" element={<AdminIntegracoes />} />
+              <Route path="/admin/home" element={<AdminHome />} />
               <Route path="/admin/logs" element={<AdminLogs />} />
             </Route>
             <Route path="*" element={<NotFound />} />

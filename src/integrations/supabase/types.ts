@@ -480,6 +480,27 @@ export type Database = {
           },
         ]
       }
+      home_settings: {
+        Row: {
+          content: Json
+          id: string
+          section_key: string
+          updated_at: string | null
+        }
+        Insert: {
+          content?: Json
+          id?: string
+          section_key: string
+          updated_at?: string | null
+        }
+        Update: {
+          content?: Json
+          id?: string
+          section_key?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       integrations: {
         Row: {
           config: Json
