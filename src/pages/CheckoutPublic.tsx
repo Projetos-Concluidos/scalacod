@@ -281,11 +281,30 @@ const CheckoutPublic = () => {
   // Initialize MercadoPago Bricks when credit_card is selected on step 3
   useEffect(() => {
     if (step !== 3 || provider !== "coinzz" || paymentMethod !== "credit_card" || !mpPublicKey || !offer) return;
-    if (!window.MercadoPago) return;
 
     setBricksReady(false);
 
+    const waitForMPSDK = (): Promise<void> => {
+      return new Promise((resolve) => {
+        if (window.MercadoPago) { resolve(); return; }
+        console.log("[Cartão] Aguardando SDK MercadoPago carregar...");
+        let attempts = 0;
+        const check = setInterval(() => {
+          attempts++;
+          if (window.MercadoPago) { clearInterval(check); resolve(); }
+          if (attempts > 50) { clearInterval(check); resolve(); } // 5s max
+        }, 100);
+      });
+    };
+
     const initBricks = async () => {
+      await waitForMPSDK();
+      if (!window.MercadoPago) {
+        console.error("[Cartão] SDK MercadoPago não carregou após 5s");
+        toast.error("Erro ao carregar SDK de pagamento. Recarregue a página.");
+        return;
+      }
+
       try {
         if (bricksControllerRef.current) {
           try { bricksControllerRef.current.unmount(); } catch {}
@@ -294,6 +313,7 @@ const CheckoutPublic = () => {
         const container = document.getElementById("cardPaymentBrick_container");
         if (container) container.innerHTML = "";
 
+        console.log("[Cartão] Inicializando Bricks com publicKey:", mpPublicKey.substring(0, 15) + "...");
         const mp = new window.MercadoPago(mpPublicKey, { locale: "pt-BR" });
         const bricksBuilder = mp.bricks();
 
@@ -317,20 +337,26 @@ const CheckoutPublic = () => {
             },
           },
           callbacks: {
-            onReady: () => setBricksReady(true),
+            onReady: () => {
+              console.log("[Cartão] Bricks pronto!");
+              setBricksReady(true);
+            },
             onSubmit: async (cardFormData: any) => {
+              console.log("[Cartão] Formulário submetido, token:", !!cardFormData.token);
               await processPayment(cardFormData.token, cardFormData.installments);
             },
             onError: (error: any) => {
-              console.error("Bricks error:", error);
+              console.error("[Cartão] Bricks error:", error);
               toast.error("Erro no formulário de pagamento");
             },
           },
         });
 
         bricksControllerRef.current = controller;
+        console.log("[Cartão] Bricks controller criado com sucesso");
       } catch (err) {
-        console.error("Failed to init Bricks:", err);
+        console.error("[Cartão] Failed to init Bricks:", err);
+        toast.error("Erro ao inicializar formulário de cartão");
       }
     };
 
