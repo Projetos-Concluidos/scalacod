@@ -25,6 +25,8 @@ const EvolutionTab = () => {
 
   useEffect(() => {
     if (user) {
+      const generatedName = `scalaninja_${user.id.substring(0, 8)}`;
+      setInstanceName(generatedName);
       fetchGlobalConfig();
       fetchInstance();
     }
