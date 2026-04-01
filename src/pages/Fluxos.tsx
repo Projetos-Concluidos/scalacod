@@ -514,6 +514,66 @@ const Fluxos = () => {
         onClose={() => setAiOpen(false)}
         onGenerated={handleAIGenerated}
       />
+
+      {/* Template Gallery Modal */}
+      {galleryOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-card border border-border rounded-2xl w-full max-w-3xl max-h-[85vh] flex flex-col shadow-2xl">
+            <div className="flex items-center justify-between p-5 border-b border-border">
+              <div>
+                <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
+                  <LayoutTemplate className="h-5 w-5 text-primary" /> Galeria de Templates
+                </h2>
+                <p className="text-xs text-muted-foreground mt-1">Templates prontos para todos os status de pedido COD</p>
+              </div>
+              <button onClick={() => setGalleryOpen(false)} className="p-2 rounded-lg hover:bg-muted text-muted-foreground"><X className="h-5 w-5" /></button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-5">
+              {galleryLoading ? (
+                <div className="flex items-center justify-center py-16"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {galleryTemplates.map((tpl: any, i: number) => {
+                    const existingFlow = flows.find(f => f.trigger_status === tpl.trigger_status);
+                    return (
+                      <div key={i} className="bg-muted/50 border border-border rounded-xl p-4 hover:border-primary/30 transition-all group">
+                        <div className="flex items-start justify-between mb-2">
+                          <h4 className="font-semibold text-foreground text-sm">{tpl.name}</h4>
+                          <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium shrink-0">
+                            Pronto
+                          </span>
+                        </div>
+                        <p className="text-xs text-muted-foreground mb-1">{tpl.description}</p>
+                        <p className="text-[10px] text-muted-foreground mb-3">
+                          Trigger: <span className="font-medium text-foreground">{tpl.trigger_status}</span>
+                          {tpl.nodes?.length > 1 && ` · ${tpl.nodes.length} nós`}
+                        </p>
+                        <div className="text-[11px] text-muted-foreground bg-background rounded-lg p-2.5 max-h-20 overflow-hidden mb-3 leading-relaxed whitespace-pre-wrap">
+                          {tpl.nodes?.[0]?.data?.content?.slice(0, 120)}...
+                        </div>
+                        {existingFlow ? (
+                          <div className="w-full py-2 text-center text-xs font-medium text-muted-foreground bg-muted rounded-lg">
+                            ✓ Já existe: "{existingFlow.name}"
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => useTemplate(i)}
+                            disabled={creatingTemplate === i}
+                            className="w-full py-2 bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-semibold rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                          >
+                            {creatingTemplate === i ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
+                            Usar este template
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
