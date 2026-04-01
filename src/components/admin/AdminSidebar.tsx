@@ -20,6 +20,7 @@ const links = [
   { to: "/admin/cobrancas", icon: Receipt, label: "Cobranças" },
   { to: "/admin/tokens", icon: Coins, label: "Tokens" },
   { to: "/admin/integracoes", icon: Settings2, label: "Integrações" },
+  { to: "/admin/home", icon: Home, label: "Página Inicial" },
   { to: "/admin/logs", icon: ScrollText, label: "Logs" },
 ];
 
