@@ -56,7 +56,7 @@ const EvolutionTab = () => {
       .eq("provider", "evolution")
       .maybeSingle();
 
-    console.log("[EvolutionTab] fetchInstance DB result:", { data, error });
+    if (import.meta.env.DEV) console.log("[EvolutionTab] fetchInstance DB result:", { data, error });
 
     if (data) {
       setInstanceData(data);
@@ -86,7 +86,7 @@ const EvolutionTab = () => {
             return;
           }
         } catch (e) {
-          console.log("Live status check failed (instance may not exist yet):", e);
+          if (import.meta.env.DEV) console.log("Live status check failed (instance may not exist yet):", e);
         }
       }
 
@@ -137,7 +137,7 @@ const EvolutionTab = () => {
           toast.success("WhatsApp conectado via Evolution API!");
         }
       } catch (e) {
-        console.error("Polling error:", e);
+        if (import.meta.env.DEV) console.error("Polling error:", e);
       }
     }, 4000);
 
@@ -168,7 +168,7 @@ const EvolutionTab = () => {
         toast.warning("QR Code não retornado. Tente gerar novo QR.");
       }
     } catch (err: any) {
-      console.error("Create instance error:", err);
+      if (import.meta.env.DEV) console.error("Create instance error:", err);
       setStatus("disconnected");
       toast.error(err.message || "Erro ao criar instância");
     } finally {

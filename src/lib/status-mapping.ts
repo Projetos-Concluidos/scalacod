@@ -84,7 +84,7 @@ export function mapLogzzToScalaNinja(logzzStatus: string): string {
   if (lower.includes('agendado')) return 'Agendado';
   
   // Default: manter status original
-  console.warn('[StatusMap] Status Logzz não mapeado:', logzzStatus);
+  if (import.meta.env.DEV) console.warn('[StatusMap] Status Logzz não mapeado:', logzzStatus);
   return logzzStatus;
 }
 

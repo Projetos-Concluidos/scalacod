@@ -235,12 +235,12 @@ const CheckoutPublic = () => {
         body: JSON.stringify({ action: "check_delivery", user_id: checkout?.user_id, cep: cep.replace(/\D/g, "") }),
       });
       const data = await res.json();
-      console.log("[Checkout] Response da edge function checkout-api:", JSON.stringify(data));
-      console.log("[Checkout] Provider:", data?.provider, "Datas:", data?.dates?.length);
+      if (import.meta.env.DEV) console.log("[Checkout] Response da edge function checkout-api:", JSON.stringify(data));
+      if (import.meta.env.DEV) console.log("[Checkout] Provider:", data?.provider, "Datas:", data?.dates?.length);
 
       // Auto-fill address from edge function response (ViaCEP enrichment)
       if (data.street || data.neighborhood || data.city || data.state) {
-        console.log("[Checkout] Preenchendo endereço:", data.street, data.neighborhood, data.city, data.state);
+        if (import.meta.env.DEV) console.log("[Checkout] Preenchendo endereço:", data.street, data.neighborhood, data.city, data.state);
         setForm((prev) => ({
           ...prev,
           street: data.street || prev.street,
@@ -256,7 +256,7 @@ const CheckoutPublic = () => {
         setProvider("coinzz"); setDeliveryDates([]);
       }
     } catch (err) {
-      console.error("[Checkout] Erro ao verificar CEP:", err);
+      if (import.meta.env.DEV) console.error("[Checkout] Erro ao verificar CEP:", err);
       // Fallback: try ViaCEP directly
       try {
         const viaCepRes = await fetch(`https://viacep.com.br/ws/${cep.replace(/\D/g, "")}/json/`);
@@ -287,7 +287,7 @@ const CheckoutPublic = () => {
     const waitForMPSDK = (): Promise<void> => {
       return new Promise((resolve) => {
         if (window.MercadoPago) { resolve(); return; }
-        console.log("[Cartão] Aguardando SDK MercadoPago carregar...");
+        if (import.meta.env.DEV) console.log("[Cartão] Aguardando SDK MercadoPago carregar...");
         let attempts = 0;
         const check = setInterval(() => {
           attempts++;
@@ -300,7 +300,7 @@ const CheckoutPublic = () => {
     const initBricks = async () => {
       await waitForMPSDK();
       if (!window.MercadoPago) {
-        console.error("[Cartão] SDK MercadoPago não carregou após 5s");
+        if (import.meta.env.DEV) console.error("[Cartão] SDK MercadoPago não carregou após 5s");
         toast.error("Erro ao carregar SDK de pagamento. Recarregue a página.");
         return;
       }
@@ -313,7 +313,7 @@ const CheckoutPublic = () => {
         const container = document.getElementById("cardPaymentBrick_container");
         if (container) container.innerHTML = "";
 
-        console.log("[Cartão] Inicializando Bricks com publicKey:", mpPublicKey.substring(0, 15) + "...");
+        if (import.meta.env.DEV) console.log("[Cartão] Inicializando Bricks com publicKey:", mpPublicKey.substring(0, 15) + "...");
         const mp = new window.MercadoPago(mpPublicKey, { locale: "pt-BR" });
         const bricksBuilder = mp.bricks();
 
@@ -338,24 +338,24 @@ const CheckoutPublic = () => {
           },
           callbacks: {
             onReady: () => {
-              console.log("[Cartão] Bricks pronto!");
+              if (import.meta.env.DEV) console.log("[Cartão] Bricks pronto!");
               setBricksReady(true);
             },
             onSubmit: async (cardFormData: any) => {
-              console.log("[Cartão] Formulário submetido, token:", !!cardFormData.token);
+              if (import.meta.env.DEV) console.log("[Cartão] Formulário submetido, token:", !!cardFormData.token);
               await processPayment(cardFormData.token, cardFormData.installments);
             },
             onError: (error: any) => {
-              console.error("[Cartão] Bricks error:", error);
+              if (import.meta.env.DEV) console.error("[Cartão] Bricks error:", error);
               toast.error("Erro no formulário de pagamento");
             },
           },
         });
 
         bricksControllerRef.current = controller;
-        console.log("[Cartão] Bricks controller criado com sucesso");
+        if (import.meta.env.DEV) console.log("[Cartão] Bricks controller criado com sucesso");
       } catch (err) {
-        console.error("[Cartão] Failed to init Bricks:", err);
+        if (import.meta.env.DEV) console.error("[Cartão] Failed to init Bricks:", err);
         toast.error("Erro ao inicializar formulário de cartão");
       }
     };
@@ -476,13 +476,13 @@ const CheckoutPublic = () => {
     setPaymentLoading(true);
     try {
       // Create order first
-      console.log("[Payment] Criando pedido...");
+      if (import.meta.env.DEV) console.log("[Payment] Criando pedido...");
       const oid = await createOrder();
-      if (!oid) { console.error("[Payment] Falha ao criar pedido"); setPaymentLoading(false); return; }
-      console.log("[Payment] Pedido criado:", oid);
+      if (!oid) { if (import.meta.env.DEV) console.error("[Payment] Falha ao criar pedido"); setPaymentLoading(false); return; }
+      if (import.meta.env.DEV) console.log("[Payment] Pedido criado:", oid);
 
       const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
-      console.log(`[Payment] Chamando create-payment. Method: ${paymentMethod}, Store: ${checkout.user_id}, Amount: ${totalPrice}`);
+      if (import.meta.env.DEV) console.log(`[Payment] Chamando create-payment. Method: ${paymentMethod}, Store: ${checkout.user_id}, Amount: ${totalPrice}`);
       
       const res = await fetch(`https://${projectId}.supabase.co/functions/v1/create-payment?store=${checkout.user_id}`, {
         method: "POST",
@@ -498,38 +498,38 @@ const CheckoutPublic = () => {
         }),
       });
       const data = await res.json();
-      console.log("[Payment] Response:", JSON.stringify(data));
+      if (import.meta.env.DEV) console.log("[Payment] Response:", JSON.stringify(data));
 
       if (!res.ok || data.error) {
-        console.error("[Payment] Erro:", data.error, data.details);
+        if (import.meta.env.DEV) console.error("[Payment] Erro:", data.error, data.details);
         toast.error(data.error || "Erro ao processar pagamento");
         setPaymentLoading(false);
         return;
       }
 
       if (data.status === "approved") {
-        console.log("[Payment] ✅ Pagamento aprovado imediatamente");
+        if (import.meta.env.DEV) console.log("[Payment] ✅ Pagamento aprovado imediatamente");
         track("payment_approved", { method: paymentMethod });
         setStep(4);
       } else if (paymentMethod === "pix") {
-        console.log("[Payment] PIX gerado. QR:", !!data.pixQrCode, "Base64:", !!data.pixQrCodeBase64, "PaymentId:", data.paymentId);
+        if (import.meta.env.DEV) console.log("[Payment] PIX gerado. QR:", !!data.pixQrCode, "Base64:", !!data.pixQrCodeBase64, "PaymentId:", data.paymentId);
         if (!data.pixQrCodeBase64) {
           toast.error("Erro: QR Code PIX não foi gerado. Verifique as credenciais MercadoPago.");
-          console.error("[Payment] pixQrCodeBase64 ausente na resposta:", data);
+          if (import.meta.env.DEV) console.error("[Payment] pixQrCodeBase64 ausente na resposta:", data);
         } else {
           setPixData({ pixQrCode: data.pixQrCode, pixQrCodeBase64: data.pixQrCodeBase64, paymentId: data.paymentId });
           startPixPolling(data.paymentId);
         }
       } else if (paymentMethod === "boleto") {
-        console.log("[Payment] Boleto gerado:", data.boletoUrl);
+        if (import.meta.env.DEV) console.log("[Payment] Boleto gerado:", data.boletoUrl);
         if (data.boletoUrl) window.open(data.boletoUrl, "_blank");
         toast.success("Boleto gerado! Aguardando pagamento.");
         startPixPolling(data.paymentId);
       } else if (paymentMethod === "wallet" && data.walletRedirectUrl) {
-        console.log("[Payment] Redirecionando para wallet:", data.walletRedirectUrl);
+        if (import.meta.env.DEV) console.log("[Payment] Redirecionando para wallet:", data.walletRedirectUrl);
         window.location.href = data.walletRedirectUrl;
       } else {
-        console.log("[Payment] Pagamento pendente, polling...", data);
+        if (import.meta.env.DEV) console.log("[Payment] Pagamento pendente, polling...", data);
         toast.info("Pagamento em processamento...");
         startPixPolling(data.paymentId);
       }
