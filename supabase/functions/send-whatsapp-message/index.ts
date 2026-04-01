@@ -25,16 +25,36 @@ Deno.serve(async (req) => {
       );
     }
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser(authHeader.replace("Bearer ", ""));
-    if (authError || !user) {
+    const body = await req.json();
+    const { conversationId, content, type = "text", mediaUrl, phone, direct, userId: bodyUserId } = body;
+
+    // Determine user: try auth.getUser first (client calls), fallback to bodyUserId (service-to-service)
+    let userId: string | null = null;
+    const token = authHeader.replace("Bearer ", "");
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+
+    if (token === serviceRoleKey && bodyUserId) {
+      // Service-to-service call (from execute-flow, execute-campaign, etc.)
+      userId = bodyUserId;
+      console.log("[send-whatsapp-message] Service-role call for userId:", userId);
+    } else {
+      // Client call — validate JWT
+      const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+      if (authError || !user) {
+        return new Response(
+          JSON.stringify({ error: "Unauthorized" }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      userId = user.id;
+    }
+
+    if (!userId) {
       return new Response(
-        JSON.stringify({ error: "Unauthorized" }),
+        JSON.stringify({ error: "No user identified" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
-
-    const body = await req.json();
-    const { conversationId, content, type = "text", mediaUrl, phone, direct } = body;
 
     // For media messages, content can be empty but mediaUrl is required
     if (type === "text" && !content?.trim()) {
@@ -55,18 +75,21 @@ Deno.serve(async (req) => {
     const { data: instance } = await supabase
       .from("whatsapp_instances")
       .select("*")
-      .eq("user_id", user.id)
+      .eq("user_id", userId)
       .eq("status", "connected")
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
 
     if (!instance) {
+      console.warn("[send-whatsapp-message] No connected instance for user:", userId);
       return new Response(
         JSON.stringify({ error: "Nenhuma instância WhatsApp conectada" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    console.log(`[send-whatsapp-message] Sending via ${instance.provider} to ${phone || "conversation"}`);
 
     // Determine target phone
     let targetPhone = phone;
@@ -77,7 +100,7 @@ Deno.serve(async (req) => {
         .from("conversations")
         .select("*")
         .eq("id", conversationId)
-        .eq("user_id", user.id)
+        .eq("user_id", userId)
         .single();
 
       if (!conv) {
@@ -268,11 +291,14 @@ Deno.serve(async (req) => {
     }
 
     if (sendError) {
+      console.error("[send-whatsapp-message] Send error:", sendError);
       return new Response(
         JSON.stringify({ error: sendError }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    console.log(`[send-whatsapp-message] Success via ${instance.provider}, msgId: ${messageIdWhatsapp}`);
 
     // Save outbound message to DB
     if (convId) {

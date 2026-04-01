@@ -42,6 +42,8 @@ Deno.serve(async (req) => {
       });
     }
 
+    console.log(`[execute-flow] Starting flow=${flowId} order=${orderId}`);
+
     // Fetch flow
     const { data: flow, error: flowErr } = await supabase
       .from("flows")
@@ -51,6 +53,7 @@ Deno.serve(async (req) => {
       .single();
 
     if (flowErr || !flow) {
+      console.error("[execute-flow] Flow not found or inactive:", flowId, flowErr?.message);
       return new Response(JSON.stringify({ error: "Fluxo não encontrado ou inativo" }), {
         status: 404,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -66,6 +69,7 @@ Deno.serve(async (req) => {
         .eq("id", orderId)
         .single();
       order = data;
+      console.log(`[execute-flow] Order found: ${!!order}, client: ${order?.client_name}, phone: ${order?.client_phone}`);
     }
 
     // Fetch store name
@@ -98,16 +102,20 @@ Deno.serve(async (req) => {
       valor_total: order ? formatCurrency(Number(order.order_final_price)) : "",
       codigo_rastreio: order?.tracking_code || "",
       loja_nome: storeName,
+      status_pedido: order?.status || "",
       ...(variables || {}),
     };
 
     const targetPhone = ctx.cliente_telefone || order?.client_phone;
     if (!targetPhone) {
+      console.warn("[execute-flow] No target phone available");
       return new Response(
         JSON.stringify({ error: "Nenhum telefone de destino disponível" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    console.log(`[execute-flow] Target phone: ${targetPhone}, store: ${storeName}`);
 
     // Create execution log
     const { data: execution } = await supabase
@@ -126,6 +134,8 @@ Deno.serve(async (req) => {
     const nodes = (flow.nodes as any[]) || [];
     const edges = (flow.edges as any[]) || [];
 
+    console.log(`[execute-flow] Nodes: ${nodes.length}, Edges: ${edges.length}, ExecutionId: ${executionId}`);
+
     // Sort nodes by execution order using edges (topological)
     const sortedNodes = topologicalSort(nodes, edges);
 
@@ -134,11 +144,13 @@ Deno.serve(async (req) => {
 
     try {
       for (const node of sortedNodes) {
+        console.log(`[execute-flow] Executing node type=${node.type || node.data?.type} id=${node.id}`);
         await executeNode(node, ctx, targetPhone, flow.user_id, supabase);
         nodesExecuted++;
       }
     } catch (e) {
       errorMessage = e.message;
+      console.error(`[execute-flow] Node execution error:`, e.message);
     }
 
     // Update execution log
@@ -153,6 +165,8 @@ Deno.serve(async (req) => {
         })
         .eq("id", executionId);
     }
+
+    console.log(`[execute-flow] Completed. Nodes executed: ${nodesExecuted}, error: ${errorMessage || "none"}`);
 
     return new Response(
       JSON.stringify({
@@ -225,6 +239,7 @@ async function executeNode(
   switch (nodeType) {
     case "text": {
       const message = interpolateVariables(node.data?.content || "", ctx);
+      console.log(`[execute-flow] Sending text to ${phone}: "${message.substring(0, 80)}..."`);
       await sendWhatsApp(userId, phone, message, supabase);
       break;
     }
@@ -236,9 +251,9 @@ async function executeNode(
       // Simple delay (max ~25s in edge functions, so cap it)
       const cappedMs = Math.min(ms, 25000);
       if (cappedMs > 0) {
+        console.log(`[execute-flow] Delay ${value} ${unit} (capped to ${cappedMs}ms)`);
         await new Promise((resolve) => setTimeout(resolve, cappedMs));
       }
-      // For delays > 25s, log a warning (in production, use pg_cron or scheduled jobs)
       if (ms > 25000) {
         console.warn(`[execute-flow] Delay of ${value} ${unit} exceeds edge function timeout. Only waited ${cappedMs}ms.`);
       }
@@ -257,14 +272,12 @@ async function executeNode(
       else if (conditionOp === "not_empty") result = fieldValue.length > 0;
       else if (conditionOp === "empty") result = fieldValue.length === 0;
 
-      // For conditions, we just log—actual branching uses edges in the flow builder
       console.log(`[execute-flow] Condition ${conditionField} ${conditionOp} ${conditionValue}: ${result}`);
       break;
     }
 
     case "audio": {
       const text = interpolateVariables(node.data?.text || "", ctx);
-      // Call generate-audio edge function
       try {
         const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
         const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -285,6 +298,8 @@ async function executeNode(
         const audioData = await audioRes.json();
         if (audioData.audioUrl) {
           await sendWhatsAppMedia(userId, phone, audioData.audioUrl, "audio", supabase);
+        } else {
+          console.warn("[execute-flow] Audio generation returned no URL");
         }
       } catch (e) {
         console.error("[execute-flow] Audio generation failed:", e.message);
@@ -311,13 +326,18 @@ async function sendWhatsApp(userId: string, phone: string, content: string, supa
       phone,
       content,
       direct: true,
+      userId, // Pass userId for service-to-service auth
     }),
   });
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
+    console.error(`[execute-flow] WhatsApp send failed: ${res.status}`, err);
     throw new Error(err.error || `WhatsApp send failed: ${res.status}`);
   }
+
+  const result = await res.json();
+  console.log(`[execute-flow] WhatsApp sent OK via ${result.provider}, msgId: ${result.message_id}`);
 
   // Small delay between messages to avoid rate limiting
   await new Promise((resolve) => setTimeout(resolve, 1500));
@@ -345,6 +365,7 @@ async function sendWhatsAppMedia(
       type,
       mediaUrl,
       direct: true,
+      userId, // Pass userId for service-to-service auth
     }),
   });
 

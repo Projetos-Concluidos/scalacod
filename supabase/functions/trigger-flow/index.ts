@@ -27,16 +27,35 @@ Deno.serve(async (req) => {
 
     const event = triggerEvent || "order_status_changed";
 
+    console.log(`[trigger-flow] event=${event} orderId=${orderId} status=${newStatus} userId=${userId}`);
+
     // Find active flows matching this trigger
-    const { data: flows } = await supabase
+    let query = supabase
       .from("flows")
-      .select("id, name")
+      .select("id, name, trigger_event, trigger_status")
       .eq("user_id", userId)
       .eq("is_active", true)
-      .eq("trigger_event", event)
-      .eq("trigger_status", newStatus);
+      .eq("trigger_event", event);
+
+    // Only filter by trigger_status if newStatus is provided
+    if (newStatus) {
+      query = query.eq("trigger_status", newStatus);
+    }
+
+    const { data: flows, error } = await query;
+
+    console.log(`[trigger-flow] Flows found: ${flows?.length || 0}`, flows?.map(f => `${f.name} (${f.trigger_status})`));
+
+    if (error) {
+      console.error("[trigger-flow] DB error:", error.message);
+      return new Response(JSON.stringify({ error: error.message }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     if (!flows || flows.length === 0) {
+      console.log(`[trigger-flow] No active flows for event="${event}" status="${newStatus}"`);
       return new Response(
         JSON.stringify({ success: true, message: "Nenhum fluxo ativo para este trigger", flows_triggered: 0 }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -50,6 +69,7 @@ Deno.serve(async (req) => {
     const results = [];
     for (const flow of flows) {
       try {
+        console.log(`[trigger-flow] Executing flow: ${flow.name} (${flow.id})`);
         const res = await fetch(`${supabaseUrl}/functions/v1/execute-flow`, {
           method: "POST",
           headers: {
@@ -64,8 +84,10 @@ Deno.serve(async (req) => {
         });
 
         const data = await res.json();
+        console.log(`[trigger-flow] Flow ${flow.name} result:`, JSON.stringify(data));
         results.push({ flow_id: flow.id, flow_name: flow.name, ...data });
       } catch (e) {
+        console.error(`[trigger-flow] Flow ${flow.name} error:`, e.message);
         results.push({ flow_id: flow.id, flow_name: flow.name, error: e.message });
       }
     }
