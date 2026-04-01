@@ -270,7 +270,7 @@ const Checkouts = () => {
       slug,
       type: formType,
       offer_id: formOfferId || null,
-      pixel_id: formPixelId || null,
+      pixel_id: formPixelFacebook || null,
       order_bump_enabled: formOrderBump,
       upsell_enabled: formUpsell,
       custom_css: formCustomCss || null,
