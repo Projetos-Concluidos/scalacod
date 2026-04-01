@@ -428,6 +428,20 @@ const Pedidos = () => {
                       {selectedOrder.tracking_code && <div><span className="text-muted-foreground">Rastreio:</span> <span className="text-primary font-mono">{selectedOrder.tracking_code}</span></div>}
                       {selectedOrder.delivery_man && <div><span className="text-muted-foreground">Entregador:</span> <span className="text-foreground">{selectedOrder.delivery_man}</span></div>}
                       {selectedOrder.logistic_operator && <div><span className="text-muted-foreground">Operador:</span> <span className="text-foreground">{selectedOrder.logistic_operator}</span></div>}
+                      {selectedOrder.logzz_order_id && (
+                        <div className="col-span-2">
+                          <span className="text-muted-foreground">Pedido Logzz:</span>{" "}
+                          <a
+                            href={`https://app.logzz.com.br/meu-pedido/${selectedOrder.logzz_order_id}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-primary hover:underline font-mono font-medium inline-flex items-center gap-1"
+                          >
+                            #{selectedOrder.logzz_order_id}
+                            <ExternalLink className="h-3 w-3" />
+                          </a>
+                        </div>
+                      )}
                     </div>
                   </div>
                   {/* Labels */}

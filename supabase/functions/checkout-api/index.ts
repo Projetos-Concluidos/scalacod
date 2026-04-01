@@ -226,7 +226,84 @@ Deno.serve(async (req) => {
           if (leadErr) console.log("[create_order] Lead upsert error:", leadErr.message);
         }
 
-        return new Response(JSON.stringify({ order_id: inserted?.id }), {
+        // If logistics_type is logzz, automatically send to Logzz
+        let logzz_order_id: string | null = null;
+        if (order_data.logistics_type === "logzz") {
+          try {
+            const logzz = getIntegration("logzz");
+            const logzzConfig = logzz?.config as any;
+            const webhookUrl = logzzConfig?.logzz_webhook_url;
+            const bearerToken = logzzConfig?.bearer_token;
+
+            if (webhookUrl) {
+              // Get offer hash for the payload
+              let offerHash = "";
+              if (order_data.offer_id) {
+                const { data: offerData } = await supabase.from("offers").select("hash").eq("id", order_data.offer_id).maybeSingle();
+                offerHash = offerData?.hash || "";
+              }
+
+              const logzzPayload = {
+                external_id: inserted?.id,
+                full_name: order_data.client_name,
+                phone: order_data.client_phone?.replace(/\D/g, ""),
+                customer_document: order_data.client_document?.replace(/\D/g, "") || "",
+                postal_code: order_data.client_zip_code?.replace(/\D/g, ""),
+                street: order_data.client_address,
+                neighborhood: order_data.client_address_district,
+                city: order_data.client_address_city,
+                state: order_data.client_address_state?.toLowerCase(),
+                house_number: order_data.client_address_number,
+                complement: order_data.client_address_comp || "",
+                delivery_date: order_data.delivery_date || "",
+                offer: offerHash,
+                affiliate_email: "",
+              };
+
+              console.log("[create_order] Sending to Logzz webhook:", webhookUrl);
+              const logzzHeaders: Record<string, string> = { "Content-Type": "application/json" };
+              if (bearerToken) logzzHeaders["Authorization"] = `Bearer ${bearerToken}`;
+
+              const logzzRes = await fetch(webhookUrl, {
+                method: "POST",
+                headers: logzzHeaders,
+                body: JSON.stringify(logzzPayload),
+              });
+
+              const logzzBody = await logzzRes.text();
+              console.log("[create_order] Logzz response:", logzzRes.status, logzzBody.substring(0, 500));
+
+              if (logzzRes.status === 200 || logzzRes.status === 201) {
+                try {
+                  const logzzData = JSON.parse(logzzBody);
+                  logzz_order_id = logzzData?.data?.id || logzzData?.id || logzzData?.order_id || null;
+                  if (typeof logzz_order_id === 'number') logzz_order_id = String(logzz_order_id);
+                } catch { /* non-JSON response */ }
+
+                // Update order with logzz_order_id and status Agendado
+                const updatePayload: any = { status: "Agendado" };
+                if (logzz_order_id) updatePayload.logzz_order_id = logzz_order_id;
+                await supabase.from("orders").update(updatePayload).eq("id", inserted?.id);
+
+                // Record status history
+                await supabase.from("order_status_history").insert({
+                  order_id: inserted?.id,
+                  from_status: "Aguardando",
+                  to_status: "Agendado",
+                  source: "logzz_auto_sync",
+                });
+
+                console.log("[create_order] Logzz sync OK, order_id:", logzz_order_id);
+              } else {
+                console.warn("[create_order] Logzz webhook failed:", logzzRes.status);
+              }
+            }
+          } catch (logzzErr: any) {
+            console.error("[create_order] Logzz sync error:", logzzErr.message);
+          }
+        }
+
+        return new Response(JSON.stringify({ order_id: inserted?.id, logzz_order_id }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       } catch (e) {
@@ -838,6 +915,16 @@ Deno.serve(async (req) => {
           message: "CPF válido",
           source: "local",
         }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // ─── ACTION: get_mp_fees ────────────────────────────
+    if (action === "get_mp_fees") {
+      const mp = getIntegration("mercadopago");
+      const feePercent = (mp?.config as any)?.processing_fee_percent || 0;
+      return new Response(
+        JSON.stringify({ processing_fee_percent: feePercent }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
