@@ -467,7 +467,7 @@ const Checkouts = () => {
                                   setLogzzPopoverOpen(false);
 
                                   // Auto-fill checkout name + slug
-                                  const slug = `${o.product_name}-${o.offer_hash || ""}`.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "").slice(0, 60);
+                                  const slug = `${o.product_name}-${o.offer_hash || ""}`.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "").replace(/-+/g, "-").replace(/^-|-$/g, "").slice(0, 60);
                                   setFormName(o.offer_name || o.product_name);
 
                                   // Upsert product in DB
