@@ -300,7 +300,7 @@ const Dashboard = () => {
           </div>
         </div>
 
-        <div className="col-span-4 space-y-6">
+        <div className="lg:col-span-4 space-y-6">
           <div className="ninja-card">
             <div className="mb-5 flex items-center justify-between">
               <h3 className="text-lg font-bold text-foreground">Leads Recentes</h3>
