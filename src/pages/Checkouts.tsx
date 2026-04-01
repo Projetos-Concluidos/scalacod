@@ -552,10 +552,6 @@ const Checkouts = () => {
                 <div><Label>Upsell</Label><p className="text-xs text-muted-foreground">Oferta pós-compra</p></div>
                 <Switch checked={formUpsell} onCheckedChange={setFormUpsell} />
               </div>
-              <div>
-                <Label>Pixel ID</Label>
-                <Input value={formPixelId} onChange={(e) => setFormPixelId(e.target.value)} placeholder="Ex: 123456789" className="bg-input border-border" />
-              </div>
             </div>
           )}
 
