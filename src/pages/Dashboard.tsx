@@ -223,8 +223,8 @@ const Dashboard = () => {
       </div>
 
       {/* Section 3 — Charts + Leads */}
-      <div className="grid grid-cols-12 gap-6">
-        <div className="col-span-8 space-y-6">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div className="lg:col-span-8 space-y-6 min-w-0">
           <div className="ninja-card">
             <div className="mb-5 flex items-center justify-between">
               <div>
