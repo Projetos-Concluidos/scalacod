@@ -56,7 +56,7 @@ const EvolutionTab = () => {
       .eq("provider", "evolution")
       .maybeSingle();
 
-    console.log("[EvolutionTab] fetchInstance DB result:", { data, error });
+    if (import.meta.env.DEV) console.log("[EvolutionTab] fetchInstance DB result:", { data, error });
 
     if (data) {
       setInstanceData(data);
