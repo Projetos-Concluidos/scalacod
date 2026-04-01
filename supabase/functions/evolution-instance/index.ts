@@ -159,6 +159,48 @@ serve(async (req) => {
 
       if (!createRes.ok) {
         const errText = await createRes.text();
+        
+        // If instance already exists (403 "already in use"), fall through to connect
+        if (createRes.status === 403 && errText.includes("already in use")) {
+          console.log("Instance already exists on Evolution, connecting...");
+          const connectRes = await fetch(`${evoUrl}/instance/connect/${instanceName}`, {
+            headers: { apikey: evoApiKey },
+          });
+          const connectData = connectRes.ok ? await connectRes.json() : {};
+
+          // Save to DB
+          const { data: existRow2 } = await supabaseAdmin
+            .from("whatsapp_instances")
+            .select("id")
+            .eq("user_id", user.id)
+            .eq("provider", "evolution")
+            .maybeSingle();
+
+          const payload2 = {
+            user_id: user.id,
+            provider: "evolution",
+            instance_name: instanceName,
+            status: "qr_ready",
+            webhook_url: webhookUrl,
+          };
+
+          if (existRow2) {
+            await supabaseAdmin.from("whatsapp_instances").update(payload2).eq("id", existRow2.id);
+          } else {
+            await supabaseAdmin.from("whatsapp_instances").insert(payload2);
+          }
+
+          return new Response(JSON.stringify({
+            success: true,
+            action: "existing_instance_connected",
+            qrcode: connectData.base64 || null,
+            pairingCode: connectData.pairingCode || null,
+            status: connectData.state || "connecting",
+          }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
         return new Response(JSON.stringify({
           error: `Erro ao criar instância: ${createRes.status} - ${errText.slice(0, 300)}`,
         }), {
