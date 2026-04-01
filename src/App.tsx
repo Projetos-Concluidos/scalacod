@@ -35,6 +35,7 @@ import AdminIntegracoes from "@/pages/admin/AdminIntegracoes";
 import AdminLogs from "@/pages/admin/AdminLogs";
 import AdminHome from "@/pages/admin/AdminHome";
 import HomePub from "@/pages/Home";
+import Suporte from "@/pages/Suporte";
 
 const queryClient = new QueryClient();
 
