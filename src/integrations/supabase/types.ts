@@ -1300,6 +1300,30 @@ export type Database = {
           },
         ]
       }
+      rate_limit_attempts: {
+        Row: {
+          action: string
+          created_at: string | null
+          id: string
+          identifier: string
+          key: string
+        }
+        Insert: {
+          action: string
+          created_at?: string | null
+          id?: string
+          identifier: string
+          key: string
+        }
+        Update: {
+          action?: string
+          created_at?: string | null
+          id?: string
+          identifier?: string
+          key?: string
+        }
+        Relationships: []
+      }
       stores: {
         Row: {
           business_hours: Json | null
@@ -1790,6 +1814,16 @@ export type Database = {
         Args: { p_plan_id: string; p_user_id: string }
         Returns: undefined
       }
+      check_rate_limit: {
+        Args: {
+          p_action: string
+          p_identifier: string
+          p_max_attempts: number
+          p_window_seconds: number
+        }
+        Returns: boolean
+      }
+      cleanup_rate_limits: { Args: never; Returns: undefined }
       get_user_plan_limit: { Args: { feature: string }; Returns: number }
       has_active_subscription: { Args: never; Returns: boolean }
       has_role: {
