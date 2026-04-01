@@ -796,6 +796,44 @@ export type Database = {
           },
         ]
       }
+      order_status_history: {
+        Row: {
+          created_at: string | null
+          from_status: string | null
+          id: string
+          order_id: string
+          raw_payload: Json | null
+          source: string
+          to_status: string
+        }
+        Insert: {
+          created_at?: string | null
+          from_status?: string | null
+          id?: string
+          order_id: string
+          raw_payload?: Json | null
+          source: string
+          to_status: string
+        }
+        Update: {
+          created_at?: string | null
+          from_status?: string | null
+          id?: string
+          order_id?: string
+          raw_payload?: Json | null
+          source?: string
+          to_status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_status_history_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       orders: {
         Row: {
           affiliate_commission: number | null
