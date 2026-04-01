@@ -98,7 +98,55 @@ export default function Home() {
 
           <h1 className="reveal text-5xl font-black leading-[1.05] text-gray-900 sm:text-6xl md:text-7xl lg:text-8xl tracking-tight">
             {s.hero.title_line1}{" "}
-            <span className="text-emerald-500">{s.hero.highlight_word}</span>
+            <span className="relative inline-block">
+              <span
+                className="animate-gradient-shift"
+                style={{
+                  backgroundClip: 'text',
+                  WebkitBackgroundClip: 'text',
+                  color: 'transparent',
+                  backgroundSize: '200% 200%',
+                  backgroundImage: 'radial-gradient(80.17% 109.2% at 44.37% 35.15%, rgb(167,243,208) 0%, rgb(16,185,129) 42.83%, rgb(6,95,70) 88.38%)',
+                }}
+              >
+                {s.hero.highlight_word}
+              </span>
+              <span
+                aria-hidden="true"
+                className="animate-gradient-shift"
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  backgroundClip: 'text',
+                  WebkitBackgroundClip: 'text',
+                  color: 'transparent',
+                  backgroundSize: '200% 200%',
+                  backgroundImage: 'radial-gradient(80.17% 109.2% at 44.37% 35.15%, rgb(167,243,208) 0%, rgb(16,185,129) 42.83%, rgb(6,95,70) 88.38%)',
+                  filter: 'blur(10px)',
+                  mixBlendMode: 'screen',
+                  opacity: 0.8,
+                  pointerEvents: 'none',
+                  zIndex: 2,
+                }}
+              >
+                {s.hero.highlight_word}
+              </span>
+              <span
+                aria-hidden="true"
+                style={{
+                  backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E")`,
+                  backgroundSize: '60%',
+                  borderRadius: '8px',
+                  position: 'absolute',
+                  inset: '-6px 0px 0px -6px',
+                  mixBlendMode: 'overlay',
+                  zIndex: 3,
+                  pointerEvents: 'none',
+                  width: 'calc(100% + 12px)',
+                  height: 'calc(100% + 6px)',
+                }}
+              />
+            </span>
             <br />
             {s.hero.title_line2}
           </h1>
