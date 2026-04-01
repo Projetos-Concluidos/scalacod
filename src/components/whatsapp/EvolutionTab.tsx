@@ -60,6 +60,31 @@ const EvolutionTab = () => {
       setInstanceData(data);
       if (data.instance_name) setInstanceName(data.instance_name);
       setConnectedPhone(data.phone_number || "");
+
+      // If DB says not connected, do a live check against Evolution API
+      if (data.status !== "connected" && data.instance_name) {
+        try {
+          const liveStatus = await callEvolutionFunction("status");
+          if (liveStatus.connected) {
+            setStatus("connected");
+            // Re-fetch to get updated phone from DB (edge function updates it)
+            const { data: refreshed } = await supabase
+              .from("whatsapp_instances")
+              .select("*")
+              .eq("user_id", user!.id)
+              .eq("provider", "evolution")
+              .maybeSingle();
+            if (refreshed) {
+              setInstanceData(refreshed);
+              setConnectedPhone(refreshed.phone_number || "");
+            }
+            return;
+          }
+        } catch (e) {
+          console.log("Live status check failed (instance may not exist yet):", e);
+        }
+      }
+
       setStatus(data.status === "connected" ? "connected" : "disconnected");
     }
   };
