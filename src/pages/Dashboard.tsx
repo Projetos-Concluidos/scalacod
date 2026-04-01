@@ -158,7 +158,9 @@ const Dashboard = () => {
     <div className="space-y-6 w-full max-w-full min-w-0">
       {/* Onboarding Banner */}
       <OnboardingBanner />
-      <div className="flex items-start justify-between">
+
+      {/* Header + Filter — aligned with gap */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <p className="text-xs font-semibold uppercase tracking-widest text-primary mb-1">Painel Geral</p>
           <h1 className="text-3xl font-bold text-foreground">Resumo Operacional</h1>
@@ -167,9 +169,9 @@ const Dashboard = () => {
           {periods.map((p) => (
             <button
               key={p}
-              onClick={() => setActivePeriod(p)}
+              onClick={() => { setActivePeriod(p); setCustomDateFrom(undefined); setCustomDateTo(undefined); }}
               className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${
-                activePeriod === p
+                activePeriod === p && activePeriod !== "Personalizado"
                   ? "bg-primary/15 text-primary border border-primary/30"
                   : "text-muted-foreground hover:bg-muted hover:text-foreground border border-transparent"
               }`}
@@ -177,9 +179,62 @@ const Dashboard = () => {
               {p}
             </button>
           ))}
-          <button className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground">
-            <Calendar className="h-4 w-4" />
-          </button>
+          <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+            <PopoverTrigger asChild>
+              <button
+                className={cn(
+                  "flex h-8 w-8 items-center justify-center rounded-lg transition-colors",
+                  activePeriod === "Personalizado"
+                    ? "bg-primary/15 text-primary"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                )}
+                title="Selecionar período personalizado"
+              >
+                <CalendarIcon className="h-4 w-4" />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-4" align="end">
+              <div className="space-y-3">
+                <p className="text-sm font-semibold text-foreground">Período personalizado</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">De</p>
+                    <Calendar
+                      mode="single"
+                      selected={customDateFrom}
+                      onSelect={setCustomDateFrom}
+                      disabled={(date) => date > new Date()}
+                      className={cn("p-2 pointer-events-auto rounded-lg border border-border")}
+                    />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">Até</p>
+                    <Calendar
+                      mode="single"
+                      selected={customDateTo}
+                      onSelect={setCustomDateTo}
+                      disabled={(date) => date > new Date() || (customDateFrom ? date < customDateFrom : false)}
+                      className={cn("p-2 pointer-events-auto rounded-lg border border-border")}
+                    />
+                  </div>
+                </div>
+                <div className="flex items-center justify-between pt-2 border-t border-border">
+                  <p className="text-xs text-muted-foreground">
+                    {customDateFrom ? format(customDateFrom, "dd/MM/yyyy", { locale: ptBR }) : "—"}
+                    {" → "}
+                    {customDateTo ? format(customDateTo, "dd/MM/yyyy", { locale: ptBR }) : "—"}
+                  </p>
+                  <button
+                    onClick={() => { setActivePeriod("Personalizado"); setCalendarOpen(false); }}
+                    disabled={!customDateFrom}
+                    className="rounded-lg bg-primary px-4 py-1.5 text-xs font-semibold text-primary-foreground disabled:opacity-40"
+                  >
+                    Aplicar
+                  </button>
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
         </div>
       </div>
 
