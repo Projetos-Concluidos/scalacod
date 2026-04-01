@@ -1,40 +1,40 @@
 
 
-## O que era o "Sem dados ainda" e por que foi removido
+## Organização Visual do Dashboard e Páginas
 
-O bloco "Sem dados ainda — O pixel está ativo..." era um `EmptyState` que aparecia **abaixo do gráfico de Engajamento** quando não havia eventos de pixel registrados. O problema é que ele era **redundante**: os gráficos e cards de métricas já estavam visíveis mostrando zeros, e o empty state ocupava espaço desnecessário empurrando o layout para baixo.
+### Problemas Identificados (dos prints)
 
-## Para que serve o Pixel
+1. **Título e filtro colados no TopBar** — sem `pt` (padding-top) no `<main>`, o conteúdo trisca na barra superior
+2. **Filtro de período desalinhado** — está `flex items-start justify-between` mas sem espaçamento vertical adequado
+3. **Ícone do calendário não funcional** — clica mas não abre date picker
+4. **Ícone `?` (HelpCircle) não navega** — deveria ir para `/suporte`
+5. **Pixel Analytics bar com 8 itens em grid de 7 colunas** — "Fila WhatsApp" quebra para linha seguinte
+6. **Ícones dos stats no Pixel Analytics** — podem ser melhorados com os ícones dos prints (círculos coloridos com ícones dentro)
 
-O sistema de Pixel (`pixel_events` + edge function `pixel-event`) rastreia eventos dos visitantes nos seus checkouts públicos:
-- **Pageviews** — quantas pessoas acessaram o checkout
-- **Interações** — cliques em botões, preenchimento de campos
-- **Conversões** — visitante que virou pedido
+### Alterações Planejadas
 
-Esses dados **já aparecem no Dashboard atual** em 3 lugares:
-1. **Card "Pixel Analytics"** (canto superior direito) — total de eventos
-2. **Barra de métricas** — Visitantes, Pageviews, Interações, Conversão, Abandono
-3. **Gráfico "Engajamento"** — Views e Interações por hora
+#### 1. `src/components/AppLayout.tsx`
+- Adicionar `pt-6` ao `<main>` para dar respiro entre o TopBar e o conteúdo em todas as páginas
 
-## Plano: Melhorar a seção de Pixel no Dashboard
+#### 2. `src/components/TopBar.tsx`
+- Botão `?` (HelpCircle): adicionar `onClick={() => navigate("/suporte")}` para navegar à página de suporte
+- Reduzir padding vertical do TopBar (`py-2` em vez de `py-3/py-4`) para compactar
 
-O que falta é um estado vazio **elegante e localizado** quando não há dados, sem quebrar o layout.
+#### 3. `src/pages/Dashboard.tsx` — Organização principal
+- **Título + Filtro**: Usar `flex-wrap` com gap adequado para mobile; adicionar `mt-2` no bloco do título
+- **Calendário funcional**: Adicionar um Popover com dois Calendar pickers (De/Até) ao clicar no ícone do calendário, permitindo consultar datas anteriores com range customizado
+- **Pixel Analytics bar**: Mudar grid de `md:grid-cols-7` para `grid-cols-4 md:grid-cols-8` para acomodar os 8 itens sem quebra
+- **Ícones nos stats**: Adicionar os ícones Lucide correspondentes dentro de círculos coloridos (`bg-{color}/10` + ícone) ao lado de cada label, como nos prints (ícones verdes, laranjas, vermelhos)
+- **Espaçamento geral**: Verificar e padronizar gaps entre seções
 
-### Alterações em `src/pages/Dashboard.tsx`
+#### 4. `src/components/PageHeader.tsx`
+- Adicionar `pt-2` para dar respiro consistente em todas as páginas que usam PageHeader
 
-1. **Gráfico de Engajamento** (linhas 269-304): Quando `metrics.pixelTotal === 0`, mostrar uma mensagem inline dentro do card do gráfico (em vez de um gráfico vazio com linhas zero), com ícone, texto explicativo e um mini-guia de como o pixel funciona.
+### Escopo controlado
+- Apenas arquivos: `AppLayout.tsx`, `TopBar.tsx`, `Dashboard.tsx`, `PageHeader.tsx`
+- Sem mudanças em lógica de dados, edge functions, ou banco de dados
+- Sem alterações em outras páginas além do padding global via AppLayout
 
-2. **Gráfico de Tráfego & Conversões** (linhas 232-267): Mesmo tratamento — mensagem inline quando não há dados.
-
-3. **Barra de métricas Pixel Analytics** (linhas 209-227): Manter sempre visível (já mostra zeros de forma limpa).
-
-4. **Lógica**: Usar `const hasPixelData = metrics.pixelTotal > 0` como flag. Quando `false`, os cards dos gráficos mostram o placeholder; quando `true`, mostram os gráficos normalmente.
-
-O placeholder inline será algo como:
-- Ícone `BarChart3` com fundo `bg-primary/10`
-- Título: "Sem dados de pixel ainda"
-- Subtítulo: "Quando visitantes acessarem seus checkouts, os dados aparecerão aqui automaticamente em tempo real."
-- Sem botão de ação (é automático)
-
-Isso mantém o layout organizado, sem empurrar conteúdo, e informa o usuário de forma clara.
+### Relatório final
+Incluirei lista detalhada de cada correção aplicada.
 
