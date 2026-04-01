@@ -125,6 +125,8 @@ const Dashboard = () => {
     return () => { supabase.removeChannel(channel); };
   }, [user, loadData]);
 
+  const hasPixelData = metrics.pixelTotal > 0;
+
   const pixelStats = [
     { label: "Visitantes", value: String(metrics.visitors), color: "#10B981", icon: Eye },
     { label: "Pageviews", value: String(metrics.pageviews), color: "#059669", icon: FileText },
