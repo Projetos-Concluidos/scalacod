@@ -1098,24 +1098,41 @@ Deno.serve(async (req) => {
       };
       if (bearerToken) logzzHeaders["Authorization"] = `Bearer ${bearerToken}`;
 
-      // Try webhook first, fallback to API v1 if Cloudflare blocks
-      let logzzRes: Response;
-      let logzzBody: string;
-      let endpoint = "webhook";
+      // Step 1: Warm up session with a GET to /api/v1/products (passes Cloudflare)
+      console.log("[send_to_logzz] Warming up Cloudflare session...");
+      const warmupRes = await fetch("https://app.logzz.com.br/api/v1/products", {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${bearerToken}`,
+          Accept: "application/json",
+        },
+        redirect: "manual",
+      });
+      const warmupCookies = warmupRes.headers.get("set-cookie") || "";
+      console.log("[send_to_logzz] Warmup status:", warmupRes.status, "cookies:", warmupCookies.substring(0, 200));
+      await warmupRes.text(); // consume body
 
-      console.log("[send_to_logzz] Trying webhook:", webhookUrl);
-      logzzRes = await fetch(webhookUrl, {
+      // Add cookies to headers if present
+      if (warmupCookies) {
+        const cookieValues = warmupCookies.split(",").map(c => c.split(";")[0].trim()).join("; ");
+        logzzHeaders["Cookie"] = cookieValues;
+      }
+
+      // Step 2: Try webhook with cookies
+      console.log("[send_to_logzz] Sending to webhook with cookies...");
+      let logzzRes = await fetch(webhookUrl, {
         method: "POST",
         headers: logzzHeaders,
         body: JSON.stringify(logzzPayload),
         redirect: "manual",
       });
-      logzzBody = await logzzRes.text();
+      let logzzBody = await logzzRes.text();
+      let endpoint = "webhook";
       console.log("[send_to_logzz] Webhook response:", logzzRes.status);
 
-      // If Cloudflare blocked (403), try API v1
+      // Step 3: If still 403, try API v1/orders
       if (logzzRes.status === 403) {
-        console.log("[send_to_logzz] Webhook blocked by Cloudflare, trying API v1/orders...");
+        console.log("[send_to_logzz] Still blocked, trying POST /api/v1/orders...");
         endpoint = "api_v1";
         logzzRes = await fetch("https://app.logzz.com.br/api/v1/orders", {
           method: "POST",
