@@ -63,6 +63,7 @@ const Dashboard = () => {
   const [queueCount, setQueueCount] = useState(0);
 
   const loadData = useCallback(async () => {
+    if (!user) return;
     let dateRange: { from: string; to: string };
     if (activePeriod === "Personalizado" && customDateFrom) {
       const fromDate = new Date(customDateFrom);
