@@ -201,14 +201,65 @@ export default function Home() {
 
       {/* PRICING */}
       <section id="pricing" className="bg-gray-50 py-20 md:py-28">
-        <div className="mx-auto max-w-4xl px-4 text-center">
-          <h2 className="reveal text-3xl font-extrabold text-gray-900 md:text-4xl">{s.pricing.title}</h2>
-          <p className="reveal mt-4 text-lg text-gray-500">{s.pricing.subtitle}</p>
-          <div className="reveal mt-10">
-            <button onClick={() => navigate("/register")} className="rounded-2xl bg-emerald-500 px-10 py-4 text-lg font-bold text-white shadow-lg shadow-emerald-500/25 transition hover:bg-emerald-600">
-              {s.pricing.cta_text}
-            </button>
-          </div>
+        <div className="mx-auto max-w-6xl px-4">
+          <h2 className="reveal text-center text-3xl font-extrabold text-gray-900 md:text-4xl">{s.pricing.title}</h2>
+          <p className="reveal mt-4 text-center text-lg text-gray-500">{s.pricing.subtitle}</p>
+
+          {plans.length > 0 ? (
+            <div className="reveal mt-12 grid gap-6 md:grid-cols-3">
+              {plans.map((plan) => {
+                const features = Array.isArray(plan.features) ? plan.features as string[] : [];
+                const isFeatured = plan.is_featured;
+                const icon = plan.slug === "starter" ? <Zap className="h-6 w-6" /> : plan.slug === "pro" ? <Star className="h-6 w-6" /> : <Crown className="h-6 w-6" />;
+
+                return (
+                  <div
+                    key={plan.id}
+                    className={`relative rounded-2xl border p-6 transition-shadow hover:shadow-lg ${
+                      isFeatured
+                        ? "border-emerald-500 bg-white shadow-md ring-2 ring-emerald-500/20"
+                        : "border-gray-200 bg-white"
+                    }`}
+                  >
+                    {isFeatured && (
+                      <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-emerald-500 px-4 py-1 text-xs font-bold text-white">
+                        Mais popular
+                      </span>
+                    )}
+                    <div className="mb-4 flex items-center gap-2 text-emerald-600">{icon}<span className="text-lg font-bold text-gray-900">{plan.name}</span></div>
+                    <div className="mb-6">
+                      <span className="text-4xl font-extrabold text-gray-900">R$ {Number(plan.price_monthly).toFixed(0)}</span>
+                      <span className="text-gray-500">/mês</span>
+                    </div>
+                    <ul className="mb-6 space-y-2">
+                      {features.map((f: string, i: number) => (
+                        <li key={i} className="flex items-start gap-2 text-sm text-gray-600">
+                          <Check className="mt-0.5 h-4 w-4 flex-shrink-0 text-emerald-500" />
+                          {f}
+                        </li>
+                      ))}
+                    </ul>
+                    <button
+                      onClick={() => navigate("/register")}
+                      className={`w-full rounded-xl py-3 text-sm font-bold transition ${
+                        isFeatured
+                          ? "bg-emerald-500 text-white hover:bg-emerald-600 shadow-lg shadow-emerald-500/25"
+                          : "bg-gray-100 text-gray-800 hover:bg-gray-200"
+                      }`}
+                    >
+                      Começar agora
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="reveal mt-10 text-center">
+              <button onClick={() => navigate("/register")} className="rounded-2xl bg-emerald-500 px-10 py-4 text-lg font-bold text-white shadow-lg shadow-emerald-500/25 transition hover:bg-emerald-600">
+                {s.pricing.cta_text}
+              </button>
+            </div>
+          )}
         </div>
       </section>
 
