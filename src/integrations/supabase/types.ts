@@ -599,6 +599,79 @@ export type Database = {
           },
         ]
       }
+      message_queue: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          flow_id: string | null
+          id: string
+          max_retries: number
+          message: string
+          order_id: string | null
+          phone: string
+          process_after: string
+          retry_count: number
+          scheduled_at: string
+          sent_at: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          flow_id?: string | null
+          id?: string
+          max_retries?: number
+          message: string
+          order_id?: string | null
+          phone: string
+          process_after?: string
+          retry_count?: number
+          scheduled_at?: string
+          sent_at?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          flow_id?: string | null
+          id?: string
+          max_retries?: number
+          message?: string
+          order_id?: string | null
+          phone?: string
+          process_after?: string
+          retry_count?: number
+          scheduled_at?: string
+          sent_at?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_queue_flow_id_fkey"
+            columns: ["flow_id"]
+            isOneToOne: false
+            referencedRelation: "flows"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_queue_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_queue_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       messages: {
         Row: {
           content: string | null
