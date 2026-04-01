@@ -1026,13 +1026,25 @@ const CheckoutPublic = () => {
                       </div>
                     </div>
                   </div>
+                  {/* Referência / Ponto de referência */}
+                  <div>
+                    <Label className="text-xs text-gray-600">Referência (opcional)</Label>
+                    <textarea
+                      value={form.complement}
+                      onChange={(e) => updateField("complement", e.target.value)}
+                      placeholder="Ex: Casa amarela, portão branco, próximo ao mercado..."
+                      className="mt-1 w-full p-2.5 border border-gray-200 rounded-xl text-sm resize-none bg-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none"
+                      rows={2}
+                    />
+                    <p className="text-[10px] text-gray-400 mt-0.5">Ajude o entregador a encontrar seu endereço</p>
+                  </div>
                   <button
                     onClick={() => {
                       if (!step2Valid) { toast.error("Preencha o endereço completo e aguarde a verificação do CEP"); return; }
                       goToStep(3);
                     }}
                     disabled={!step2Valid}
-                    className={`mt-5 w-full rounded-xl py-3 text-sm font-semibold text-white transition-all ${step2Valid ? "bg-emerald-500 hover:bg-emerald-600 shadow-md shadow-emerald-500/20" : "bg-gray-300 cursor-not-allowed"}`}
+                    className={`mt-5 w-full rounded-xl py-3.5 text-sm font-semibold text-white transition-all ${step2Valid ? "bg-emerald-500 hover:bg-emerald-600 shadow-lg shadow-emerald-500/20" : "bg-gray-300 cursor-not-allowed"}`}
                   >
                     Confirmar endereço →
                   </button>
