@@ -168,6 +168,74 @@ Deno.serve(async (req) => {
       }
     }
 
+    // ─── ACTION: create_order ─────────────────────────
+    if (action === "create_order") {
+      if (!order_data) {
+        return new Response(JSON.stringify({ error: "order_data required" }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      try {
+        console.log("[create_order] Creating order for user:", user_id);
+        const { data: inserted, error: orderErr } = await supabase.from("orders").insert({
+          user_id,
+          order_number: order_data.order_number,
+          checkout_id: order_data.checkout_id || null,
+          offer_id: order_data.offer_id || null,
+          client_name: order_data.client_name,
+          client_email: order_data.client_email || null,
+          client_document: order_data.client_document || null,
+          client_phone: order_data.client_phone,
+          client_zip_code: order_data.client_zip_code,
+          client_address: order_data.client_address,
+          client_address_number: order_data.client_address_number,
+          client_address_comp: order_data.client_address_comp || null,
+          client_address_district: order_data.client_address_district,
+          client_address_city: order_data.client_address_city,
+          client_address_state: order_data.client_address_state,
+          order_final_price: order_data.order_final_price,
+          shipping_value: order_data.shipping_value || 0,
+          status: order_data.status || "Aguardando",
+          logistics_type: order_data.logistics_type || "logzz",
+          delivery_date: order_data.delivery_date || null,
+          payment_method: order_data.payment_method || null,
+          utm_source: order_data.utm_source || null,
+          utm_medium: order_data.utm_medium || null,
+          utm_campaign: order_data.utm_campaign || null,
+          utm_content: order_data.utm_content || null,
+          utm_term: order_data.utm_term || null,
+          utm_id: order_data.utm_id || null,
+        }).select("id").single();
+
+        if (orderErr) {
+          console.error("[create_order] Order insert error:", orderErr.message);
+          throw new Error(orderErr.message);
+        }
+        console.log("[create_order] Order created:", inserted?.id);
+
+        // Upsert lead
+        if (order_data.client_phone) {
+          const { error: leadErr } = await supabase.from("leads").upsert({
+            user_id,
+            name: order_data.client_name,
+            phone: order_data.client_phone,
+            email: order_data.client_email || null,
+            document: order_data.client_document || null,
+            status: "Confirmado",
+          }, { onConflict: "user_id,phone" });
+          if (leadErr) console.log("[create_order] Lead upsert error:", leadErr.message);
+        }
+
+        return new Response(JSON.stringify({ order_id: inserted?.id }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      } catch (e) {
+        return new Response(JSON.stringify({ error: e.message }), {
+          status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
     // ─── ACTION: create_pix ───────────────────────────
     if (action === "create_pix") {
       const mp = getIntegration("mercadopago");
