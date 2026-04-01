@@ -350,7 +350,7 @@ const EvolutionTab = () => {
         <div className="flex items-center gap-3">
           <button
             onClick={handleCreateInstance}
-            disabled={loading || !instanceName.trim()}
+            disabled={loading}
             className="gradient-primary flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold text-primary-foreground disabled:opacity-50"
           >
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "⚡"}
