@@ -249,7 +249,7 @@ const Pedidos = () => {
         </div>
       ) : (
         <DragDropContext onDragEnd={handleDragEnd}>
-          <div className="flex gap-3 overflow-x-auto pb-4 flex-1">
+          <div role="region" aria-label="Quadro Kanban de pedidos" className="flex gap-3 overflow-x-auto pb-4 flex-1">
             {STATUS_KEYS.map((status) => {
               const meta = statusMeta(status);
               const items = columns[status] || [];
