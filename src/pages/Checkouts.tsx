@@ -66,7 +66,7 @@ const Checkouts = () => {
   const [formName, setFormName] = useState("");
   const [formType, setFormType] = useState("hybrid");
   const [formOfferId, setFormOfferId] = useState("");
-  const [formPixelId, setFormPixelId] = useState("");
+  
   const [formOrderBump, setFormOrderBump] = useState(false);
   const [formUpsell, setFormUpsell] = useState(false);
   const [formCustomCss, setFormCustomCss] = useState("");
@@ -215,7 +215,7 @@ const Checkouts = () => {
     setFormName("");
     setFormType("hybrid");
     setFormOfferId("");
-    setFormPixelId("");
+    
     setFormOrderBump(false);
     setFormUpsell(false);
     setFormCustomCss("");
@@ -235,7 +235,7 @@ const Checkouts = () => {
     setFormName(c.name);
     setFormType(c.type || "hybrid");
     setFormOfferId(c.offer_id || "");
-    setFormPixelId(c.pixel_id || "");
+    
     setFormOrderBump(c.order_bump_enabled || false);
     setFormUpsell(c.upsell_enabled || false);
     setFormCustomCss(c.custom_css || "");
@@ -270,7 +270,7 @@ const Checkouts = () => {
       slug,
       type: formType,
       offer_id: formOfferId || null,
-      pixel_id: formPixelId || null,
+      pixel_id: formPixelFacebook || null,
       order_bump_enabled: formOrderBump,
       upsell_enabled: formUpsell,
       custom_css: formCustomCss || null,
