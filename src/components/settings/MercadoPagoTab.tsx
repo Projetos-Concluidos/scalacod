@@ -94,7 +94,7 @@ const MercadoPagoTab = () => {
       const payload = {
         user_id: user.id,
         type: "mercadopago" as const,
-        config: { access_token: accessToken, public_key: publicKey } as any,
+        config: { access_token: accessToken, public_key: publicKey, processing_fee_percent: processingFee ? parseFloat(processingFee) : 0 } as any,
         is_active: isActive,
       };
       const { data: existing } = await supabase
