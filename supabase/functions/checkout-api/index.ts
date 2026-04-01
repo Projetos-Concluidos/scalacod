@@ -747,6 +747,84 @@ Deno.serve(async (req) => {
       );
     }
 
+    // ─── ACTION: process_logzz_webhook ────────────────
+    if (action === "process_logzz_webhook") {
+      const { order_id, logzz_order_id, status: rawStatus, payload } = body;
+
+      // Inline status mapping (Logzz → ScalaNinja)
+      const LOGZZ_MAP: Record<string, string> = {
+        'Pendente': 'Aguardando', 'Em aberto': 'Aguardando', 'Aguardando': 'Aguardando', 'A enviar': 'Aguardando',
+        'Confirmado': 'Confirmado', 'Agendado': 'Agendado', 'Reagendado': 'Agendado',
+        'Em separação': 'Em Separação', 'Separado': 'Separado',
+        'Enviado': 'Em Rota', 'Em Rota': 'Em Rota', 'A caminho': 'Em Rota', 'Saiu para entrega': 'Em Rota', 'Enviando': 'Em Rota',
+        'Entregue': 'Entregue', 'Completo': 'Entregue',
+        'Frustrado': 'Frustrado', 'Tentativa frustrada': 'Frustrado', 'Atrasado': 'Frustrado', 'Sem sucesso': 'Frustrado',
+        'A reagendar': 'Reagendar',
+        'Cancelado': 'Cancelado', 'Reembolsado': 'Reembolsado', 'Reembolso em andamento': 'Reembolsado',
+        'Estoque insuficiente': 'Cancelado', 'Aguardando retirada na agência': 'Em Rota',
+        'pending': 'Aguardando', 'confirmed': 'Confirmado', 'scheduled': 'Agendado',
+        'separated': 'Em Separação', 'in_route': 'Em Rota', 'delivered': 'Entregue',
+        'frustrated': 'Frustrado', 'canceled': 'Cancelado', 'rescheduled': 'Reagendar',
+      };
+
+      const mapStatus = (s: string): string => {
+        if (!s) return 'Aguardando';
+        if (LOGZZ_MAP[s]) return LOGZZ_MAP[s];
+        const lower = s.toLowerCase();
+        for (const [k, v] of Object.entries(LOGZZ_MAP)) { if (k.toLowerCase() === lower) return v; }
+        if (lower.includes('entregue') || lower.includes('completo')) return 'Entregue';
+        if (lower.includes('rota') || lower.includes('caminho') || lower.includes('enviado')) return 'Em Rota';
+        if (lower.includes('frustr')) return 'Frustrado';
+        if (lower.includes('cancela')) return 'Cancelado';
+        if (lower.includes('separa')) return 'Em Separação';
+        if (lower.includes('agendado')) return 'Agendado';
+        console.warn('[StatusMap] Unmapped Logzz status:', s);
+        return s;
+      };
+
+      const newStatus = mapStatus(rawStatus);
+      console.log(`[Webhook Logzz] Status: "${rawStatus}" → "${newStatus}"`);
+
+      // Find order
+      let matchQuery = supabase.from("orders").select("id, status").limit(1);
+      if (order_id) {
+        matchQuery = matchQuery.eq("id", order_id);
+      } else if (logzz_order_id) {
+        matchQuery = matchQuery.eq("logzz_order_id", logzz_order_id);
+      } else {
+        return new Response(JSON.stringify({ error: "order_id or logzz_order_id required" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      const { data: order } = await matchQuery.single();
+      if (!order) {
+        return new Response(JSON.stringify({ error: "Order not found" }),
+          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      const fromStatus = order.status;
+
+      // Update order status
+      await supabase.from("orders").update({
+        status: newStatus,
+        status_description: rawStatus,
+        updated_at: new Date().toISOString(),
+      }).eq("id", order.id);
+
+      // Insert status history
+      await supabase.from("order_status_history").insert({
+        order_id: order.id,
+        from_status: fromStatus,
+        to_status: newStatus,
+        source: "logzz_webhook",
+        raw_payload: payload || { raw_status: rawStatus },
+      });
+
+      return new Response(JSON.stringify({
+        success: true, from: fromStatus, to: newStatus, order_id: order.id,
+      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
     return new Response(
       JSON.stringify({ error: "Invalid action" }),
       { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
