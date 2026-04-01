@@ -1,4 +1,4 @@
-import { lazy, Suspense } from "react";
+import { Suspense } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -10,6 +10,7 @@ import AdminGuard from "@/components/AdminGuard";
 import AppLayout from "@/components/AppLayout";
 import AdminLayout from "@/components/admin/AdminLayout";
 import PageLoader from "@/components/PageLoader";
+import { lazyWithRetry } from "@/lib/lazyWithRetry";
 
 // Auth pages — keep static (critical path)
 import Login from "@/pages/Login";
@@ -17,33 +18,33 @@ import Register from "@/pages/Register";
 import ForgotPassword from "@/pages/ForgotPassword";
 import ResetPassword from "@/pages/ResetPassword";
 
-// Lazy-loaded pages
-const Dashboard = lazy(() => import("@/pages/Dashboard"));
-const Checkouts = lazy(() => import("@/pages/Checkouts"));
-const Pedidos = lazy(() => import("@/pages/Pedidos"));
-const Leads = lazy(() => import("@/pages/Leads"));
-const Conversas = lazy(() => import("@/pages/Conversas"));
-const Fluxos = lazy(() => import("@/pages/Fluxos"));
-const Vozes = lazy(() => import("@/pages/Vozes"));
-const Disparos = lazy(() => import("@/pages/Disparos"));
-const WhatsAppCloud = lazy(() => import("@/pages/WhatsAppCloud"));
-const Configuracoes = lazy(() => import("@/pages/Configuracoes"));
-const Suporte = lazy(() => import("@/pages/Suporte"));
-const Upgrade = lazy(() => import("@/pages/Upgrade"));
-const Subscription = lazy(() => import("@/pages/Subscription"));
-const CheckoutPublic = lazy(() => import("@/pages/CheckoutPublic"));
-const HomePub = lazy(() => import("@/pages/Home"));
-const NotFound = lazy(() => import("@/pages/NotFound"));
+// Lazy-loaded pages with auto-retry on chunk errors
+const Dashboard = lazyWithRetry(() => import("@/pages/Dashboard"));
+const Checkouts = lazyWithRetry(() => import("@/pages/Checkouts"));
+const Pedidos = lazyWithRetry(() => import("@/pages/Pedidos"));
+const Leads = lazyWithRetry(() => import("@/pages/Leads"));
+const Conversas = lazyWithRetry(() => import("@/pages/Conversas"));
+const Fluxos = lazyWithRetry(() => import("@/pages/Fluxos"));
+const Vozes = lazyWithRetry(() => import("@/pages/Vozes"));
+const Disparos = lazyWithRetry(() => import("@/pages/Disparos"));
+const WhatsAppCloud = lazyWithRetry(() => import("@/pages/WhatsAppCloud"));
+const Configuracoes = lazyWithRetry(() => import("@/pages/Configuracoes"));
+const Suporte = lazyWithRetry(() => import("@/pages/Suporte"));
+const Upgrade = lazyWithRetry(() => import("@/pages/Upgrade"));
+const Subscription = lazyWithRetry(() => import("@/pages/Subscription"));
+const CheckoutPublic = lazyWithRetry(() => import("@/pages/CheckoutPublic"));
+const HomePub = lazyWithRetry(() => import("@/pages/Home"));
+const NotFound = lazyWithRetry(() => import("@/pages/NotFound"));
 
 // Admin — separate chunk
-const AdminOverview = lazy(() => import("@/pages/admin/AdminOverview"));
-const AdminAssinantes = lazy(() => import("@/pages/admin/AdminAssinantes"));
-const AdminPlanos = lazy(() => import("@/pages/admin/AdminPlanos"));
-const AdminCobrancas = lazy(() => import("@/pages/admin/AdminCobrancas"));
-const AdminTokens = lazy(() => import("@/pages/admin/AdminTokens"));
-const AdminIntegracoes = lazy(() => import("@/pages/admin/AdminIntegracoes"));
-const AdminLogs = lazy(() => import("@/pages/admin/AdminLogs"));
-const AdminHome = lazy(() => import("@/pages/admin/AdminHome"));
+const AdminOverview = lazyWithRetry(() => import("@/pages/admin/AdminOverview"));
+const AdminAssinantes = lazyWithRetry(() => import("@/pages/admin/AdminAssinantes"));
+const AdminPlanos = lazyWithRetry(() => import("@/pages/admin/AdminPlanos"));
+const AdminCobrancas = lazyWithRetry(() => import("@/pages/admin/AdminCobrancas"));
+const AdminTokens = lazyWithRetry(() => import("@/pages/admin/AdminTokens"));
+const AdminIntegracoes = lazyWithRetry(() => import("@/pages/admin/AdminIntegracoes"));
+const AdminLogs = lazyWithRetry(() => import("@/pages/admin/AdminLogs"));
+const AdminHome = lazyWithRetry(() => import("@/pages/admin/AdminHome"));
 
 const queryClient = new QueryClient();
 
