@@ -219,6 +219,18 @@ const Checkouts = () => {
     setFormWhatsappSupport((c as any).whatsapp_support || "");
     setWizardStep(1);
     setWizardOpen(true);
+    // Load existing order bumps for this checkout
+    if (c.offer_id) {
+      supabase.from("order_bumps").select("id, name, price, current_price, hash, description, label_bump, offer_id")
+        .eq("offer_id", c.offer_id)
+        .then(({ data }) => {
+          if (data) setFormBumps(data.map(b => ({
+            offer_id: b.offer_id, name: b.name, price: b.current_price || b.price || 0,
+            label_bump: b.label_bump || "OFERTA ESPECIAL", description: b.description || "",
+            hash: b.hash || null, image_url: null,
+          })));
+        });
+    }
   }
 
   function handleSave() {
