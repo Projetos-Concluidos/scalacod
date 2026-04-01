@@ -134,7 +134,8 @@ const Dashboard = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* Onboarding Checklist */}
+      <OnboardingChecklist />
       <div className="flex items-start justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-widest text-primary mb-1">Painel Geral</p>
