@@ -17,7 +17,6 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Authenticate user via JWT
     const authHeader = req.headers.get("authorization") || "";
     const token = authHeader.replace("Bearer ", "");
 
@@ -36,7 +35,6 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Get Logzz integration config
     const { data: integrations } = await supabase
       .from("integrations")
       .select("*")
@@ -47,14 +45,12 @@ Deno.serve(async (req) => {
     const logzzToken = (logzz?.config as any)?.bearer_token;
 
     if (!logzzToken) {
-      // Return empty silently (as per spec: if logzz_api_token not configured, return empty)
       return new Response(
         JSON.stringify({ success: true, offers: [] }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Call Logzz API
     console.log("[logzz-list-products] Calling GET /api/v1/products");
     const res = await fetch("https://app.logzz.com.br/api/v1/products", {
       method: "GET",
@@ -96,7 +92,6 @@ Deno.serve(async (req) => {
     console.log(`[logzz-list-products] Response type: ${typeof data}, keys: ${Object.keys(data || {}).join(",")}`);
     console.log(`[logzz-list-products] Preview: ${JSON.stringify(data).substring(0, 500)}`);
 
-    // Extract offers from role-based structure: { type, status, data: { producer: [...], affiliate: [...], coproducer: [...] } }
     const actualData = data?.data || data;
     const roles = ["producer", "affiliate", "coproducer"];
     const offers: any[] = [];
@@ -108,6 +103,15 @@ Deno.serve(async (req) => {
       for (const product of products) {
         const productName = product.name || "Produto Logzz";
         const productHash = product.hash || null;
+        const productDescription = product.description || null;
+        const productImageUrl = product.main_image_url || product.image_url || product.image || null;
+        const specs = product.specifications || product;
+        const productWeight = specs?.weight ?? null;
+        const productWidth = specs?.width ?? null;
+        const productHeight = specs?.height ?? null;
+        const productLength = specs?.length ?? null;
+        const productWarrantyDays = product.warranty_time ?? product.warranty_days ?? null;
+        const productCategories = product.categories || [];
         const productOffers = product.offers;
 
         if (Array.isArray(productOffers)) {
@@ -115,27 +119,48 @@ Deno.serve(async (req) => {
             offers.push({
               product_name: productName,
               product_hash: productHash,
+              product_description: productDescription,
+              product_image_url: productImageUrl,
+              product_weight: productWeight,
+              product_width: productWidth,
+              product_height: productHeight,
+              product_length: productLength,
+              product_warranty_days: productWarrantyDays,
+              product_categories: productCategories,
               offer_name: offer.name || productName,
               offer_hash: offer.hash || null,
               price: parseFloat(offer.price || "0"),
+              original_price: parseFloat(offer.original_price || offer.price || "0"),
+              scheduling_checkout_url: offer.scheduling_checkout_url || null,
+              expedition_checkout_url: offer.expedition_checkout_url || null,
               role,
             });
           }
         } else {
-          // Product without nested offers — treat product itself as an offer
           offers.push({
             product_name: productName,
             product_hash: productHash,
+            product_description: productDescription,
+            product_image_url: productImageUrl,
+            product_weight: productWeight,
+            product_width: productWidth,
+            product_height: productHeight,
+            product_length: productLength,
+            product_warranty_days: productWarrantyDays,
+            product_categories: productCategories,
             offer_name: productName,
             offer_hash: productHash,
             price: parseFloat(product.price || "0"),
+            original_price: parseFloat(product.original_price || product.price || "0"),
+            scheduling_checkout_url: null,
+            expedition_checkout_url: null,
             role,
           });
         }
       }
     }
 
-    // Also try flat array/object shapes as fallback
+    // Flat array fallback
     if (offers.length === 0) {
       let items: any[] = [];
       if (Array.isArray(data)) items = data;
@@ -147,9 +172,20 @@ Deno.serve(async (req) => {
         offers.push({
           product_name: item.product_name || item.name || "Produto",
           product_hash: item.product_hash || item.hash || null,
+          product_description: item.description || null,
+          product_image_url: item.main_image_url || item.image_url || null,
+          product_weight: item.weight ?? null,
+          product_width: item.width ?? null,
+          product_height: item.height ?? null,
+          product_length: item.length ?? null,
+          product_warranty_days: item.warranty_time ?? null,
+          product_categories: item.categories || [],
           offer_name: item.offer_name || item.name || "Oferta",
           offer_hash: item.offer_hash || item.hash || null,
           price: parseFloat(item.price || "0"),
+          original_price: parseFloat(item.original_price || item.price || "0"),
+          scheduling_checkout_url: item.scheduling_checkout_url || null,
+          expedition_checkout_url: item.expedition_checkout_url || null,
           role: item.role || "unknown",
         });
       }
