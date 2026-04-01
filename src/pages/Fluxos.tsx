@@ -261,6 +261,9 @@ const Fluxos = () => {
         subtitle="Gerencie suas automações e funis de WhatsApp com precisão cirúrgica."
         actions={
           <div className="flex items-center gap-3">
+            <button onClick={openGallery} className="flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted">
+              <LayoutTemplate className="h-4 w-4 text-primary" /> Templates
+            </button>
             <button onClick={() => setAiOpen(true)} className="flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted">
               <Sparkles className="h-4 w-4 text-primary" /> IA
             </button>
