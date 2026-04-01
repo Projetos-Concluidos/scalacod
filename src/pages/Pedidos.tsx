@@ -147,13 +147,14 @@ const Pedidos = () => {
     (result: DropResult) => {
       if (!result.destination) return;
       const newStatus = result.destination.droppableId;
+      const fromStatus = result.source.droppableId;
       const orderId = result.draggableId;
-      if (result.source.droppableId === newStatus) return;
+      if (fromStatus === newStatus) return;
       // Optimistic update
       queryClient.setQueryData<Order[]>(["orders"], (old) =>
         old?.map((o) => (o.id === orderId ? { ...o, status: newStatus } : o))
       );
-      updateStatusMutation.mutate({ id: orderId, status: newStatus });
+      updateStatusMutation.mutate({ id: orderId, status: newStatus, fromStatus });
       toast.success(`Pedido movido para ${newStatus}`);
     },
     [queryClient, updateStatusMutation]
