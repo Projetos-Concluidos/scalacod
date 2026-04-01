@@ -12,6 +12,7 @@ const MercadoPagoTab = () => {
   const { user } = useAuth();
   const [accessToken, setAccessToken] = useState("");
   const [publicKey, setPublicKey] = useState("");
+  const [processingFee, setProcessingFee] = useState("");
   const [showAccessToken, setShowAccessToken] = useState(false);
   const [isActive, setIsActive] = useState(false);
   const [testing, setTesting] = useState(false);
