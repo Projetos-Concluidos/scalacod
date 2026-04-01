@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { checkRateLimit, rateLimitResponse } from "../_shared/rate-limit.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -10,6 +11,14 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
+
+  // Rate limit: 30 requests per 60 seconds
+  const { limited } = await checkRateLimit(req, {
+    action: "checkout-api",
+    windowSeconds: 60,
+    maxAttempts: 30,
+  });
+  if (limited) return rateLimitResponse(corsHeaders, 60);
 
   try {
     const body = await req.json();

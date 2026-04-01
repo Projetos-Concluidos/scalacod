@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { checkRateLimit } from "../_shared/rate-limit.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -14,6 +15,20 @@ Deno.serve(async (req) => {
   if (req.method !== "POST") {
     return new Response(JSON.stringify({ error: "Method not allowed" }), {
       status: 405,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+  // Rate limit: 100 requests per 60s — silent (return 200, just skip insert)
+  const { limited } = await checkRateLimit(req, {
+    action: "pixel-event",
+    windowSeconds: 60,
+    maxAttempts: 100,
+    silent: true,
+  });
+  if (limited) {
+    return new Response(JSON.stringify({ ok: true }), {
+      status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
