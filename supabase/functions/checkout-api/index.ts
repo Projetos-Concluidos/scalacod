@@ -30,7 +30,7 @@ Deno.serve(async (req) => {
     );
 
     // Get user integrations (include inactive for test/sync actions)
-    const skipActiveFilter = ["test_connection", "sync_logzz_products"].includes(action);
+    const skipActiveFilter = ["test_connection", "sync_logzz_products", "test_logzz_mapping"].includes(action);
     let intQuery = supabase.from("integrations").select("*").eq("user_id", user_id);
     if (!skipActiveFilter) {
       intQuery = intQuery.eq("is_active", true);
