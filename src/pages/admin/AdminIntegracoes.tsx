@@ -241,6 +241,7 @@ const AdminIntegracoes = () => {
                 </div>
                 <p className="text-sm text-muted-foreground">{section.description}</p>
                 {renderSectionStatus(section)}
+              </CardHeader>
               <CardContent className="space-y-4">
                 {section.fields.map((field) => (
                   <div key={field.key} className="space-y-1">
