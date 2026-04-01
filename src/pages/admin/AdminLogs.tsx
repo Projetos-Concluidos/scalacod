@@ -11,6 +11,8 @@ interface LogEntry {
   action: string;
   metadata: Record<string, unknown> | null;
   created_at: string | null;
+  admin_email?: string;
+  target_email?: string;
 }
 
 const actionLabels: Record<string, { label: string; color: "default" | "secondary" | "destructive" | "outline" }> = {
@@ -31,7 +33,31 @@ const AdminLogs = () => {
         .select("*")
         .order("created_at", { ascending: false })
         .limit(100);
-      setLogs((data || []) as LogEntry[]);
+
+      if (data && data.length > 0) {
+        // Collect unique user IDs
+        const userIds = new Set<string>();
+        data.forEach((log) => {
+          userIds.add(log.admin_id);
+          if (log.target_user_id) userIds.add(log.target_user_id);
+        });
+
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("id, email")
+          .in("id", Array.from(userIds));
+
+        const emailMap = new Map(profiles?.map((p) => [p.id, p.email]) || []);
+
+        const enriched = data.map((log) => ({
+          ...log,
+          admin_email: emailMap.get(log.admin_id) || log.admin_id.slice(0, 8) + "...",
+          target_email: log.target_user_id ? emailMap.get(log.target_user_id) || log.target_user_id.slice(0, 8) + "..." : "—",
+        }));
+        setLogs(enriched as LogEntry[]);
+      } else {
+        setLogs([]);
+      }
       setLoading(false);
     };
     fetch();
@@ -62,12 +88,12 @@ const AdminLogs = () => {
               return (
                 <TableRow key={log.id}>
                   <TableCell><Badge variant={ac.color}>{ac.label}</Badge></TableCell>
-                  <TableCell className="font-mono text-xs">{log.admin_id.slice(0, 8)}...</TableCell>
-                  <TableCell className="font-mono text-xs">{log.target_user_id?.slice(0, 8) || "—"}...</TableCell>
+                  <TableCell className="text-sm">{log.admin_email}</TableCell>
+                  <TableCell className="text-sm">{log.target_email}</TableCell>
                   <TableCell className="text-xs text-muted-foreground max-w-[200px] truncate">
                     {log.metadata ? JSON.stringify(log.metadata) : "—"}
                   </TableCell>
-                  <TableCell>{log.created_at ? new Date(log.created_at).toLocaleString("pt-BR") : "—"}</TableCell>
+                  <TableCell className="text-sm">{log.created_at ? new Date(log.created_at).toLocaleString("pt-BR") : "—"}</TableCell>
                 </TableRow>
               );
             })}
