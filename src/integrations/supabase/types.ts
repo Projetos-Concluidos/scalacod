@@ -1384,6 +1384,27 @@ export type Database = {
           },
         ]
       }
+      system_config: {
+        Row: {
+          description: string | null
+          key: string
+          updated_at: string | null
+          value: Json | null
+        }
+        Insert: {
+          description?: string | null
+          key: string
+          updated_at?: string | null
+          value?: Json | null
+        }
+        Update: {
+          description?: string | null
+          key?: string
+          updated_at?: string | null
+          value?: Json | null
+        }
+        Relationships: []
+      }
       token_purchases: {
         Row: {
           amount: number
