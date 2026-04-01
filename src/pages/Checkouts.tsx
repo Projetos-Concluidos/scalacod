@@ -265,7 +265,7 @@ const Checkouts = () => {
 
   function handleSave() {
     if (!formName.trim()) return toast.error("Nome é obrigatório");
-    const slug = formName.trim().toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+    const slug = formName.trim().toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "").replace(/-+/g, "-").replace(/^-|-$/g, "");
     const payload: any = {
       name: formName.trim(),
       slug,
