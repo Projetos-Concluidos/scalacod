@@ -1107,22 +1107,55 @@ Deno.serve(async (req) => {
 
       console.log("[send_to_logzz] Payload:", JSON.stringify(logzzPayload));
 
-      // Use API v1 (not webhook) to bypass Cloudflare
+      // Try API v1 first, fallback to webhook if 403
       const logzzApiUrl = "https://app.logzz.com.br/api/v1/orders";
+      const browserUA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
       const logzzHeaders: Record<string, string> = {
         "Content-Type": "application/json",
         "Accept": "application/json",
+        "User-Agent": browserUA,
       };
-      if (bearerToken) logzzHeaders["Authorization"] = `Bearer ${bearerToken}`;
+      if (bearerToken) logzzHeaders["Authorization"] = `bearer ${bearerToken}`;
 
-      console.log("[send_to_logzz] Sending to API v1:", logzzApiUrl);
-      const logzzRes = await fetch(logzzApiUrl, {
+      // Attempt 1: API v1
+      console.log("[send_to_logzz] Attempt 1 - API v1:", logzzApiUrl);
+      let logzzRes = await fetch(logzzApiUrl, {
         method: "POST",
         headers: logzzHeaders,
         body: JSON.stringify(logzzPayload),
       });
-      const logzzBody = await logzzRes.text();
-      const endpoint = "api_v1";
+      let logzzBody = await logzzRes.text();
+      let endpoint = "api_v1";
+      console.log("[send_to_logzz] API v1 response:", logzzRes.status, logzzBody.substring(0, 300));
+
+      // If API v1 fails with 403, try webhook URL
+      if (logzzRes.status === 403 && webhookUrl) {
+        console.log("[send_to_logzz] Attempt 2 - Webhook:", webhookUrl);
+        logzzRes = await fetch(webhookUrl, {
+          method: "POST",
+          headers: logzzHeaders,
+          body: JSON.stringify(logzzPayload),
+          redirect: "manual",
+        });
+        logzzBody = await logzzRes.text();
+        endpoint = "webhook";
+        console.log("[send_to_logzz] Webhook response:", logzzRes.status, logzzBody.substring(0, 300));
+      }
+
+      // If both fail with 403, try API v1 with capital Bearer
+      if (logzzRes.status === 403) {
+        console.log("[send_to_logzz] Attempt 3 - API v1 with Bearer (capital)");
+        const altHeaders = { ...logzzHeaders };
+        if (bearerToken) altHeaders["Authorization"] = `Bearer ${bearerToken}`;
+        logzzRes = await fetch(logzzApiUrl, {
+          method: "POST",
+          headers: altHeaders,
+          body: JSON.stringify(logzzPayload),
+        });
+        logzzBody = await logzzRes.text();
+        endpoint = "api_v1_capital";
+        console.log("[send_to_logzz] Capital Bearer response:", logzzRes.status, logzzBody.substring(0, 300));
+      }
       console.log("[send_to_logzz] Webhook response:", logzzRes.status, logzzBody.substring(0, 500));
 
       if (logzzRes.status === 200 || logzzRes.status === 201) {
