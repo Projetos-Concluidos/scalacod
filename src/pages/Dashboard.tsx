@@ -162,8 +162,8 @@ const Dashboard = () => {
       </div>
 
       {/* Section 1 — Top metric cards */}
-      <div className="grid grid-cols-12 gap-4">
-        <div className="col-span-8 ninja-card flex flex-col justify-between">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+        <div className="lg:col-span-8 ninja-card flex flex-col justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Receita Estimada</p>
             <p className="mt-2 text-4xl font-extrabold text-foreground tracking-tight">
@@ -182,7 +182,7 @@ const Dashboard = () => {
           </div>
         </div>
 
-        <div className="col-span-2 ninja-card flex flex-col items-center justify-center text-center">
+        <div className="lg:col-span-2 ninja-card flex flex-col items-center justify-center text-center">
           <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10">
             <Eye className="h-7 w-7 text-primary" />
           </div>
@@ -191,7 +191,7 @@ const Dashboard = () => {
           <p className="mt-0.5 text-[11px] text-muted-foreground">Eventos disparados</p>
         </div>
 
-        <div className="col-span-2 ninja-card flex flex-col items-center justify-center text-center">
+        <div className="lg:col-span-2 ninja-card flex flex-col items-center justify-center text-center">
           <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-accent/10">
             <TrendingUp className="h-7 w-7 text-accent" />
           </div>
