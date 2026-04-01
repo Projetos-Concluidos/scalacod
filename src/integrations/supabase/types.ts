@@ -1204,6 +1204,8 @@ export type Database = {
           email: string
           id: string
           name: string
+          onboarding_dismissed: boolean | null
+          onboarding_dismissed_at: string | null
           plan: string | null
           plan_id: string | null
           store_name: string | null
@@ -1220,6 +1222,8 @@ export type Database = {
           email: string
           id: string
           name: string
+          onboarding_dismissed?: boolean | null
+          onboarding_dismissed_at?: string | null
           plan?: string | null
           plan_id?: string | null
           store_name?: string | null
@@ -1236,6 +1240,8 @@ export type Database = {
           email?: string
           id?: string
           name?: string
+          onboarding_dismissed?: boolean | null
+          onboarding_dismissed_at?: string | null
           plan?: string | null
           plan_id?: string | null
           store_name?: string | null

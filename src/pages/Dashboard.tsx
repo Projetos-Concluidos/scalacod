@@ -8,7 +8,7 @@ import {
   ResponsiveContainer, LineChart, Line
 } from "recharts";
 import EmptyState from "@/components/EmptyState";
-import OnboardingChecklist from "@/components/OnboardingChecklist";
+import OnboardingBanner from "@/components/OnboardingBanner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -134,8 +134,8 @@ const Dashboard = () => {
 
   return (
     <div className="space-y-6 w-full max-w-full min-w-0">
-      {/* Onboarding Checklist */}
-      <OnboardingChecklist />
+      {/* Onboarding Banner */}
+      <OnboardingBanner />
       <div className="flex items-start justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-widest text-primary mb-1">Painel Geral</p>

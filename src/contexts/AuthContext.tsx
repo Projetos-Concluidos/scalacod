@@ -15,6 +15,8 @@ interface Profile {
   trial_ends_at: string | null;
   subscription_ends_at: string | null;
   token_balance: number | null;
+  onboarding_dismissed: boolean | null;
+  onboarding_dismissed_at: string | null;
   role: string | null; // from user_roles table
 }
 
