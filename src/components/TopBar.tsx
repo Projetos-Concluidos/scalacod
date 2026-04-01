@@ -42,7 +42,7 @@ const TopBar = () => {
     : "Free";
 
   return (
-    <div className="sticky top-0 z-30 flex items-center justify-between gap-3 px-4 py-3 border-b border-border bg-card md:justify-end md:px-6 md:py-4">
+    <div className="sticky top-0 z-30 flex items-center justify-between gap-3 px-4 py-2 border-b border-border bg-card md:justify-end md:px-6 md:py-2.5">
       {/* Hamburger — mobile only */}
       <button
         onClick={open}
