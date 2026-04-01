@@ -281,7 +281,14 @@ const Vozes = () => {
     setCloneFiles([]);
   };
 
-  if (!gate.allowed) return <UpgradePrompt reason={gate.reason} />;
+  if (!gate.allowed) {
+    return (
+      <div>
+        <PageHeader title="Vozes" subtitle="Gerencie suas vozes, explore a biblioteca e clone novas vozes" />
+        <UpgradePrompt reason={gate.reason} />
+      </div>
+    );
+  }
 
   return (
     <div>

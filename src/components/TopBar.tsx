@@ -36,9 +36,12 @@ const TopBar = () => {
     ? profile.name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
     : "U";
 
-  const planLabel = profile?.plan === "pro" ? "Pro Account"
+  const isActive = ["active", "trial"].includes(profile?.subscription_status || "");
+  const planLabel = profile?.role === "superadmin" ? "Admin"
+    : profile?.plan === "pro" ? "Pro Account"
     : profile?.plan === "enterprise" ? "Enterprise"
     : profile?.plan === "starter" ? "Starter"
+    : isActive ? "Ativo"
     : "Free";
 
   return (

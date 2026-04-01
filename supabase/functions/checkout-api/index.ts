@@ -213,17 +213,46 @@ Deno.serve(async (req) => {
         }
         console.log("[create_order] Order created:", inserted?.id);
 
-        // Upsert lead
+        // Upsert lead + accumulate revenue (LTV)
         if (order_data.client_phone) {
-          const { error: leadErr } = await supabase.from("leads").upsert({
-            user_id,
-            name: order_data.client_name,
-            phone: order_data.client_phone,
-            email: order_data.client_email || null,
-            document: order_data.client_document || null,
-            status: "Confirmado",
-          }, { onConflict: "user_id,phone" });
-          if (leadErr) console.log("[create_order] Lead upsert error:", leadErr.message);
+          const orderValue = parseFloat(order_data.order_final_price || "0");
+
+          // Try to find existing lead first
+          const { data: existingLead } = await supabase
+            .from("leads")
+            .select("id, accumulated_revenue")
+            .eq("user_id", user_id)
+            .eq("phone", order_data.client_phone)
+            .maybeSingle();
+
+          if (existingLead) {
+            // Update existing lead: accumulate revenue
+            const newRevenue = (Number(existingLead.accumulated_revenue) || 0) + orderValue;
+            const { error: leadErr } = await supabase.from("leads").update({
+              name: order_data.client_name,
+              email: order_data.client_email || null,
+              document: order_data.client_document || null,
+              status: "Confirmado",
+              accumulated_revenue: newRevenue,
+              order_id: inserted?.id,
+            }).eq("id", existingLead.id);
+            if (leadErr) console.log("[create_order] Lead update error:", leadErr.message);
+            else console.log("[create_order] Lead LTV updated:", newRevenue);
+          } else {
+            // Insert new lead with initial revenue
+            const { error: leadErr } = await supabase.from("leads").insert({
+              user_id,
+              name: order_data.client_name,
+              phone: order_data.client_phone,
+              email: order_data.client_email || null,
+              document: order_data.client_document || null,
+              status: "Confirmado",
+              accumulated_revenue: orderValue,
+              order_id: inserted?.id,
+            });
+            if (leadErr) console.log("[create_order] Lead insert error:", leadErr.message);
+            else console.log("[create_order] Lead created with revenue:", orderValue);
+          }
         }
 
         // If logistics_type is logzz, delegate to dedicated logzz-create-order function
