@@ -284,18 +284,26 @@ const Dashboard = () => {
           <Eye className="h-4 w-4 text-primary" />
           <h3 className="text-sm font-bold text-foreground">Pixel Analytics</h3>
         </div>
-        <div className="flex flex-wrap gap-4 md:gap-0 md:grid md:grid-cols-7 md:divide-x md:divide-border">
-          {pixelStats.map((stat) => (
-            <div key={stat.label} className="flex flex-col items-start px-4 first:pl-0 last:pr-0">
-              <div className="flex items-center gap-1.5 mb-2">
-                <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: stat.color }} />
-                <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                  {stat.label}
-                </span>
+        <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 gap-4 md:gap-0 md:divide-x md:divide-border">
+          {pixelStats.map((stat) => {
+            const IconComp = stat.icon;
+            return (
+              <div key={stat.label} className="flex items-center gap-3 px-4 first:pl-0 last:pr-0">
+                <div
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
+                  style={{ backgroundColor: `${stat.color}15` }}
+                >
+                  <IconComp className="h-4 w-4" style={{ color: stat.color }} />
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground block">
+                    {stat.label}
+                  </span>
+                  <p className="text-xl font-extrabold text-foreground leading-tight">{stat.value}</p>
+                </div>
               </div>
-              <p className="text-2xl font-extrabold text-foreground">{stat.value}</p>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
