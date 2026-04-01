@@ -9,6 +9,7 @@ import {
   ScrollText,
   ArrowLeft,
   Shield,
+  Home,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
