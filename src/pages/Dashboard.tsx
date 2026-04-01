@@ -293,26 +293,36 @@ const Dashboard = () => {
                 </span>
               </div>
             </div>
-            <ResponsiveContainer width="100%" height={220}>
-              <AreaChart data={hourlyData}>
-                <defs>
-                  <linearGradient id="gradViews" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#10B981" stopOpacity={0.2} />
-                    <stop offset="100%" stopColor="#10B981" stopOpacity={0} />
-                  </linearGradient>
-                  <linearGradient id="gradInteracoes" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#F59E0B" stopOpacity={0.2} />
-                    <stop offset="100%" stopColor="#F59E0B" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                <XAxis dataKey="name" tick={{ fontSize: 10, fill: "#6B7280" }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 10, fill: "#6B7280" }} axisLine={false} tickLine={false} />
-                <Tooltip contentStyle={chartTooltipStyle} />
-                <Area type="monotone" dataKey="views" stroke="#10B981" strokeWidth={2} fill="url(#gradViews)" />
-                <Area type="monotone" dataKey="interacoes" stroke="#F59E0B" strokeWidth={2} fill="url(#gradInteracoes)" />
-              </AreaChart>
-            </ResponsiveContainer>
+            {hasPixelData ? (
+              <ResponsiveContainer width="100%" height={220}>
+                <AreaChart data={hourlyData}>
+                  <defs>
+                    <linearGradient id="gradViews" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#10B981" stopOpacity={0.2} />
+                      <stop offset="100%" stopColor="#10B981" stopOpacity={0} />
+                    </linearGradient>
+                    <linearGradient id="gradInteracoes" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#F59E0B" stopOpacity={0.2} />
+                      <stop offset="100%" stopColor="#F59E0B" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                  <XAxis dataKey="name" tick={{ fontSize: 10, fill: "#6B7280" }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 10, fill: "#6B7280" }} axisLine={false} tickLine={false} />
+                  <Tooltip contentStyle={chartTooltipStyle} />
+                  <Area type="monotone" dataKey="views" stroke="#10B981" strokeWidth={2} fill="url(#gradViews)" />
+                  <Area type="monotone" dataKey="interacoes" stroke="#F59E0B" strokeWidth={2} fill="url(#gradInteracoes)" />
+                </AreaChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex flex-col items-center justify-center h-[220px] text-center">
+                <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10">
+                  <MousePointerClick className="h-7 w-7 text-primary" />
+                </div>
+                <p className="text-sm font-semibold text-foreground mb-1">Sem dados de engajamento ainda</p>
+                <p className="text-xs text-muted-foreground max-w-xs">Views e interações dos visitantes aparecerão aqui automaticamente em tempo real.</p>
+              </div>
+            )}
           </div>
         </div>
 
