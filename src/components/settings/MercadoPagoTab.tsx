@@ -32,6 +32,7 @@ const MercadoPagoTab = () => {
         const config = data.config as any;
         setAccessToken(config?.access_token || "");
         setPublicKey(config?.public_key || "");
+        setProcessingFee(config?.processing_fee_percent?.toString() || "");
         setIsActive(data.is_active ?? false);
       }
     };
