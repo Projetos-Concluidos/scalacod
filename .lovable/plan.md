@@ -1,31 +1,35 @@
 
 
-# Adicionar URL de Webhook na EvolutionTab
+# Fix: Status Evolution API Sempre DESCONECTADO
 
-## Problema
-O campo de URL de Webhook (configurada automaticamente) foi removido durante a simplificação do componente. O usuário precisa ver essa informação com botão de copiar.
+## Causa Raiz
+
+A tabela `whatsapp_instances` **não possui** um índice UNIQUE em `(user_id, provider)`. O edge function usa `upsert` com `onConflict: "user_id,provider"`, que falha silenciosamente porque não existe essa constraint. Resultado: nenhum registro é salvo no banco, e na recarga da página o status é sempre "desconectado".
 
 ## Solução
 
-Adicionar um campo read-only abaixo dos badges de status mostrando a URL do webhook gerada automaticamente, com botão de copiar — exatamente como na screenshot.
+### 1. Migration: Adicionar UNIQUE constraint
 
-### Mudanças em `src/components/whatsapp/EvolutionTab.tsx`
-
-1. Adicionar import de `Copy` do lucide-react
-2. Construir a URL do webhook: `${VITE_SUPABASE_URL}/functions/v1/whatsapp-webhook?user_id=${user.id}&provider=evolution`
-3. Renderizar campo read-only com label "URL de Webhook (configurada automaticamente)" e botão de copiar
-4. Posicionar entre os badges de status e o bloco de ação (criar instância / QR code / conectado)
-
-### UI resultante
-```text
-URL de Webhook (configurada automaticamente)
-[https://xxx.supabase.co/functions/v1/whatsapp-webhook?user_id=...&provider=evolution  📋]
+```sql
+CREATE UNIQUE INDEX IF NOT EXISTS whatsapp_instances_user_provider_unique 
+ON public.whatsapp_instances (user_id, provider);
 ```
 
-O campo será visível em todos os estados (conectado, desconectado, QR ready).
+### 2. Edge Function: Fallback para INSERT caso upsert falhe
 
-### Arquivo alterado
+No `evolution-instance/index.ts`, trocar os `upsert` por lógica de "select → update ou insert" para maior robustez, caso haja dados duplicados pré-existentes.
+
+Alternativamente, manter o upsert mas garantir que a constraint existe (a migration resolve).
+
+### 3. Adicionar console.log no cliente para debug
+
+No `EvolutionTab.tsx`, adicionar logs na `fetchInstance` para capturar o resultado da query ao DB e da chamada de status ao edge function. Isso ajuda a diagnosticar problemas futuros.
+
+## Arquivos alterados
+
 | Arquivo | Ação |
 |---------|------|
-| `src/components/whatsapp/EvolutionTab.tsx` | Adicionar campo de webhook URL com copy button |
+| Migration SQL | Adicionar UNIQUE constraint em `(user_id, provider)` |
+| `supabase/functions/evolution-instance/index.ts` | Adicionar fallback insert/update caso upsert falhe |
+| `src/components/whatsapp/EvolutionTab.tsx` | Adicionar console.logs de debug na fetchInstance |
 
