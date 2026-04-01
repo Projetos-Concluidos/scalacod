@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { CheckCircle, Loader2, Send, RefreshCw, LogOut, AlertTriangle, Wifi, WifiOff } from "lucide-react";
+import { CheckCircle, Loader2, Send, RefreshCw, LogOut, AlertTriangle, Wifi, WifiOff, Copy } from "lucide-react";
 import InfoTooltip from "@/components/InfoTooltip";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -243,6 +243,33 @@ const EvolutionTab = () => {
           </Badge>
         )}
       </div>
+
+      {/* Webhook URL */}
+      {user && (
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium text-muted-foreground">
+            URL de Webhook (configurada automaticamente)
+          </label>
+          <div className="flex gap-2">
+            <input
+              readOnly
+              value={`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/whatsapp-webhook?user_id=${user.id}&provider=evolution`}
+              className="flex h-10 w-full rounded-md border border-input bg-muted/50 px-3 py-2 text-xs font-mono text-muted-foreground ring-offset-background focus-visible:outline-none"
+            />
+            <button
+              type="button"
+              onClick={() => {
+                const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/whatsapp-webhook?user_id=${user.id}&provider=evolution`;
+                navigator.clipboard.writeText(url);
+                toast.success("URL copiada!");
+              }}
+              className="flex h-10 items-center justify-center rounded-md border border-input bg-background px-3 hover:bg-muted"
+            >
+              <Copy className="h-4 w-4 text-muted-foreground" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* API not configured warning */}
       {apiConfigured === false && status !== "connected" && (
