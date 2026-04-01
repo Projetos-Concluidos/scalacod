@@ -254,11 +254,11 @@ const Pedidos = () => {
               const meta = statusMeta(status);
               const items = columns[status] || [];
               return (
-                <div key={status} className="min-w-[270px] w-[270px] flex flex-col">
+                <div key={status} className="min-w-[270px] w-[270px] flex flex-col" role="group" aria-label={`Coluna ${status} — ${items.length} pedidos`}>
                   <div className="mb-2 flex items-center gap-2 px-1">
-                    <span className={`h-2.5 w-2.5 rounded-full ${meta.color}`} />
+                    <span className={`h-2.5 w-2.5 rounded-full ${meta.color}`} aria-hidden="true" />
                     <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">{status}</h3>
-                    <Badge variant="secondary" className="h-5 min-w-5 justify-center text-[10px] font-bold bg-muted text-muted-foreground">
+                    <Badge variant="secondary" className="h-5 min-w-5 justify-center text-[10px] font-bold bg-muted text-muted-foreground" aria-label={`${items.length} pedidos`}>
                       {items.length}
                     </Badge>
                   </div>
@@ -267,6 +267,8 @@ const Pedidos = () => {
                       <div
                         ref={provided.innerRef}
                         {...provided.droppableProps}
+                        role="list"
+                        aria-label={`Pedidos com status ${status}`}
                         className={`flex-1 rounded-xl border p-2 space-y-2 min-h-[200px] max-h-[calc(100vh-340px)] overflow-y-auto transition-colors ${
                           snapshot.isDraggingOver
                             ? "border-primary/40 bg-primary/5"
