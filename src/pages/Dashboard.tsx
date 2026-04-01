@@ -288,19 +288,12 @@ const Dashboard = () => {
           {pixelStats.map((stat) => {
             const IconComp = stat.icon;
             return (
-              <div key={stat.label} className="flex items-center gap-3 px-4 first:pl-0 last:pr-0">
-                <div
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
-                  style={{ backgroundColor: `${stat.color}15` }}
-                >
-                  <IconComp className="h-4 w-4" style={{ color: stat.color }} />
-                </div>
-                <div>
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground block">
-                    {stat.label}
-                  </span>
-                  <p className="text-xl font-extrabold text-foreground leading-tight">{stat.value}</p>
-                </div>
+              <div key={stat.label} className="flex flex-col items-center gap-1 px-4 first:pl-0 last:pr-0">
+                <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                  <IconComp className="h-3.5 w-3.5" style={{ color: stat.color }} />
+                  {stat.label}
+                </span>
+                <p className="text-lg font-extrabold text-foreground leading-tight">{stat.value}</p>
               </div>
             );
           })}
