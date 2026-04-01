@@ -37,9 +37,20 @@ type CheckoutWithOffer = {
 type LogzzOffer = {
   product_name: string;
   product_hash: string | null;
+  product_description: string | null;
+  product_image_url: string | null;
+  product_weight: number | null;
+  product_width: number | null;
+  product_height: number | null;
+  product_length: number | null;
+  product_warranty_days: number | null;
+  product_categories: any[];
   offer_name: string;
   offer_hash: string | null;
   price: number;
+  original_price: number;
+  scheduling_checkout_url: string | null;
+  expedition_checkout_url: string | null;
   role: string;
 };
 
