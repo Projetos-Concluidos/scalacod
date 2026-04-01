@@ -221,13 +221,6 @@ const CheckoutPublic = () => {
     const cep = form.cep.replace(/\D/g, "");
     if (cep.length !== 8) return;
     setCepLoading(true);
-    try {
-      const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
-      const data = await res.json();
-      if (!data.erro) {
-        setForm((prev) => ({ ...prev, street: data.logradouro || "", district: data.bairro || "", city: data.localidade || "", state: data.uf || "" }));
-      }
-    } catch { /* ignore */ }
     track("cep_check", { cep });
     await checkDeliveryProvider(cep);
     setCepLoading(false);
@@ -242,12 +235,36 @@ const CheckoutPublic = () => {
         body: JSON.stringify({ action: "check_delivery", user_id: checkout?.user_id, cep: cep.replace(/\D/g, "") }),
       });
       const data = await res.json();
+      console.log("[Checkout] Response da edge function checkout-api:", JSON.stringify(data));
+      console.log("[Checkout] Provider:", data?.provider, "Datas:", data?.dates?.length);
+
+      // Auto-fill address from edge function response (ViaCEP enrichment)
+      if (data.street || data.neighborhood || data.city || data.state) {
+        console.log("[Checkout] Preenchendo endereço:", data.street, data.neighborhood, data.city, data.state);
+        setForm((prev) => ({
+          ...prev,
+          street: data.street || prev.street,
+          district: data.neighborhood || prev.district,
+          city: data.city || prev.city,
+          state: data.state || prev.state,
+        }));
+      }
+
       if (data.provider === "logzz" && data.dates?.length > 0) {
         setProvider("logzz"); setDeliveryDates(data.dates);
       } else {
         setProvider("coinzz"); setDeliveryDates([]);
       }
-    } catch {
+    } catch (err) {
+      console.error("[Checkout] Erro ao verificar CEP:", err);
+      // Fallback: try ViaCEP directly
+      try {
+        const viaCepRes = await fetch(`https://viacep.com.br/ws/${cep.replace(/\D/g, "")}/json/`);
+        const viaCepData = await viaCepRes.json();
+        if (!viaCepData.erro) {
+          setForm((prev) => ({ ...prev, street: viaCepData.logradouro || "", district: viaCepData.bairro || "", city: viaCepData.localidade || "", state: viaCepData.uf || "" }));
+        }
+      } catch { /* ignore */ }
       setProvider("coinzz"); setDeliveryDates([]);
     }
     setDeliveryChecked(true);
