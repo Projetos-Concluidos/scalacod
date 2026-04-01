@@ -92,13 +92,53 @@ Deno.serve(async (req) => {
         });
         const rawCep = await res.text();
         console.log("[CEP] Logzz response status:", res.status);
+        console.log("[CEP] Logzz raw body:", rawCep.substring(0, 800));
+        
+        if (res.status === 403) throw new Error("Logzz 403 Forbidden - token may be expired");
+        if (res.status >= 300) throw new Error(`Logzz returned status ${res.status}`);
+        
         let data: any;
-        try { data = JSON.parse(rawCep); } catch { throw new Error("Invalid Logzz response"); }
-        console.log("[CEP] Logzz success:", data.success, "dates:", data.data?.response?.dates_available?.length || 0, "errors:", data.errors);
+        try { data = JSON.parse(rawCep); } catch { throw new Error("Invalid Logzz JSON response"); }
+        
+        // Resilient date extraction - try multiple response structures
+        let datesAvailable: any[] = [];
+        let respObj: any = null;
+        
+        // Structure 1: { data: { response: { dates_available: [...] } } }
+        if (data?.data?.response?.dates_available?.length > 0) {
+          datesAvailable = data.data.response.dates_available;
+          respObj = data.data.response;
+        }
+        // Structure 2: { response: { dates_available: [...] } }
+        else if (data?.response?.dates_available?.length > 0) {
+          datesAvailable = data.response.dates_available;
+          respObj = data.response;
+        }
+        // Structure 3: { data: { dates_available: [...] } }
+        else if (data?.data?.dates_available?.length > 0) {
+          datesAvailable = data.data.dates_available;
+          respObj = data.data;
+        }
+        // Structure 4: { dates_available: [...] }
+        else if (data?.dates_available?.length > 0) {
+          datesAvailable = data.dates_available;
+          respObj = data;
+        }
+        // Structure 5: root is array of dates
+        else if (Array.isArray(data) && data.length > 0 && data[0]?.date) {
+          datesAvailable = data;
+          respObj = {};
+        }
+        // Structure 6: { data: [...] } flat array
+        else if (Array.isArray(data?.data) && data.data.length > 0 && data.data[0]?.date) {
+          datesAvailable = data.data;
+          respObj = {};
+        }
+        
+        console.log("[CEP] Parsed dates_available:", datesAvailable.length, "keys:", Object.keys(data || {}).join(","));
 
-        if (data.success && data.data?.response?.dates_available?.length > 0) {
-          const resp = data.data.response;
-          const dates = resp.dates_available.map((d: any) => ({
+        if (datesAvailable.length > 0) {
+          const dates = datesAvailable.map((d: any) => ({
             date: d.date, type: d.type || "Padrão", price: d.price || 0,
           }));
           const addr = await fetchViaCep(cleanCep);
@@ -106,8 +146,8 @@ Deno.serve(async (req) => {
           return new Response(
             JSON.stringify({
               provider: "logzz", dates, ...addr, zipCode: cleanCep,
-              city: resp.city || addr.city, state: resp.state || addr.state,
-              operationName: resp.local_operation_name,
+              city: respObj?.city || addr.city, state: respObj?.state || addr.state,
+              operationName: respObj?.local_operation_name,
             }),
             { headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
@@ -125,6 +165,74 @@ Deno.serve(async (req) => {
           }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
+      }
+    }
+
+    // ─── ACTION: create_order ─────────────────────────
+    if (action === "create_order") {
+      if (!order_data) {
+        return new Response(JSON.stringify({ error: "order_data required" }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      try {
+        console.log("[create_order] Creating order for user:", user_id);
+        const { data: inserted, error: orderErr } = await supabase.from("orders").insert({
+          user_id,
+          order_number: order_data.order_number,
+          checkout_id: order_data.checkout_id || null,
+          offer_id: order_data.offer_id || null,
+          client_name: order_data.client_name,
+          client_email: order_data.client_email || null,
+          client_document: order_data.client_document || null,
+          client_phone: order_data.client_phone,
+          client_zip_code: order_data.client_zip_code,
+          client_address: order_data.client_address,
+          client_address_number: order_data.client_address_number,
+          client_address_comp: order_data.client_address_comp || null,
+          client_address_district: order_data.client_address_district,
+          client_address_city: order_data.client_address_city,
+          client_address_state: order_data.client_address_state,
+          order_final_price: order_data.order_final_price,
+          shipping_value: order_data.shipping_value || 0,
+          status: order_data.status || "Aguardando",
+          logistics_type: order_data.logistics_type || "logzz",
+          delivery_date: order_data.delivery_date || null,
+          payment_method: order_data.payment_method || null,
+          utm_source: order_data.utm_source || null,
+          utm_medium: order_data.utm_medium || null,
+          utm_campaign: order_data.utm_campaign || null,
+          utm_content: order_data.utm_content || null,
+          utm_term: order_data.utm_term || null,
+          utm_id: order_data.utm_id || null,
+        }).select("id").single();
+
+        if (orderErr) {
+          console.error("[create_order] Order insert error:", orderErr.message);
+          throw new Error(orderErr.message);
+        }
+        console.log("[create_order] Order created:", inserted?.id);
+
+        // Upsert lead
+        if (order_data.client_phone) {
+          const { error: leadErr } = await supabase.from("leads").upsert({
+            user_id,
+            name: order_data.client_name,
+            phone: order_data.client_phone,
+            email: order_data.client_email || null,
+            document: order_data.client_document || null,
+            status: "Confirmado",
+          }, { onConflict: "user_id,phone" });
+          if (leadErr) console.log("[create_order] Lead upsert error:", leadErr.message);
+        }
+
+        return new Response(JSON.stringify({ order_id: inserted?.id }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      } catch (e) {
+        return new Response(JSON.stringify({ error: e.message }), {
+          status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
     }
 

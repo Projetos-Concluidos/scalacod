@@ -398,28 +398,48 @@ const CheckoutPublic = () => {
       const num = generateOrderNumber();
       setOrderNumber(num);
       const utm = getUTM();
-      const { data: inserted, error } = await supabase.from("orders").insert({
-        user_id: checkout.user_id, order_number: num, checkout_id: checkout.id, offer_id: offer.id,
-        client_name: form.name, client_email: form.email || null,
-        client_document: form.cpf.replace(/\D/g, "") || null,
-        client_phone: form.phone.replace(/\D/g, ""),
-        client_zip_code: form.cep.replace(/\D/g, ""),
-        client_address: form.street, client_address_number: form.number,
-        client_address_comp: form.complement || null, client_address_district: form.district,
-        client_address_city: form.city, client_address_state: form.state,
-        order_final_price: totalPrice, shipping_value: shippingPrice,
-        status: "Aguardando", logistics_type: provider || "logzz",
-        delivery_date: provider === "logzz" && selectedDate ? selectedDate.date : null,
-        payment_method: provider === "logzz" ? "afterpay" : paymentMethod,
-        utm_source: utm.utm_source || null, utm_medium: utm.utm_medium || null,
-        utm_campaign: utm.utm_campaign || null, utm_content: utm.utm_content || null,
-        utm_term: utm.utm_term || null, utm_id: utm.utm_id || null,
-      }).select("id").single();
-      if (error) throw error;
-      await supabase.from("leads").upsert({
-        user_id: checkout.user_id, name: form.name, phone: form.phone.replace(/\D/g, ""),
-        email: form.email || null, document: form.cpf.replace(/\D/g, "") || null, status: "Confirmado",
-      }, { onConflict: "user_id,phone" }).select();
+      
+      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+      const res = await fetch(`https://${projectId}.supabase.co/functions/v1/checkout-api`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "create_order",
+          user_id: checkout.user_id,
+          order_data: {
+            order_number: num,
+            checkout_id: checkout.id,
+            offer_id: offer.id,
+            client_name: form.name,
+            client_email: form.email || null,
+            client_document: form.cpf.replace(/\D/g, "") || null,
+            client_phone: form.phone.replace(/\D/g, ""),
+            client_zip_code: form.cep.replace(/\D/g, ""),
+            client_address: form.street,
+            client_address_number: form.number,
+            client_address_comp: form.complement || null,
+            client_address_district: form.district,
+            client_address_city: form.city,
+            client_address_state: form.state,
+            order_final_price: totalPrice,
+            shipping_value: shippingPrice,
+            status: "Aguardando",
+            logistics_type: provider || "logzz",
+            delivery_date: provider === "logzz" && selectedDate ? selectedDate.date : null,
+            payment_method: provider === "logzz" ? "afterpay" : paymentMethod,
+            utm_source: utm.utm_source || null,
+            utm_medium: utm.utm_medium || null,
+            utm_campaign: utm.utm_campaign || null,
+            utm_content: utm.utm_content || null,
+            utm_term: utm.utm_term || null,
+            utm_id: utm.utm_id || null,
+          },
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || "Erro ao criar pedido");
+      const orderId = data.order_id;
+
       track("order_confirmed", { order_number: num });
 
       // FB Pixel Purchase (client-side)
@@ -450,7 +470,7 @@ const CheckoutPublic = () => {
       // FB Lead event
       if (fbPixelRef.current) fbPixelRef.current.lead(totalPrice);
 
-      return inserted?.id || null;
+      return orderId || null;
     } catch (e: any) {
       toast.error(e.message || "Erro ao criar pedido");
       return null;
