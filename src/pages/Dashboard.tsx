@@ -48,6 +48,9 @@ function getDateRange(period: string): { from: string; to: string } {
 const Dashboard = () => {
   const { user } = useAuth();
   const [activePeriod, setActivePeriod] = useState("Hoje");
+  const [customDateFrom, setCustomDateFrom] = useState<Date | undefined>();
+  const [customDateTo, setCustomDateTo] = useState<Date | undefined>();
+  const [calendarOpen, setCalendarOpen] = useState(false);
   const [metrics, setMetrics] = useState({
     revenue: 0, orderCount: 0, visitors: 0, pageviews: 0,
     interactions: 0, conversions: 0, abandonment: 0, coinzzPaid: 0, pixelTotal: 0,
