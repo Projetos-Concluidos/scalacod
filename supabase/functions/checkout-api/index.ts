@@ -972,6 +972,42 @@ Deno.serve(async (req) => {
         raw_payload: payload || { raw_status: rawStatus },
       });
 
+      // P1: Trigger flow notifications for this status change
+      if (fromStatus !== newStatus) {
+        try {
+          // Get order user_id for trigger-flow
+          const { data: fullOrder } = await supabase
+            .from("orders")
+            .select("user_id")
+            .eq("id", order.id)
+            .single();
+
+          if (fullOrder?.user_id) {
+            const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+            const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+            console.log(`[process_logzz_webhook] Triggering flows for status change: ${fromStatus} → ${newStatus}`);
+            
+            const triggerRes = await fetch(`${supabaseUrl}/functions/v1/trigger-flow`, {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${serviceKey}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                userId: fullOrder.user_id,
+                orderId: order.id,
+                newStatus,
+                triggerEvent: "order_status_changed",
+              }),
+            });
+            const triggerResult = await triggerRes.json();
+            console.log(`[process_logzz_webhook] trigger-flow result:`, JSON.stringify(triggerResult));
+          }
+        } catch (triggerErr: any) {
+          console.error(`[process_logzz_webhook] trigger-flow error (non-blocking):`, triggerErr.message);
+        }
+      }
+
       return new Response(JSON.stringify({
         success: true, from: fromStatus, to: newStatus, order_id: order.id,
       }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });

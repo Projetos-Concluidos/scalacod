@@ -65,10 +65,28 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-    // Execute each matching flow
+    // P3: Send-once — check flow_executions for duplicate prevention
     const results = [];
     for (const flow of flows) {
       try {
+        // Check if this exact flow+order+status was already executed successfully
+        if (orderId) {
+          const { data: existingExec } = await supabase
+            .from("flow_executions")
+            .select("id")
+            .eq("flow_id", flow.id)
+            .eq("order_id", orderId)
+            .eq("status", "completed")
+            .limit(1)
+            .maybeSingle();
+
+          if (existingExec) {
+            console.log(`[trigger-flow] Skipping flow "${flow.name}" — already executed for order ${orderId}`);
+            results.push({ flow_id: flow.id, flow_name: flow.name, skipped: true, reason: "already_executed" });
+            continue;
+          }
+        }
+
         console.log(`[trigger-flow] Executing flow: ${flow.name} (${flow.id})`);
         const res = await fetch(`${supabaseUrl}/functions/v1/execute-flow`, {
           method: "POST",

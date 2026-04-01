@@ -645,7 +645,7 @@ const CheckoutPublic = () => {
             </div>
 
             {/* Product */}
-            <div className="flex items-center gap-3 rounded-xl border border-gray-100 bg-gray-50 p-3 text-left mb-4">
+            <div className="flex items-center gap-3 rounded-xl border border-gray-100 bg-gray-50 p-3 text-left mb-2">
               {product?.main_image_url ? (
                 <img src={product.main_image_url} alt={product.name} className="h-12 w-12 rounded-lg object-cover" />
               ) : (
@@ -653,8 +653,43 @@ const CheckoutPublic = () => {
               )}
               <div className="flex-1">
                 <p className="text-sm font-semibold text-gray-900">{product?.name}</p>
+                <p className="text-xs text-gray-500">1 unidade</p>
               </div>
               <p className="text-sm font-bold text-emerald-600">R$ {Number(offer?.price || 0).toFixed(2)}</p>
+            </div>
+
+            {/* Order Bumps purchased */}
+            {orderBumps.filter(b => selectedBumps.has(b.id)).length > 0 && (
+              <div className="rounded-xl border border-emerald-100 bg-emerald-50/50 p-3 text-left mb-4 space-y-2">
+                <p className="text-xs font-semibold text-emerald-700 uppercase tracking-wider flex items-center gap-1">
+                  <Plus className="h-3 w-3" /> Itens adicionais
+                </p>
+                {orderBumps.filter(b => selectedBumps.has(b.id)).map(b => (
+                  <div key={b.id} className="flex items-center justify-between py-1 border-t border-emerald-100 first:border-0">
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-gray-900">{b.name}</p>
+                      <p className="text-xs text-gray-500">1 unidade</p>
+                    </div>
+                    <p className="text-sm font-bold text-emerald-600">R$ {(b.current_price || b.price || 0).toFixed(2)}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Total breakdown */}
+            <div className="rounded-xl border border-gray-100 bg-gray-50 p-3 text-left mb-4">
+              <div className="space-y-1 text-sm">
+                <div className="flex justify-between"><span className="text-gray-500">Produto principal</span><span className="text-gray-800">R$ {Number(offer?.price || 0).toFixed(2)}</span></div>
+                {bumpsTotal > 0 && (
+                  <div className="flex justify-between"><span className="text-gray-500">Itens adicionais</span><span className="text-gray-800">R$ {bumpsTotal.toFixed(2)}</span></div>
+                )}
+                <div className="flex justify-between"><span className="text-gray-500">Frete</span><span className="text-emerald-600 font-medium">Grátis</span></div>
+                {mpFeeAmount > 0 && (
+                  <div className="flex justify-between"><span className="text-gray-500">Taxa de processamento</span><span className="text-gray-800">R$ {mpFeeAmount.toFixed(2)}</span></div>
+                )}
+                <div className="h-px bg-gray-200 my-1" />
+                <div className="flex justify-between font-bold text-base"><span className="text-gray-900">Total</span><span className="text-emerald-600">R$ {totalPrice.toFixed(2)}</span></div>
+              </div>
             </div>
 
             {/* Client data */}
