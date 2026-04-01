@@ -213,17 +213,46 @@ Deno.serve(async (req) => {
         }
         console.log("[create_order] Order created:", inserted?.id);
 
-        // Upsert lead
+        // Upsert lead + accumulate revenue (LTV)
         if (order_data.client_phone) {
-          const { error: leadErr } = await supabase.from("leads").upsert({
-            user_id,
-            name: order_data.client_name,
-            phone: order_data.client_phone,
-            email: order_data.client_email || null,
-            document: order_data.client_document || null,
-            status: "Confirmado",
-          }, { onConflict: "user_id,phone" });
-          if (leadErr) console.log("[create_order] Lead upsert error:", leadErr.message);
+          const orderValue = parseFloat(order_data.order_final_price || "0");
+
+          // Try to find existing lead first
+          const { data: existingLead } = await supabase
+            .from("leads")
+            .select("id, accumulated_revenue")
+            .eq("user_id", user_id)
+            .eq("phone", order_data.client_phone)
+            .maybeSingle();
+
+          if (existingLead) {
+            // Update existing lead: accumulate revenue
+            const newRevenue = (Number(existingLead.accumulated_revenue) || 0) + orderValue;
+            const { error: leadErr } = await supabase.from("leads").update({
+              name: order_data.client_name,
+              email: order_data.client_email || null,
+              document: order_data.client_document || null,
+              status: "Confirmado",
+              accumulated_revenue: newRevenue,
+              order_id: inserted?.id,
+            }).eq("id", existingLead.id);
+            if (leadErr) console.log("[create_order] Lead update error:", leadErr.message);
+            else console.log("[create_order] Lead LTV updated:", newRevenue);
+          } else {
+            // Insert new lead with initial revenue
+            const { error: leadErr } = await supabase.from("leads").insert({
+              user_id,
+              name: order_data.client_name,
+              phone: order_data.client_phone,
+              email: order_data.client_email || null,
+              document: order_data.client_document || null,
+              status: "Confirmado",
+              accumulated_revenue: orderValue,
+              order_id: inserted?.id,
+            });
+            if (leadErr) console.log("[create_order] Lead insert error:", leadErr.message);
+            else console.log("[create_order] Lead created with revenue:", orderValue);
+          }
         }
 
         // If logistics_type is logzz, delegate to dedicated logzz-create-order function
@@ -249,6 +278,45 @@ Deno.serve(async (req) => {
           } catch (logzzErr: any) {
             console.error("[create_order] Logzz sync error:", logzzErr.message);
           }
+        }
+
+        // Trigger automation flows for new order
+        try {
+          const supabaseUrl2 = Deno.env.get("SUPABASE_URL")!;
+          const serviceKey2 = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+          console.log("[create_order] Triggering flows for new order:", inserted?.id);
+          
+          // Trigger for order_created event
+          fetch(`${supabaseUrl2}/functions/v1/trigger-flow`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${serviceKey2}`,
+            },
+            body: JSON.stringify({
+              userId: user_id,
+              orderId: inserted?.id,
+              newStatus: order_data.status || "Aguardando",
+              triggerEvent: "order_created",
+            }),
+          }).catch(e => console.warn("[create_order] trigger-flow order_created error:", e.message));
+
+          // Also trigger for order_status_changed with initial status
+          fetch(`${supabaseUrl2}/functions/v1/trigger-flow`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${serviceKey2}`,
+            },
+            body: JSON.stringify({
+              userId: user_id,
+              orderId: inserted?.id,
+              newStatus: order_data.status || "Aguardando",
+              triggerEvent: "order_status_changed",
+            }),
+          }).catch(e => console.warn("[create_order] trigger-flow status_changed error:", e.message));
+        } catch (triggerErr: any) {
+          console.warn("[create_order] Trigger flow error:", triggerErr.message);
         }
 
         return new Response(JSON.stringify({ order_id: inserted?.id, logzz_order_id }), {
