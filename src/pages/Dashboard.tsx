@@ -1,16 +1,21 @@
 import { useState, useEffect, useCallback } from "react";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import {
   Eye, TrendingUp, Package, Users, BarChart3, MousePointerClick,
-  ShoppingCart, AlertTriangle, Coins, Calendar, FileText, MessageCircle
+  ShoppingCart, AlertTriangle, Coins, Calendar as CalendarIcon, FileText, MessageCircle
 } from "lucide-react";
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, LineChart, Line
 } from "recharts";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 import EmptyState from "@/components/EmptyState";
 import OnboardingBanner from "@/components/OnboardingBanner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { cn } from "@/lib/utils";
 
 const periods = ["Hoje", "Ontem", "7 dias", "15 dias", "30 dias", "Máximo"];
 
