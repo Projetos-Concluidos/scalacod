@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { ShoppingCart, CheckCircle, PauseCircle, Package, Plus, Search, Copy, Pencil, Trash2, ToggleLeft, ToggleRight, ExternalLink, RefreshCw, Loader2 } from "lucide-react";
+import { ShoppingCart, CheckCircle, PauseCircle, Package, Plus, Search, Copy, Pencil, Trash2, ToggleLeft, ToggleRight, ExternalLink, RefreshCw, Loader2, ShoppingBag } from "lucide-react";
 import PageHeader from "@/components/PageHeader";
 import StatCard from "@/components/StatCard";
 import EmptyState from "@/components/EmptyState";
@@ -82,6 +82,8 @@ const Checkouts = () => {
   const [syncingLogzz, setSyncingLogzz] = useState(false);
   const [logzzPopoverOpen, setLogzzPopoverOpen] = useState(false);
   const [selectedLogzzOffer, setSelectedLogzzOffer] = useState<LogzzOffer | null>(null);
+  const [formBumps, setFormBumps] = useState<Array<{ offer_id: string; name: string; price: number; label_bump: string; description: string; hash: string | null; image_url: string | null }>>([]);
+  const [bumpSearchQuery, setBumpSearchQuery] = useState("");
 
   const { data: checkouts = [], isLoading } = useQuery({
     queryKey: ["checkouts"],
@@ -132,8 +134,13 @@ const Checkouts = () => {
 
   const createMutation = useMutation({
     mutationFn: async (payload: any) => {
-      const { error } = await supabase.from("checkouts").insert(payload);
+      const { data, error } = await supabase.from("checkouts").insert(payload).select("id, offer_id").single();
       if (error) throw error;
+      // Save order bumps if enabled
+      if (payload.order_bump_enabled && payload.offer_id && formBumps.length > 0) {
+        await saveBumps(payload.offer_id);
+      }
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["checkouts"] });
@@ -147,6 +154,13 @@ const Checkouts = () => {
     mutationFn: async ({ id, ...payload }: any) => {
       const { error } = await supabase.from("checkouts").update(payload).eq("id", id);
       if (error) throw error;
+      // Save order bumps if enabled
+      if (payload.order_bump_enabled && payload.offer_id && formBumps.length > 0) {
+        await saveBumps(payload.offer_id);
+      } else if (!payload.order_bump_enabled && payload.offer_id) {
+        // Remove bumps if disabled
+        await supabase.from("order_bumps").delete().eq("offer_id", payload.offer_id);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["checkouts"] });
@@ -155,6 +169,23 @@ const Checkouts = () => {
     },
     onError: (e: any) => toast.error(e.message),
   });
+
+  async function saveBumps(offerId: string) {
+    // Delete existing bumps for this offer, then re-insert
+    await supabase.from("order_bumps").delete().eq("offer_id", offerId);
+    if (formBumps.length > 0) {
+      const bumpsToInsert = formBumps.map(b => ({
+        offer_id: offerId,
+        name: b.name,
+        price: b.price,
+        current_price: b.price,
+        hash: b.hash,
+        label_bump: b.label_bump || "OFERTA ESPECIAL",
+        description: b.description || null,
+      }));
+      await supabase.from("order_bumps").insert(bumpsToInsert);
+    }
+  }
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -195,6 +226,8 @@ const Checkouts = () => {
     setFormGoogleAnalyticsId("");
     setFormThankYouUrl("");
     setFormWhatsappSupport("");
+    setFormBumps([]);
+    setBumpSearchQuery("");
   }
 
   function openEdit(c: CheckoutWithOffer) {
@@ -215,6 +248,18 @@ const Checkouts = () => {
     setFormWhatsappSupport((c as any).whatsapp_support || "");
     setWizardStep(1);
     setWizardOpen(true);
+    // Load existing order bumps for this checkout
+    if (c.offer_id) {
+      supabase.from("order_bumps").select("id, name, price, current_price, hash, description, label_bump, offer_id")
+        .eq("offer_id", c.offer_id)
+        .then(({ data }) => {
+          if (data) setFormBumps(data.map(b => ({
+            offer_id: b.offer_id, name: b.name, price: b.current_price || b.price || 0,
+            label_bump: b.label_bump || "OFERTA ESPECIAL", description: b.description || "",
+            hash: b.hash || null, image_url: null,
+          })));
+        });
+    }
   }
 
   function handleSave() {
@@ -544,11 +589,112 @@ const Checkouts = () => {
 
           {wizardStep === 2 && (
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between p-3 rounded-xl bg-secondary/50 border border-border">
                 <div><Label>Order Bump</Label><p className="text-xs text-muted-foreground">Oferecer produto adicional no checkout</p></div>
                 <Switch checked={formOrderBump} onCheckedChange={setFormOrderBump} />
               </div>
-              <div className="flex items-center justify-between">
+
+              {formOrderBump && (
+                <div className="space-y-3">
+                  <Label className="text-sm">Produtos para Order Bump</Label>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                    <Input
+                      value={bumpSearchQuery}
+                      onChange={(e) => setBumpSearchQuery(e.target.value)}
+                      placeholder="Buscar oferta por nome..."
+                      className="pl-9 bg-input border-border text-sm"
+                    />
+                  </div>
+
+                  {bumpSearchQuery && (
+                    <div className="bg-secondary border border-border rounded-xl max-h-48 overflow-y-auto">
+                      {offers
+                        .filter((o) => {
+                          const q = bumpSearchQuery.toLowerCase();
+                          const prod = products.find((p) => p.id === o.product_id);
+                          return (
+                            o.name.toLowerCase().includes(q) ||
+                            prod?.name.toLowerCase().includes(q)
+                          );
+                        })
+                        .filter((o) => !formBumps.some((b) => b.offer_id === o.id))
+                        .map((o) => {
+                          const prod = products.find((p) => p.id === o.product_id);
+                          return (
+                            <button
+                              key={o.id}
+                              onClick={() => {
+                                setFormBumps((prev) => [
+                                  ...prev,
+                                  {
+                                    offer_id: o.id,
+                                    name: o.name,
+                                    price: Number(o.price),
+                                    label_bump: "OFERTA ESPECIAL",
+                                    description: "",
+                                    hash: null,
+                                    image_url: null,
+                                  },
+                                ]);
+                                setBumpSearchQuery("");
+                                toast.success(`"${o.name}" adicionado como order bump`);
+                              }}
+                              className="w-full flex items-center gap-3 p-3 hover:bg-muted text-left border-b border-border/50 last:border-0"
+                            >
+                              <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+                                <ShoppingBag className="h-4 w-4 text-muted-foreground" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-foreground truncate">{prod?.name} — {o.name}</p>
+                                <p className="text-xs text-primary">R$ {Number(o.price).toFixed(2)}</p>
+                              </div>
+                              <Plus className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                            </button>
+                          );
+                        })}
+                      {offers.filter((o) => {
+                        const q = bumpSearchQuery.toLowerCase();
+                        const prod = products.find((p) => p.id === o.product_id);
+                        return (o.name.toLowerCase().includes(q) || prod?.name.toLowerCase().includes(q)) && !formBumps.some((b) => b.offer_id === o.id);
+                      }).length === 0 && (
+                        <p className="p-3 text-sm text-muted-foreground text-center">Nenhuma oferta encontrada</p>
+                      )}
+                    </div>
+                  )}
+
+                  {formBumps.length > 0 && (
+                    <div className="space-y-2">
+                      <p className="text-xs text-muted-foreground">Bumps adicionados ({formBumps.length})</p>
+                      {formBumps.map((bump, i) => (
+                        <div key={bump.offer_id + i} className="flex items-center gap-3 p-3 bg-primary/5 border border-primary/10 rounded-xl">
+                          <span className="text-xs text-primary font-bold w-5 text-center">{i + 1}</span>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm text-foreground truncate">{bump.name}</p>
+                            <p className="text-xs text-primary">R$ {bump.price.toFixed(2)}</p>
+                          </div>
+                          <Input
+                            value={bump.label_bump}
+                            onChange={(e) => {
+                              setFormBumps((prev) => prev.map((b, j) => j === i ? { ...b, label_bump: e.target.value } : b));
+                            }}
+                            className="w-28 text-xs h-7 bg-input border-border"
+                            placeholder="Label"
+                          />
+                          <button
+                            onClick={() => setFormBumps((prev) => prev.filter((_, j) => j !== i))}
+                            className="p-1 text-destructive hover:text-destructive/80"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="flex items-center justify-between p-3 rounded-xl bg-secondary/50 border border-border">
                 <div><Label>Upsell</Label><p className="text-xs text-muted-foreground">Oferta pós-compra</p></div>
                 <Switch checked={formUpsell} onCheckedChange={setFormUpsell} />
               </div>
