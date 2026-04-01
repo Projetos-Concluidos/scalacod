@@ -58,7 +58,7 @@ Deno.serve(async (req) => {
     }
 
     const mpToken = (integration.config as any)?.access_token;
-    console.log(`[create-payment] MP token present: ${!!mpToken}, starts with: ${mpToken?.substring(0, 10) || "N/A"}`);
+    console.log(`[create-payment] MP token present: ${!!mpToken}`);
 
     if (!mpToken) {
       return new Response(JSON.stringify({
