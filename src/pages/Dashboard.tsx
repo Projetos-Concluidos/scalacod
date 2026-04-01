@@ -63,8 +63,15 @@ const Dashboard = () => {
   const [queueCount, setQueueCount] = useState(0);
 
   const loadData = useCallback(async () => {
-    if (!user) return;
-    const { from, to } = getDateRange(activePeriod);
+    let dateRange: { from: string; to: string };
+    if (activePeriod === "Personalizado" && customDateFrom) {
+      const fromDate = new Date(customDateFrom);
+      const toDate = customDateTo ? new Date(customDateTo.getTime() + 86400000) : new Date(fromDate.getTime() + 86400000);
+      dateRange = { from: fromDate.toISOString(), to: toDate.toISOString() };
+    } else {
+      dateRange = getDateRange(activePeriod);
+    }
+    const { from, to } = dateRange;
 
     const [pixelRes, ordersRes, coinzzRes, leadsRes, queueRes] = await Promise.all([
       supabase.from("pixel_events").select("event_type, created_at").eq("user_id", user.id).gte("created_at", from).lt("created_at", to),
