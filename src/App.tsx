@@ -35,6 +35,7 @@ import AdminIntegracoes from "@/pages/admin/AdminIntegracoes";
 import AdminLogs from "@/pages/admin/AdminLogs";
 import AdminHome from "@/pages/admin/AdminHome";
 import HomePub from "@/pages/Home";
+import Suporte from "@/pages/Suporte";
 
 const queryClient = new QueryClient();
 
@@ -64,6 +65,7 @@ const App = () => (
               <Route path="/disparos" element={<Disparos />} />
               <Route path="/whatsapp-cloud" element={<WhatsAppCloud />} />
               <Route path="/configuracoes" element={<Configuracoes />} />
+              <Route path="/suporte" element={<Suporte />} />
               <Route path="/upgrade" element={<Upgrade />} />
               <Route path="/subscription" element={<Subscription />} />
             </Route>
