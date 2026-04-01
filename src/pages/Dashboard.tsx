@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import {
   Eye, TrendingUp, Package, Users, BarChart3, MousePointerClick,
-  ShoppingCart, AlertTriangle, Coins, Calendar, FileText
+  ShoppingCart, AlertTriangle, Coins, Calendar, FileText, MessageCircle
 } from "lucide-react";
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -52,16 +52,18 @@ const Dashboard = () => {
   );
   const [sparkData, setSparkData] = useState(Array.from({ length: 12 }, () => ({ v: 0 })));
   const [recentLeads, setRecentLeads] = useState<any[]>([]);
+  const [queueCount, setQueueCount] = useState(0);
 
   const loadData = useCallback(async () => {
     if (!user) return;
     const { from, to } = getDateRange(activePeriod);
 
-    const [pixelRes, ordersRes, coinzzRes, leadsRes] = await Promise.all([
+    const [pixelRes, ordersRes, coinzzRes, leadsRes, queueRes] = await Promise.all([
       supabase.from("pixel_events").select("event_type, created_at").eq("user_id", user.id).gte("created_at", from).lt("created_at", to),
       supabase.from("orders").select("order_final_price, created_at, status").eq("user_id", user.id).gte("created_at", from).lt("created_at", to),
       supabase.from("orders").select("id", { count: "exact", head: true }).eq("user_id", user.id).eq("logistics_type", "coinzz").in("status", ["Aprovado", "Entregue"]).gte("created_at", from).lt("created_at", to),
       supabase.from("leads").select("id, name, phone, status, created_at").eq("user_id", user.id).order("created_at", { ascending: false }).limit(5),
+      supabase.from("message_queue").select("id", { count: "exact", head: true }).eq("user_id", user.id).eq("status", "pending"),
     ]);
 
     const pixels = pixelRes.data || [];
@@ -107,6 +109,7 @@ const Dashboard = () => {
     });
     setSparkData(spark);
     setRecentLeads(leadsRes.data || []);
+    setQueueCount(queueRes.count || 0);
   }, [user, activePeriod]);
 
   useEffect(() => { loadData(); }, [loadData]);
@@ -130,6 +133,7 @@ const Dashboard = () => {
     { label: "Conversão", value: `${metrics.conversions}%`, color: "#10B981", icon: TrendingUp },
     { label: "Abandono", value: `${metrics.abandonment}%`, color: "#F59E0B", icon: AlertTriangle },
     { label: "Coinzz Pagos", value: String(metrics.coinzzPaid), color: "#6B7280", icon: Coins },
+    { label: "Fila WhatsApp", value: String(queueCount), color: queueCount > 0 ? "#F59E0B" : "#10B981", icon: MessageCircle },
   ];
 
   return (

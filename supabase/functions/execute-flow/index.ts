@@ -145,7 +145,7 @@ Deno.serve(async (req) => {
     try {
       for (const node of sortedNodes) {
         console.log(`[execute-flow] Executing node type=${node.type || node.data?.type} id=${node.id}`);
-        await executeNode(node, ctx, targetPhone, flow.user_id, supabase);
+        await executeNode(node, ctx, targetPhone, flow.user_id, supabase, { orderId, flowId });
         nodesExecuted++;
       }
     } catch (e) {
@@ -232,7 +232,8 @@ async function executeNode(
   ctx: Record<string, string>,
   phone: string,
   userId: string,
-  supabase: any
+  supabase: any,
+  meta?: { orderId?: string; flowId?: string }
 ) {
   const nodeType = node.type || node.data?.type;
 
@@ -240,7 +241,7 @@ async function executeNode(
     case "text": {
       const message = interpolateVariables(node.data?.content || "", ctx);
       console.log(`[execute-flow] Sending text to ${phone}: "${message.substring(0, 80)}..."`);
-      await sendWhatsApp(userId, phone, message, supabase);
+      await sendWhatsApp(userId, phone, message, supabase, meta);
       break;
     }
 
@@ -312,32 +313,76 @@ async function executeNode(
   }
 }
 
-async function sendWhatsApp(userId: string, phone: string, content: string, supabase: any) {
+async function sendWhatsApp(
+  userId: string,
+  phone: string,
+  content: string,
+  supabase: any,
+  meta?: { orderId?: string; flowId?: string }
+) {
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-  const res = await fetch(`${supabaseUrl}/functions/v1/send-whatsapp-message`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${serviceKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      phone,
-      content,
-      direct: true,
-      userId, // Pass userId for service-to-service auth
-    }),
-  });
+  // Check if user has a connected instance before attempting send
+  const { data: instance } = await supabase
+    .from("whatsapp_instances")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("status", "connected")
+    .limit(1)
+    .maybeSingle();
 
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    console.error(`[execute-flow] WhatsApp send failed: ${res.status}`, err);
-    throw new Error(err.error || `WhatsApp send failed: ${res.status}`);
+  if (!instance) {
+    // No connected instance — queue the message for retry
+    console.log(`[execute-flow] No connected instance for user=${userId}, queuing message`);
+    await supabase.from("message_queue").insert({
+      user_id: userId,
+      phone,
+      message: content,
+      order_id: meta?.orderId || null,
+      flow_id: meta?.flowId || null,
+      status: "pending",
+      process_after: new Date().toISOString(),
+    });
+    return;
   }
 
-  const result = await res.json();
-  console.log(`[execute-flow] WhatsApp sent OK via ${result.provider}, msgId: ${result.message_id}`);
+  try {
+    const res = await fetch(`${supabaseUrl}/functions/v1/send-whatsapp-message`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${serviceKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        phone,
+        content,
+        direct: true,
+        userId,
+      }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || `WhatsApp send failed: ${res.status}`);
+    }
+
+    const result = await res.json();
+    console.log(`[execute-flow] WhatsApp sent OK via ${result.provider}, msgId: ${result.message_id}`);
+  } catch (e) {
+    // Send failed — queue for retry
+    console.error(`[execute-flow] Send failed, queuing: ${e.message}`);
+    await supabase.from("message_queue").insert({
+      user_id: userId,
+      phone,
+      message: content,
+      order_id: meta?.orderId || null,
+      flow_id: meta?.flowId || null,
+      status: "pending",
+      error_message: e.message,
+      process_after: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
+    });
+  }
 
   // Small delay between messages to avoid rate limiting
   await new Promise((resolve) => setTimeout(resolve, 1500));
