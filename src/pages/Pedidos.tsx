@@ -75,12 +75,23 @@ const Pedidos = () => {
   }, [user, queryClient]);
 
   const updateStatusMutation = useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: string }) => {
+    mutationFn: async ({ id, status, fromStatus }: { id: string; status: string; fromStatus?: string }) => {
       const { error } = await supabase.from("orders").update({ status }).eq("id", id);
       if (error) throw error;
 
+      // Record status history
+      supabase.from("order_status_history").insert({
+        order_id: id,
+        from_status: fromStatus || null,
+        to_status: status,
+        source: "kanban_drag",
+      }).then(({ error: histErr }) => {
+        if (histErr) console.warn("Status history insert error:", histErr);
+      });
+
       // Trigger automation flows for this status change
       if (user) {
+        console.log(`[Kanban] Triggering flow for status=${status} orderId=${id}`);
         supabase.functions.invoke("trigger-flow", {
           body: { userId: user.id, orderId: id, newStatus: status },
         }).catch((err: any) => console.warn("Flow trigger error:", err));
@@ -136,13 +147,14 @@ const Pedidos = () => {
     (result: DropResult) => {
       if (!result.destination) return;
       const newStatus = result.destination.droppableId;
+      const fromStatus = result.source.droppableId;
       const orderId = result.draggableId;
-      if (result.source.droppableId === newStatus) return;
+      if (fromStatus === newStatus) return;
       // Optimistic update
       queryClient.setQueryData<Order[]>(["orders"], (old) =>
         old?.map((o) => (o.id === orderId ? { ...o, status: newStatus } : o))
       );
-      updateStatusMutation.mutate({ id: orderId, status: newStatus });
+      updateStatusMutation.mutate({ id: orderId, status: newStatus, fromStatus });
       toast.success(`Pedido movido para ${newStatus}`);
     },
     [queryClient, updateStatusMutation]
