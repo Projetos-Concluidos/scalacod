@@ -197,6 +197,8 @@ const Checkouts = () => {
     setFormGoogleAnalyticsId("");
     setFormThankYouUrl("");
     setFormWhatsappSupport("");
+    setFormBumps([]);
+    setBumpSearchQuery("");
   }
 
   function openEdit(c: CheckoutWithOffer) {
