@@ -1090,24 +1090,39 @@ Deno.serve(async (req) => {
         affiliate_email: order.affiliate_email || "",
       };
 
+      // Fetch order bumps if any
+      const { data: orderBumps } = await supabase
+        .from("order_bumps")
+        .select("hash, product_id")
+        .eq("offer_id", order.offer_id || "");
+
+      // Add bumps to payload if present
+      if (orderBumps && orderBumps.length > 0) {
+        const bumps = orderBumps.map((b: any) => {
+          const bump: any = { hash: b.hash };
+          return bump;
+        });
+        (logzzPayload as any).bumps = bumps;
+      }
+
       console.log("[send_to_logzz] Payload:", JSON.stringify(logzzPayload));
 
+      // Use API v1 (not webhook) to bypass Cloudflare
+      const logzzApiUrl = "https://app.logzz.com.br/api/v1/orders";
       const logzzHeaders: Record<string, string> = {
         "Content-Type": "application/json",
         "Accept": "application/json",
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
       };
-      if (bearerToken) logzzHeaders["Authorization"] = `bearer ${bearerToken}`;
+      if (bearerToken) logzzHeaders["Authorization"] = `Bearer ${bearerToken}`;
 
-      console.log("[send_to_logzz] Sending to webhook:", webhookUrl);
-      const logzzRes = await fetch(webhookUrl, {
+      console.log("[send_to_logzz] Sending to API v1:", logzzApiUrl);
+      const logzzRes = await fetch(logzzApiUrl, {
         method: "POST",
         headers: logzzHeaders,
         body: JSON.stringify(logzzPayload),
-        redirect: "manual",
       });
       const logzzBody = await logzzRes.text();
-      const endpoint = "webhook";
+      const endpoint = "api_v1";
       console.log("[send_to_logzz] Webhook response:", logzzRes.status, logzzBody.substring(0, 500));
 
       if (logzzRes.status === 200 || logzzRes.status === 201) {
