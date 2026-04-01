@@ -285,6 +285,8 @@ const Pedidos = () => {
                                 ref={provided.innerRef}
                                 {...provided.draggableProps}
                                 {...provided.dragHandleProps}
+                                role="listitem"
+                                aria-label={`Pedido ${order.order_number || order.id.slice(0, 8)} — ${order.client_name} — R$ ${Number(order.order_final_price).toFixed(2)}`}
                                 className={`rounded-lg border bg-card p-3 transition-shadow cursor-grab active:cursor-grabbing ${
                                   snapshot.isDragging ? "shadow-lg shadow-primary/10 border-primary/30" : "border-border hover:border-primary/20"
                                 }`}
