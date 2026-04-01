@@ -111,6 +111,18 @@ const AppSidebar = () => {
 
         <div className="border-t border-sidebar-border px-3 py-3 space-y-0.5">
           <NavLink
+            to="/suporte"
+            className={cn(
+              "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
+              location.pathname === "/suporte"
+                ? "border-l-[3px] border-sidebar-primary bg-sidebar-accent text-sidebar-accent-foreground"
+                : "border-l-[3px] border-transparent text-sidebar-foreground hover:bg-white/5 hover:text-white"
+            )}
+          >
+            <HelpCircle className="h-[18px] w-[18px]" />
+            <span>Suporte</span>
+          </NavLink>
+          <NavLink
             to="/configuracoes"
             className={cn(
               "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",

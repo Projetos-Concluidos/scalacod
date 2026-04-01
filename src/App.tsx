@@ -65,6 +65,7 @@ const App = () => (
               <Route path="/disparos" element={<Disparos />} />
               <Route path="/whatsapp-cloud" element={<WhatsAppCloud />} />
               <Route path="/configuracoes" element={<Configuracoes />} />
+              <Route path="/suporte" element={<Suporte />} />
               <Route path="/upgrade" element={<Upgrade />} />
               <Route path="/subscription" element={<Subscription />} />
             </Route>
