@@ -919,6 +919,16 @@ Deno.serve(async (req) => {
       );
     }
 
+    // ─── ACTION: get_mp_fees ────────────────────────────
+    if (action === "get_mp_fees") {
+      const mp = getIntegration("mercadopago");
+      const feePercent = (mp?.config as any)?.processing_fee_percent || 0;
+      return new Response(
+        JSON.stringify({ processing_fee_percent: feePercent }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // ─── ACTION: get_mp_public_key ───────────────────────
     if (action === "get_mp_public_key") {
       const mp = getIntegration("mercadopago");

@@ -196,7 +196,7 @@ const MercadoPagoTab = () => {
       </div>
 
       {/* Public Key */}
-      <div className="mb-6 max-w-xl">
+      <div className="mb-4 max-w-xl">
         <label className="text-sm font-medium text-foreground">Public Key</label>
         <input
           type="text"
@@ -208,6 +208,29 @@ const MercadoPagoTab = () => {
         <p className="mt-1 text-xs text-muted-foreground">
           Usada no frontend para tokenizar o cartão de crédito do comprador (Bricks SDK).
         </p>
+      </div>
+
+      {/* Processing Fee */}
+      <div className="mb-6 max-w-xl">
+        <label className="text-sm font-medium text-foreground">Taxa de processamento (%)</label>
+        <input
+          type="number"
+          step="0.01"
+          min="0"
+          max="20"
+          value={processingFee}
+          onChange={(e) => setProcessingFee(e.target.value)}
+          placeholder="Ex: 4.99"
+          className="mt-1.5 h-10 w-full rounded-lg border border-border bg-input px-4 text-sm text-foreground focus:border-primary focus:outline-none"
+        />
+        <p className="mt-1 text-xs text-muted-foreground">
+          Percentual adicionado ao valor do pedido no checkout para cobrir taxas do gateway.
+        </p>
+        <div className="mt-2 rounded-md border border-border bg-secondary/30 px-3 py-2">
+          <p className="text-[10px] text-muted-foreground">
+            <strong>Referência de taxas MercadoPago:</strong> PIX ~0,99% · Cartão ~4,99% · Boleto ~R$ 3,49 fixo · Saldo MP ~4,99%
+          </p>
+        </div>
       </div>
 
       {/* Test result */}

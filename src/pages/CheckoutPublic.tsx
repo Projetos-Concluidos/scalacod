@@ -274,9 +274,31 @@ const CheckoutPublic = () => {
     setSelectedBumps((prev) => { const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next; });
   };
 
+  const [mpFeePercent, setMpFeePercent] = useState(0);
+
+  // Fetch MP processing fee
+  useEffect(() => {
+    if (!checkout) return;
+    const fetchFees = async () => {
+      try {
+        const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+        const res = await fetch(`https://${projectId}.supabase.co/functions/v1/checkout-api`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "get_mp_fees", user_id: checkout.user_id }),
+        });
+        const data = await res.json();
+        if (data.processing_fee_percent) setMpFeePercent(Number(data.processing_fee_percent));
+      } catch { /* no fee configured */ }
+    };
+    fetchFees();
+  }, [checkout]);
+
   const bumpsTotal = orderBumps.filter((b) => selectedBumps.has(b.id)).reduce((sum, b) => sum + (b.current_price || b.price || 0), 0);
-  const shippingPrice = provider === "logzz" && selectedDate ? selectedDate.price : 0;
-  const totalPrice = (offer?.price || 0) + bumpsTotal + shippingPrice;
+  const shippingPrice = 0; // Frete grátis
+  const basePrice = (offer?.price || 0) + bumpsTotal + shippingPrice;
+  const mpFeeAmount = provider === "coinzz" && mpFeePercent > 0 ? Math.round(basePrice * mpFeePercent) / 100 : 0;
+  const totalPrice = basePrice + mpFeeAmount;
 
   // Initialize MercadoPago Bricks when credit_card is selected on step 3
   useEffect(() => {
