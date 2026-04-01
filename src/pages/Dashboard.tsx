@@ -58,11 +58,12 @@ const Dashboard = () => {
     if (!user) return;
     const { from, to } = getDateRange(activePeriod);
 
-    const [pixelRes, ordersRes, coinzzRes, leadsRes] = await Promise.all([
+    const [pixelRes, ordersRes, coinzzRes, leadsRes, queueRes] = await Promise.all([
       supabase.from("pixel_events").select("event_type, created_at").eq("user_id", user.id).gte("created_at", from).lt("created_at", to),
       supabase.from("orders").select("order_final_price, created_at, status").eq("user_id", user.id).gte("created_at", from).lt("created_at", to),
       supabase.from("orders").select("id", { count: "exact", head: true }).eq("user_id", user.id).eq("logistics_type", "coinzz").in("status", ["Aprovado", "Entregue"]).gte("created_at", from).lt("created_at", to),
       supabase.from("leads").select("id, name, phone, status, created_at").eq("user_id", user.id).order("created_at", { ascending: false }).limit(5),
+      supabase.from("message_queue").select("id", { count: "exact", head: true }).eq("user_id", user.id).eq("status", "pending"),
     ]);
 
     const pixels = pixelRes.data || [];
