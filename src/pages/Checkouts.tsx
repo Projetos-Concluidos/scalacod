@@ -557,7 +557,13 @@ const Checkouts = () => {
                                 <Check className={`mr-2 h-4 w-4 ${selectedLogzzOffer?.offer_hash === o.offer_hash ? "opacity-100" : "opacity-0"}`} />
                                 <div className="flex flex-col min-w-0">
                                   <span className="text-sm font-medium truncate">{o.product_name} — {o.offer_name}</span>
-                                  <span className="text-xs text-muted-foreground">R$ {o.price.toFixed(2)} · {o.role} · {o.offer_hash}</span>
+                                  <span className="text-xs text-muted-foreground flex items-center gap-1.5">
+                                    R$ {o.price.toFixed(2)} ·
+                                    <span className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-bold uppercase ${o.role === "affiliate" ? "bg-success/15 text-success" : o.role === "coproducer" ? "bg-primary/15 text-primary" : "bg-warning/15 text-warning"}`}>
+                                      {o.role === "affiliate" ? "afiliado" : o.role === "coproducer" ? "coprodutor" : "produtor"}
+                                    </span>
+                                    · {o.offer_hash}
+                                  </span>
                                 </div>
                               </CommandItem>
                             ))}
