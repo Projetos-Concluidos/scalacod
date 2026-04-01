@@ -261,7 +261,11 @@ Deno.serve(async (req) => {
               };
 
               console.log("[create_order] Sending to Logzz webhook:", webhookUrl);
-              const logzzHeaders: Record<string, string> = { "Content-Type": "application/json" };
+              const logzzHeaders: Record<string, string> = {
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+                "User-Agent": "ScalaNinja/1.0",
+              };
               if (bearerToken) logzzHeaders["Authorization"] = `Bearer ${bearerToken}`;
 
               const logzzRes = await fetch(webhookUrl, {
