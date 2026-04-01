@@ -12,7 +12,6 @@ serve(async (req) => {
   }
 
   try {
-    // Verify superadmin
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       return new Response(JSON.stringify({ success: false, message: "Não autorizado" }), {
@@ -35,25 +34,33 @@ serve(async (req) => {
       });
     }
 
-    const { data: roleData } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", user.id)
-      .eq("role", "superadmin")
-      .maybeSingle();
-
-    if (!roleData) {
-      return new Response(JSON.stringify({ success: false, message: "Acesso negado" }), {
-        status: 403,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
     const { provider, credentials } = await req.json();
+
+    // Tenant-level providers don't require superadmin
+    const tenantProviders = ["mercadopago_tenant", "coinzz_tenant", "logzz_tenant"];
+    const isTenantProvider = tenantProviders.includes(provider);
+
+    if (!isTenantProvider) {
+      // Admin-level: verify superadmin
+      const { data: roleData } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .eq("role", "superadmin")
+        .maybeSingle();
+
+      if (!roleData) {
+        return new Response(JSON.stringify({ success: false, message: "Acesso negado" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
 
     let testResult: { success: boolean; message: string };
 
     switch (provider) {
+      // ═══════════════ ADMIN PROVIDERS ═══════════════
       case "evolution": {
         const url = credentials.evolution_url?.replace(/\/$/, "");
         const apiKey = credentials.evolution_api_key;
@@ -125,6 +132,71 @@ serve(async (req) => {
         if (res.ok) {
           testResult = { success: true, message: "Conectado! API Key válida." };
           await res.text();
+        } else {
+          const text = await res.text();
+          testResult = { success: false, message: `Erro ${res.status}: ${text.slice(0, 200)}` };
+        }
+        break;
+      }
+
+      // ═══════════════ TENANT PROVIDERS ═══════════════
+      case "mercadopago_tenant": {
+        const token = credentials.access_token;
+        if (!token) {
+          testResult = { success: false, message: "Access Token é obrigatório" };
+          break;
+        }
+        const res = await fetch("https://api.mercadopago.com/v1/payment_methods", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const pixAvailable = data.some((m: any) => m.id === "pix");
+          testResult = {
+            success: true,
+            message: `✅ Conectado! ${data.length} métodos disponíveis${pixAvailable ? " (PIX ativo)" : ""}.`,
+          };
+        } else {
+          const text = await res.text();
+          testResult = { success: false, message: `Erro ${res.status}: Token inválido ou expirado. ${text.slice(0, 100)}` };
+        }
+        break;
+      }
+
+      case "coinzz_tenant": {
+        const token = credentials.bearer_token;
+        if (!token) {
+          testResult = { success: false, message: "Bearer Token é obrigatório" };
+          break;
+        }
+        // Test Coinzz by calling their products endpoint
+        const res = await fetch("https://app.coinzz.com.br/api/v1/products", {
+          headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+        });
+        if (res.ok) {
+          testResult = { success: true, message: "✅ Conectado à Coinzz! Token válido." };
+        } else if (res.status === 401) {
+          testResult = { success: false, message: "Token inválido ou expirado." };
+        } else {
+          const text = await res.text();
+          testResult = { success: false, message: `Erro ${res.status}: ${text.slice(0, 200)}` };
+        }
+        break;
+      }
+
+      case "logzz_tenant": {
+        const token = credentials.bearer_token;
+        if (!token) {
+          testResult = { success: false, message: "Bearer Token é obrigatório" };
+          break;
+        }
+        const res = await fetch("https://app.logzz.com.br/api/v1/products", {
+          headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+        });
+        if (res.ok) {
+          testResult = { success: true, message: "✅ Conectado à Logzz! Token válido." };
+        } else if (res.status === 401) {
+          testResult = { success: false, message: "Token inválido ou expirado." };
         } else {
           const text = await res.text();
           testResult = { success: false, message: `Erro ${res.status}: ${text.slice(0, 200)}` };
