@@ -133,7 +133,7 @@ const Dashboard = () => {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 w-full max-w-full min-w-0">
       {/* Onboarding Checklist */}
       <OnboardingChecklist />
       <div className="flex items-start justify-between">
@@ -162,8 +162,8 @@ const Dashboard = () => {
       </div>
 
       {/* Section 1 — Top metric cards */}
-      <div className="grid grid-cols-12 gap-4">
-        <div className="col-span-8 ninja-card flex flex-col justify-between">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+        <div className="lg:col-span-8 ninja-card flex flex-col justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Receita Estimada</p>
             <p className="mt-2 text-4xl font-extrabold text-foreground tracking-tight">
@@ -182,7 +182,7 @@ const Dashboard = () => {
           </div>
         </div>
 
-        <div className="col-span-2 ninja-card flex flex-col items-center justify-center text-center">
+        <div className="lg:col-span-2 ninja-card flex flex-col items-center justify-center text-center">
           <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10">
             <Eye className="h-7 w-7 text-primary" />
           </div>
@@ -191,7 +191,7 @@ const Dashboard = () => {
           <p className="mt-0.5 text-[11px] text-muted-foreground">Eventos disparados</p>
         </div>
 
-        <div className="col-span-2 ninja-card flex flex-col items-center justify-center text-center">
+        <div className="lg:col-span-2 ninja-card flex flex-col items-center justify-center text-center">
           <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-accent/10">
             <TrendingUp className="h-7 w-7 text-accent" />
           </div>
@@ -207,7 +207,7 @@ const Dashboard = () => {
           <Eye className="h-4 w-4 text-primary" />
           <h3 className="text-sm font-bold text-foreground">Pixel Analytics</h3>
         </div>
-        <div className="grid grid-cols-7 divide-x divide-border">
+        <div className="flex flex-wrap gap-4 md:gap-0 md:grid md:grid-cols-7 md:divide-x md:divide-border">
           {pixelStats.map((stat) => (
             <div key={stat.label} className="flex flex-col items-start px-4 first:pl-0 last:pr-0">
               <div className="flex items-center gap-1.5 mb-2">
@@ -223,8 +223,8 @@ const Dashboard = () => {
       </div>
 
       {/* Section 3 — Charts + Leads */}
-      <div className="grid grid-cols-12 gap-6">
-        <div className="col-span-8 space-y-6">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div className="lg:col-span-8 space-y-6 min-w-0">
           <div className="ninja-card">
             <div className="mb-5 flex items-center justify-between">
               <div>
@@ -300,7 +300,7 @@ const Dashboard = () => {
           </div>
         </div>
 
-        <div className="col-span-4 space-y-6">
+        <div className="lg:col-span-4 space-y-6">
           <div className="ninja-card">
             <div className="mb-5 flex items-center justify-between">
               <h3 className="text-lg font-bold text-foreground">Leads Recentes</h3>
