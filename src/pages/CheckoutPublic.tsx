@@ -738,7 +738,10 @@ const CheckoutPublic = () => {
         {/* Totals */}
         <div className="space-y-2 text-sm pt-3 border-t border-gray-100 mt-3">
           <div className="flex justify-between"><span className="text-gray-500">Subtotal</span><span className="text-gray-900">R$ {Number(offer?.price || 0).toFixed(2)}</span></div>
-          <div className="flex justify-between"><span className="text-gray-500">Frete</span><span className="text-gray-900">{shippingPrice > 0 ? `R$ ${shippingPrice.toFixed(2)}` : "Grátis"}</span></div>
+          <div className="flex justify-between"><span className="text-gray-500">Frete</span><span className="text-gray-900">Grátis</span></div>
+          {mpFeeAmount > 0 && (
+            <div className="flex justify-between"><span className="text-gray-500">Taxa de processamento</span><span className="text-gray-900">R$ {mpFeeAmount.toFixed(2)}</span></div>
+          )}
           <div className="h-px bg-gray-100" />
           <div className="flex justify-between font-bold text-base"><span className="text-gray-900">Total</span><span className="text-emerald-600">R$ {totalPrice.toFixed(2)}</span></div>
         </div>
