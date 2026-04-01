@@ -99,14 +99,27 @@ serve(async (req) => {
         });
         const connectData = await connectRes.json();
 
-        // Update DB
-        await supabaseAdmin.from("whatsapp_instances").upsert({
+        // Update DB — select then update or insert
+        const { data: existRow } = await supabaseAdmin
+          .from("whatsapp_instances")
+          .select("id")
+          .eq("user_id", user.id)
+          .eq("provider", "evolution")
+          .maybeSingle();
+
+        const payload = {
           user_id: user.id,
           provider: "evolution",
           instance_name: instanceName,
           status: "qr_ready",
           webhook_url: webhookUrl,
-        }, { onConflict: "user_id,provider" });
+        };
+
+        if (existRow) {
+          await supabaseAdmin.from("whatsapp_instances").update(payload).eq("id", existRow.id);
+        } else {
+          await supabaseAdmin.from("whatsapp_instances").insert(payload);
+        }
 
         return new Response(JSON.stringify({
           success: true,
