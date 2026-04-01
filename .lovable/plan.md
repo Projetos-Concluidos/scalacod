@@ -1,40 +1,36 @@
 
 
-## Organização Visual do Dashboard e Páginas
+## Corrigir ícones do Pixel Analytics bar
 
-### Problemas Identificados (dos prints)
+Os ícones estão em containers `h-9 w-9` com `rounded-xl` — muito grandes. O print de referência mostra ícones pequenos inline antes do texto do label, sem container grande.
 
-1. **Título e filtro colados no TopBar** — sem `pt` (padding-top) no `<main>`, o conteúdo trisca na barra superior
-2. **Filtro de período desalinhado** — está `flex items-start justify-between` mas sem espaçamento vertical adequado
-3. **Ícone do calendário não funcional** — clica mas não abre date picker
-4. **Ícone `?` (HelpCircle) não navega** — deveria ir para `/suporte`
-5. **Pixel Analytics bar com 8 itens em grid de 7 colunas** — "Fila WhatsApp" quebra para linha seguinte
-6. **Ícones dos stats no Pixel Analytics** — podem ser melhorados com os ícones dos prints (círculos coloridos com ícones dentro)
+### Alteração em `src/pages/Dashboard.tsx` (linhas 291-303)
 
-### Alterações Planejadas
+Remover o container `div` com `h-9 w-9 rounded-xl` e colocar o ícone pequeno (`h-3.5 w-3.5`) diretamente ao lado do label, na mesma linha:
 
-#### 1. `src/components/AppLayout.tsx`
-- Adicionar `pt-6` ao `<main>` para dar respiro entre o TopBar e o conteúdo em todas as páginas
+**De:**
+```
+<div className="flex items-center gap-3 px-4">
+  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl" style={{backgroundColor}}>
+    <IconComp className="h-4 w-4" style={{color}} />
+  </div>
+  <div>
+    <span className="text-[10px] ...">LABEL</span>
+    <p className="text-xl ...">VALUE</p>
+  </div>
+</div>
+```
 
-#### 2. `src/components/TopBar.tsx`
-- Botão `?` (HelpCircle): adicionar `onClick={() => navigate("/suporte")}` para navegar à página de suporte
-- Reduzir padding vertical do TopBar (`py-2` em vez de `py-3/py-4`) para compactar
+**Para:**
+```
+<div className="flex flex-col items-center gap-1 px-4">
+  <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+    <IconComp className="h-3.5 w-3.5" style={{color}} />
+    {stat.label}
+  </span>
+  <p className="text-lg font-extrabold text-foreground leading-tight">{stat.value}</p>
+</div>
+```
 
-#### 3. `src/pages/Dashboard.tsx` — Organização principal
-- **Título + Filtro**: Usar `flex-wrap` com gap adequado para mobile; adicionar `mt-2` no bloco do título
-- **Calendário funcional**: Adicionar um Popover com dois Calendar pickers (De/Até) ao clicar no ícone do calendário, permitindo consultar datas anteriores com range customizado
-- **Pixel Analytics bar**: Mudar grid de `md:grid-cols-7` para `grid-cols-4 md:grid-cols-8` para acomodar os 8 itens sem quebra
-- **Ícones nos stats**: Adicionar os ícones Lucide correspondentes dentro de círculos coloridos (`bg-{color}/10` + ícone) ao lado de cada label, como nos prints (ícones verdes, laranjas, vermelhos)
-- **Espaçamento geral**: Verificar e padronizar gaps entre seções
-
-#### 4. `src/components/PageHeader.tsx`
-- Adicionar `pt-2` para dar respiro consistente em todas as páginas que usam PageHeader
-
-### Escopo controlado
-- Apenas arquivos: `AppLayout.tsx`, `TopBar.tsx`, `Dashboard.tsx`, `PageHeader.tsx`
-- Sem mudanças em lógica de dados, edge functions, ou banco de dados
-- Sem alterações em outras páginas além do padding global via AppLayout
-
-### Relatório final
-Incluirei lista detalhada de cada correção aplicada.
+Isso replica o layout do print: ícone pequeno colorido + label na mesma linha, valor abaixo, tudo centralizado no card.
 
