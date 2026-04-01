@@ -1,53 +1,60 @@
 
 
-# Fix: Persistir Credenciais de Integrações Globais + Status e Teste de API
+# Simplificar EvolutionTab — Credenciais Globais, Usuário Só Cria Instância
 
 ## Problema
-As credenciais digitadas no painel de integrações globais do admin são armazenadas apenas em estado local (`useState`). Ao recarregar a página, tudo se perde. Além disso, não há indicação de status (ativa/inativa) nem botão para testar as APIs.
+A aba Evolution API pede URL do servidor e API Key ao usuário/assinante. Porém, essas credenciais são **globais da plataforma**, configuradas pelo admin em `/admin/integracoes`. O tenant só precisa criar uma instância e escanear o QR Code.
 
 ## Solução
 
-### 1. Persistir no banco de dados (`system_config`)
-- Usar a tabela `system_config` (já existente, com RLS superadmin) para salvar cada campo como uma chave separada (ex: `integration_evolution_url`, `integration_evolution_api_key`)
-- No `useEffect` inicial, carregar todas as chaves `integration_%` da `system_config` e popular o estado
-- No `handleSave`, fazer upsert na `system_config` para cada campo da seção
+### 1. Remover campos de credenciais do EvolutionTab
+- Remover inputs de "URL do Servidor Evolution" e "API Key Global"
+- Remover estados `serverUrl`, `apiKeyGlobal`, `showApiKey`
+- Manter apenas o campo "Nome da Instância"
+- Botão "Criar Instância e Conectar" depende apenas do nome preenchido
 
-### 2. Indicador de Status (Ativa/Inativa)
-- Cada seção mostrará um badge verde "Ativa" ou vermelho "Inativa"
-- Lógica: se todos os campos obrigatórios de uma seção estão preenchidos no banco → "Ativa", caso contrário → "Inativa"
+### 2. Verificar disponibilidade da API global
+- No `useEffect`, buscar `system_config` com keys `integration_evolution_url` e `integration_evolution_api_key`
+- Se ambas estiverem preenchidas → mostrar formulário com campo de instância + botão
+- Se não configuradas → mostrar aviso: "Evolution API não configurada pelo administrador"
+- Mostrar badge "API Ativa" / "API Inativa" baseado na configuração global
 
-### 3. Botão "Testar API"
-- Cada seção terá um botão "Testar Conexão" ao lado do "Salvar"
-- Para **Evolution API**: `GET {url}/instance/fetchInstances` com header `apikey`
-- Para **MercadoPago**: `GET https://api.mercadopago.com/v1/payment_methods` com `Authorization: Bearer {token}`
-- Para **ElevenLabs**: `GET https://api.elevenlabs.io/v1/user` com header `xi-api-key`
-- Para **OpenAI**: `GET https://api.openai.com/v1/models` com `Authorization: Bearer {key}`
-- Uma edge function `test-integration` receberá `{ provider, credentials }` e fará a chamada server-side, retornando `{ success, message }`
+### 3. Usar credenciais globais server-side
+- O `handleCreateInstance` passa apenas `instanceName` e `userId` para uma edge function
+- A edge function busca as credenciais globais da `system_config` e chama a Evolution API
+- Credenciais nunca expostas ao frontend do tenant
 
-### 4. Arquivos alterados
+### 4. Atualizar disclaimer
+- Simplificar instruções do InfoTooltip (remover passos sobre servidor/API key)
+- Manter aviso de API não oficial
+
+### Arquivos alterados
 
 | Arquivo | Ação |
 |---------|------|
-| `src/pages/admin/AdminIntegracoes.tsx` | Reescrever: carregar do DB, salvar no DB, badges de status, botão testar |
-| `supabase/functions/test-integration/index.ts` | **Criar**: edge function para testar cada provedor |
+| `src/components/whatsapp/EvolutionTab.tsx` | Reescrever: remover campos de credenciais, buscar config global, simplificar UI |
 
-### Detalhes técnicos
+### UI resultante (estado desconectado)
+```text
+┌─ Atenção — API Não Oficial ─────────────────┐
+│ ⚠️ Aviso sobre risco de banimento...         │
+└──────────────────────────────────────────────┘
 
-**Carregamento (useEffect)**:
+● DESCONECTADO    [🟢 API Ativa] ou [🔴 API Inativa]
+
+Nome da Instância: [minha_loja_________]
+  Nome único para identificar esta conexão
+
+[⚡ Criar Instância e Conectar]
 ```
-SELECT key, value FROM system_config WHERE key LIKE 'integration_%'
-```
 
-**Salvamento (upsert)**:
-```
-supabase.from('system_config').upsert({ key, value, description, updated_at })
-```
+### UI resultante (estado conectado)
+```text
+● CONECTADO    [🟢 API Ativa]
 
-**Edge function `test-integration`**:
-- Recebe `{ provider: 'evolution' | 'mercadopago' | 'elevenlabs' | 'openai', credentials: Record<string,string> }`
-- Valida que é superadmin via JWT
-- Faz fetch para o endpoint de teste do provedor
-- Retorna `{ success: boolean, message: string }`
-
-**Valores armazenados como JSONB strings** na coluna `value` (ex: `'"sk-abc123"'`), consistente com o padrão já existente na tabela.
+┌─ ✅ Conexão ativa — Evolution API ──────────┐
+│ Número: +5511999...    Instância: minha_loja │
+│ [Testar envio] [Reiniciar] [Desconectar]    │
+└──────────────────────────────────────────────┘
+```
 
