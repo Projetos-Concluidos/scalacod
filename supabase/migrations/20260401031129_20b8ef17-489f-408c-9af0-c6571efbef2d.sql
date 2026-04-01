@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX IF NOT EXISTS whatsapp_instances_user_provider_unique ON public.whatsapp_instances (user_id, provider);
