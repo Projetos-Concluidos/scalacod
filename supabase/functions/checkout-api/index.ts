@@ -280,6 +280,45 @@ Deno.serve(async (req) => {
           }
         }
 
+        // Trigger automation flows for new order
+        try {
+          const supabaseUrl2 = Deno.env.get("SUPABASE_URL")!;
+          const serviceKey2 = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+          console.log("[create_order] Triggering flows for new order:", inserted?.id);
+          
+          // Trigger for order_created event
+          fetch(`${supabaseUrl2}/functions/v1/trigger-flow`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${serviceKey2}`,
+            },
+            body: JSON.stringify({
+              userId: user_id,
+              orderId: inserted?.id,
+              newStatus: order_data.status || "Aguardando",
+              triggerEvent: "order_created",
+            }),
+          }).catch(e => console.warn("[create_order] trigger-flow order_created error:", e.message));
+
+          // Also trigger for order_status_changed with initial status
+          fetch(`${supabaseUrl2}/functions/v1/trigger-flow`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${serviceKey2}`,
+            },
+            body: JSON.stringify({
+              userId: user_id,
+              orderId: inserted?.id,
+              newStatus: order_data.status || "Aguardando",
+              triggerEvent: "order_status_changed",
+            }),
+          }).catch(e => console.warn("[create_order] trigger-flow status_changed error:", e.message));
+        } catch (triggerErr: any) {
+          console.warn("[create_order] Trigger flow error:", triggerErr.message);
+        }
+
         return new Response(JSON.stringify({ order_id: inserted?.id, logzz_order_id }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
