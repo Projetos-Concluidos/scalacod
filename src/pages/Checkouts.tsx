@@ -396,7 +396,7 @@ const Checkouts = () => {
 
       {/* Wizard Modal */}
       <Dialog open={wizardOpen} onOpenChange={(o) => { if (!o) closeWizard(); }}>
-        <DialogContent className="sm:max-w-[560px] bg-card border-border">
+        <DialogContent className="sm:max-w-[560px] bg-card border-border max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-foreground">{editingCheckout ? "Editar Checkout" : "Novo Checkout"}</DialogTitle>
           </DialogHeader>
