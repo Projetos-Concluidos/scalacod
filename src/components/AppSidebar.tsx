@@ -1,7 +1,7 @@
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, ShoppingCart, Package, Users, MessageCircle,
-  GitBranch, Mic, Send, Cloud, Settings, LogOut, X
+  GitBranch, Mic, Send, Cloud, Settings, LogOut, X, HelpCircle
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
