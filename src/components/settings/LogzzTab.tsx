@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Truck, Eye, EyeOff, Copy, CheckCircle, XCircle, Loader2, MapPin, Package, ExternalLink } from "lucide-react";
+import { Truck, Eye, EyeOff, Copy, CheckCircle, XCircle, Loader2, MapPin, Package, ExternalLink, Circle, PauseCircle } from "lucide-react";
 import InfoTooltip from "@/components/InfoTooltip";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
