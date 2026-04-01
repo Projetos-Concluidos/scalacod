@@ -325,20 +325,11 @@ const EvolutionTab = () => {
 
       {/* Form — only instance name */}
       {status !== "connected" && status !== "qr_ready" && apiConfigured && (
-        <div className="space-y-5">
-          <div>
-            <label className="text-sm font-medium text-foreground">Nome da Instância</label>
-            <input
-              type="text"
-              value={instanceName}
-              onChange={(e) => setInstanceName(e.target.value)}
-              placeholder="minha_loja_scalaninja"
-              className="mt-1.5 h-10 w-full rounded-lg border border-border bg-input px-4 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none"
-            />
-            <p className="mt-1 text-xs text-muted-foreground">
-              Nome único para identificar esta conexão WhatsApp
-            </p>
-          </div>
+        <div className="rounded-lg border border-border bg-muted/30 p-4">
+          <p className="text-sm text-muted-foreground">
+            Sua instância será criada automaticamente como:
+          </p>
+          <p className="mt-1 font-mono text-sm font-semibold text-foreground">{instanceName}</p>
         </div>
       )}
 
