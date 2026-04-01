@@ -1,44 +1,85 @@
 
 
-## Plano: Teste Real do Pedido #HM3DPA3W + Correção Visual do Modal
+## Plano: Efeito Gradient Animado Emerald no Highlight Word do Hero
 
-### Diagnóstico do Pedido #HM3DPA3W
+### O que muda
 
-Dados atuais no banco:
-- **Oferta**: `salrp166` (hash de afiliado correto)
-- **Order Bump**: hash `salkqmk9` (atualizado, sem mais `null`)
-- **Bump product_id**: `null` — precisa ser corrigido para buscar variações
-- **affiliate_email**: `null` — campo vazio
-- **Endereço**: CEP 59015070, Tirol, Natal/RN
-- **Entrega**: 2026-04-06
+A palavra destacada no Hero (ex: "Ninja") ganha um efeito premium com gradiente animado em tons de **Emerald**, mantendo a identidade visual do ScalaCOD. São 3 camadas sobrepostas:
 
-O mapeamento na Logzz já funciona (confirmado pelo teste do botão "Disparar Mapeamento"). Agora precisamos:
+1. **Texto com gradiente animado** — radial-gradient que se move (emerald claro → emerald → emerald escuro)
+2. **Glow blur** — cópia com `blur(10px)` criando brilho difuso verde
+3. **Noise overlay** — textura sutil com SVG inline
+
+### Paleta de cores (Emerald)
+
+```text
+Original:  rgb(208,178,255) → rgb(255,238,216) → rgb(232,64,13)
+                roxo              dourado             laranja
+
+Novo:      rgb(167,243,208) → rgb(16,185,129)  → rgb(6,95,70)
+           emerald-200          emerald-500         emerald-800
+```
+
+O gradiente vai de um verde claro luminoso, passando pelo emerald principal, até um verde escuro profundo — criando profundidade e movimento premium sem sair da identidade visual.
 
 ### Alterações
 
-#### 1. Teste real: ação `send_to_logzz` na página Pedidos
+#### 1. `src/index.css` — Keyframes do gradiente
 
-Adicionar botão "Enviar para Logzz" na página `Pedidos.tsx` para pedidos com `logistics_type = "logzz"` e status "Aguardando". Ao clicar, chama `checkout-api` com `action: "send_to_logzz"` e `order_id`.
+```css
+@keyframes gradient-shift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+.animate-gradient-shift {
+  animation: gradient-shift 4s ease infinite;
+}
+```
 
-- Dropdown no menu de ações do pedido ou botão direto na row
-- Exibe resultado (sucesso/erro) via toast
-- Atualiza a lista após envio
+#### 2. `src/pages/Home.tsx` — Span do highlight_word com 3 camadas
 
-#### 2. Correção visual do modal Step 2
+Trocar o `<span className="text-emerald-500">` por:
 
-O conteúdo do modal está transbordando (visível no screenshot). Causa: o `DialogContent` não tem scroll habilitado.
-
-- Adicionar `max-h-[85vh] overflow-y-auto` ao conteúdo interno do `DialogContent`
-- Garantir que o Popover do Combobox use `portal` para não ficar preso dentro do modal
-
-#### 3. Corrigir `product_id` null no order bump `salkqmk9`
-
-O bump tem `product_id: null`, o que impede o `logzz-create-order` de buscar variações. Precisamos:
-- No `logzz-create-order`, tratar `product_id` null sem quebrar
-- No Step 2 do wizard, ao importar bump da Logzz, garantir que o `product_id` é salvo na tabela `order_bumps`
+```tsx
+<span className="relative inline-block">
+  {/* Camada 1: texto com gradiente emerald animado */}
+  <span
+    className="animate-gradient-shift"
+    style={{
+      backgroundClip: 'text',
+      WebkitBackgroundClip: 'text',
+      color: 'transparent',
+      backgroundSize: '200% 200%',
+      backgroundImage: 'radial-gradient(80% 109% at 44% 35%,
+        rgb(167,243,208) 0%,
+        rgb(16,185,129) 43%,
+        rgb(6,95,70) 88%)',
+    }}
+  >
+    {highlightWord}
+  </span>
+  {/* Camada 2: glow blur */}
+  <span aria-hidden="true" style={{
+    position:'absolute', inset:0,
+    backgroundClip:'text', color:'transparent',
+    backgroundSize:'200% 200%',
+    backgroundImage: 'radial-gradient(...mesmo gradiente...)',
+    filter:'blur(10px)', mixBlendMode:'screen', opacity:0.8,
+    pointerEvents:'none', zIndex:2,
+  }} className="animate-gradient-shift">
+    {highlightWord}
+  </span>
+  {/* Camada 3: noise overlay (SVG inline) */}
+  <span style={{
+    backgroundImage:'url("data:image/svg+xml,...")',
+    backgroundSize:'60%', borderRadius:'8px',
+    inset:'-6px 0 0 -6px', mixBlendMode:'overlay',
+    position:'absolute', zIndex:3, pointerEvents:'none',
+  }} />
+</span>
+```
 
 ### Escopo
-- `src/pages/Pedidos.tsx` — botão "Enviar para Logzz"
-- `src/pages/Checkouts.tsx` — scroll no modal + fix product_id no bump
-- `supabase/functions/logzz-create-order/index.ts` — tratar product_id null
+- 2 arquivos: `src/index.css`, `src/pages/Home.tsx`
+- Sem banco, sem edge functions
 
