@@ -1091,24 +1091,41 @@ Deno.serve(async (req) => {
       };
 
       console.log("[send_to_logzz] Payload:", JSON.stringify(logzzPayload));
-      console.log("[send_to_logzz] Webhook URL:", webhookUrl);
 
       const logzzHeaders: Record<string, string> = {
         "Content-Type": "application/json",
         "Accept": "application/json",
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
       };
       if (bearerToken) logzzHeaders["Authorization"] = `Bearer ${bearerToken}`;
 
-      const logzzRes = await fetch(webhookUrl, {
+      // Try webhook first, fallback to API v1 if Cloudflare blocks
+      let logzzRes: Response;
+      let logzzBody: string;
+      let endpoint = "webhook";
+
+      console.log("[send_to_logzz] Trying webhook:", webhookUrl);
+      logzzRes = await fetch(webhookUrl, {
         method: "POST",
         headers: logzzHeaders,
         body: JSON.stringify(logzzPayload),
         redirect: "manual",
       });
+      logzzBody = await logzzRes.text();
+      console.log("[send_to_logzz] Webhook response:", logzzRes.status);
 
-      const logzzBody = await logzzRes.text();
-      console.log("[send_to_logzz] Logzz response:", logzzRes.status, logzzBody.substring(0, 1000));
+      // If Cloudflare blocked (403), try API v1
+      if (logzzRes.status === 403) {
+        console.log("[send_to_logzz] Webhook blocked by Cloudflare, trying API v1/orders...");
+        endpoint = "api_v1";
+        logzzRes = await fetch("https://app.logzz.com.br/api/v1/orders", {
+          method: "POST",
+          headers: logzzHeaders,
+          body: JSON.stringify(logzzPayload),
+          redirect: "manual",
+        });
+        logzzBody = await logzzRes.text();
+        console.log("[send_to_logzz] API v1 response:", logzzRes.status, logzzBody.substring(0, 1000));
+      }
 
       if (logzzRes.status === 200 || logzzRes.status === 201) {
         let logzzOrderId: string | null = null;
@@ -1119,24 +1136,23 @@ Deno.serve(async (req) => {
 
         const prevStatus = order.status;
 
-        // Update order
         await supabase.from("orders").update({
           logzz_order_id: logzzOrderId,
           status: "Agendado",
           updated_at: new Date().toISOString(),
         }).eq("id", order.id);
 
-        // Log status change
         await supabase.from("order_status_history").insert({
           order_id: order.id,
           from_status: prevStatus,
           to_status: "Agendado",
           source: "send_to_logzz",
-          raw_payload: { logzz_status: logzzRes.status, logzz_body: logzzBody.substring(0, 500) },
+          raw_payload: { endpoint, logzz_status: logzzRes.status, logzz_body: logzzBody.substring(0, 500) },
         });
 
         return new Response(JSON.stringify({
           success: true,
+          endpoint,
           logzz_order_id: logzzOrderId,
           logzz_status: logzzRes.status,
           logzz_response: logzzBody.substring(0, 500),
@@ -1144,6 +1160,7 @@ Deno.serve(async (req) => {
       } else {
         return new Response(JSON.stringify({
           success: false,
+          endpoint,
           logzz_status: logzzRes.status,
           logzz_response: logzzBody.substring(0, 1000),
         }), { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } });
