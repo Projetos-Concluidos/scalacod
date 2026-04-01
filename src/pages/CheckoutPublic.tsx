@@ -1141,13 +1141,21 @@ const CheckoutPublic = () => {
                       setSubmitting(false);
                     }}
                     disabled={submitting || !selectedDate}
-                    className={`w-full rounded-xl py-3 text-sm font-semibold text-white transition-all ${
-                      selectedDate ? "bg-emerald-500 hover:bg-emerald-600 shadow-md shadow-emerald-500/20" : "bg-gray-300 cursor-not-allowed"
+                    className={`w-full rounded-2xl py-4 font-bold text-base text-white flex items-center justify-center gap-2 transition-all ${
+                      selectedDate ? "bg-emerald-500 hover:bg-emerald-600 shadow-lg shadow-emerald-500/25 active:scale-[0.98]" : "bg-gray-300 cursor-not-allowed"
                     }`}
                   >
-                    {submitting && <Loader2 className="inline h-4 w-4 animate-spin mr-2" />}
-                    Confirmar Pedido → R$ {totalPrice.toFixed(2)}
+                    {submitting ? (
+                      <><Loader2 className="h-5 w-5 animate-spin" /> Processando...</>
+                    ) : (
+                      <><Lock className="h-5 w-5" /> Confirmar Pedido Seguro → R$ {totalPrice.toFixed(2)}</>
+                    )}
                   </button>
+                  <div className="flex items-center justify-center gap-4 mt-3 text-[10px] text-gray-400">
+                    <span className="flex items-center gap-1"><ShieldCheck className="h-3 w-3 text-emerald-400" /> Dados protegidos</span>
+                    <span className="flex items-center gap-1"><Lock className="h-3 w-3 text-emerald-400" /> Compra segura</span>
+                    <span className="flex items-center gap-1"><CheckCircle className="h-3 w-3 text-emerald-400" /> Confirmação imediata</span>
+                  </div>
                 </div>
               </motion.div>
             )}
