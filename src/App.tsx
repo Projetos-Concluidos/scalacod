@@ -33,6 +33,8 @@ import AdminCobrancas from "@/pages/admin/AdminCobrancas";
 import AdminTokens from "@/pages/admin/AdminTokens";
 import AdminIntegracoes from "@/pages/admin/AdminIntegracoes";
 import AdminLogs from "@/pages/admin/AdminLogs";
+import AdminHome from "@/pages/admin/AdminHome";
+import HomePub from "@/pages/Home";
 
 const queryClient = new QueryClient();
 
