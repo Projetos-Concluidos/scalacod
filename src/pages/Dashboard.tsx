@@ -52,6 +52,7 @@ const Dashboard = () => {
   );
   const [sparkData, setSparkData] = useState(Array.from({ length: 12 }, () => ({ v: 0 })));
   const [recentLeads, setRecentLeads] = useState<any[]>([]);
+  const [queueCount, setQueueCount] = useState(0);
 
   const loadData = useCallback(async () => {
     if (!user) return;
