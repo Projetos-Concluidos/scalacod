@@ -1,8 +1,9 @@
-import { Moon, Sun, Bell, HelpCircle, Menu, Shield } from "lucide-react";
+import { Moon, Sun, HelpCircle, Menu, Shield } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useMobileSidebar } from "@/contexts/MobileSidebarContext";
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
+import NotificationBell from "@/components/NotificationBell";
 
 const TopBar = () => {
   const { profile } = useAuth();
@@ -59,9 +60,7 @@ const TopBar = () => {
         >
           {isDark ? <Sun className="h-[18px] w-[18px]" /> : <Moon className="h-[18px] w-[18px]" />}
         </button>
-        <button className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
-          <Bell className="h-[18px] w-[18px]" />
-        </button>
+        <NotificationBell />
         <button className="hidden h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground sm:flex">
           <HelpCircle className="h-[18px] w-[18px]" />
         </button>
