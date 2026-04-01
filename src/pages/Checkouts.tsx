@@ -548,7 +548,7 @@ const Checkouts = () => {
                                     }
                                     toast.success(`Oferta "${o.offer_name}" importada com todos os dados!`);
                                   } catch (err: any) {
-                                    console.error("[Logzz Import]", err);
+                                    if (import.meta.env.DEV) console.error("[Logzz Import]", err);
                                     toast.error("Erro ao salvar produto/oferta no banco");
                                   }
                                 }}

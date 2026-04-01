@@ -168,7 +168,7 @@ const EvolutionTab = () => {
         toast.warning("QR Code não retornado. Tente gerar novo QR.");
       }
     } catch (err: any) {
-      console.error("Create instance error:", err);
+      if (import.meta.env.DEV) console.error("Create instance error:", err);
       setStatus("disconnected");
       toast.error(err.message || "Erro ao criar instância");
     } finally {
