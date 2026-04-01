@@ -275,6 +275,14 @@ const LogzzTab = () => {
           </p>
         </div>
 
+        {/* Test result */}
+        {testResult && (
+          <div className={`mb-4 rounded-lg border p-3 text-sm ${testResult.success ? "border-success/30 bg-success/10 text-success" : "border-destructive/30 bg-destructive/10 text-destructive"}`}>
+            {testResult.success ? <CheckCircle className="inline h-4 w-4 mr-1" /> : <XCircle className="inline h-4 w-4 mr-1" />}
+            {testResult.message}
+          </div>
+        )}
+
         <div className="flex gap-3">
           <Button variant="outline" onClick={handleTestConnection} disabled={testing || !token.trim()}>
             {testing ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
