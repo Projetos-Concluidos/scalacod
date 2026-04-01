@@ -207,7 +207,7 @@ const Dashboard = () => {
           <Eye className="h-4 w-4 text-primary" />
           <h3 className="text-sm font-bold text-foreground">Pixel Analytics</h3>
         </div>
-        <div className="grid grid-cols-7 divide-x divide-border">
+        <div className="flex flex-wrap gap-4 md:gap-0 md:grid md:grid-cols-7 md:divide-x md:divide-border">
           {pixelStats.map((stat) => (
             <div key={stat.label} className="flex flex-col items-start px-4 first:pl-0 last:pr-0">
               <div className="flex items-center gap-1.5 mb-2">
