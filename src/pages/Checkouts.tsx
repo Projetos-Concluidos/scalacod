@@ -589,11 +589,112 @@ const Checkouts = () => {
 
           {wizardStep === 2 && (
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between p-3 rounded-xl bg-secondary/50 border border-border">
                 <div><Label>Order Bump</Label><p className="text-xs text-muted-foreground">Oferecer produto adicional no checkout</p></div>
                 <Switch checked={formOrderBump} onCheckedChange={setFormOrderBump} />
               </div>
-              <div className="flex items-center justify-between">
+
+              {formOrderBump && (
+                <div className="space-y-3">
+                  <Label className="text-sm">Produtos para Order Bump</Label>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                    <Input
+                      value={bumpSearchQuery}
+                      onChange={(e) => setBumpSearchQuery(e.target.value)}
+                      placeholder="Buscar oferta por nome..."
+                      className="pl-9 bg-input border-border text-sm"
+                    />
+                  </div>
+
+                  {bumpSearchQuery && (
+                    <div className="bg-secondary border border-border rounded-xl max-h-48 overflow-y-auto">
+                      {offers
+                        .filter((o) => {
+                          const q = bumpSearchQuery.toLowerCase();
+                          const prod = products.find((p) => p.id === o.product_id);
+                          return (
+                            o.name.toLowerCase().includes(q) ||
+                            prod?.name.toLowerCase().includes(q)
+                          );
+                        })
+                        .filter((o) => !formBumps.some((b) => b.offer_id === o.id))
+                        .map((o) => {
+                          const prod = products.find((p) => p.id === o.product_id);
+                          return (
+                            <button
+                              key={o.id}
+                              onClick={() => {
+                                setFormBumps((prev) => [
+                                  ...prev,
+                                  {
+                                    offer_id: o.id,
+                                    name: o.name,
+                                    price: Number(o.price),
+                                    label_bump: "OFERTA ESPECIAL",
+                                    description: "",
+                                    hash: null,
+                                    image_url: null,
+                                  },
+                                ]);
+                                setBumpSearchQuery("");
+                                toast.success(`"${o.name}" adicionado como order bump`);
+                              }}
+                              className="w-full flex items-center gap-3 p-3 hover:bg-muted text-left border-b border-border/50 last:border-0"
+                            >
+                              <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+                                <ShoppingBag className="h-4 w-4 text-muted-foreground" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-foreground truncate">{prod?.name} — {o.name}</p>
+                                <p className="text-xs text-primary">R$ {Number(o.price).toFixed(2)}</p>
+                              </div>
+                              <Plus className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                            </button>
+                          );
+                        })}
+                      {offers.filter((o) => {
+                        const q = bumpSearchQuery.toLowerCase();
+                        const prod = products.find((p) => p.id === o.product_id);
+                        return (o.name.toLowerCase().includes(q) || prod?.name.toLowerCase().includes(q)) && !formBumps.some((b) => b.offer_id === o.id);
+                      }).length === 0 && (
+                        <p className="p-3 text-sm text-muted-foreground text-center">Nenhuma oferta encontrada</p>
+                      )}
+                    </div>
+                  )}
+
+                  {formBumps.length > 0 && (
+                    <div className="space-y-2">
+                      <p className="text-xs text-muted-foreground">Bumps adicionados ({formBumps.length})</p>
+                      {formBumps.map((bump, i) => (
+                        <div key={bump.offer_id + i} className="flex items-center gap-3 p-3 bg-primary/5 border border-primary/10 rounded-xl">
+                          <span className="text-xs text-primary font-bold w-5 text-center">{i + 1}</span>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm text-foreground truncate">{bump.name}</p>
+                            <p className="text-xs text-primary">R$ {bump.price.toFixed(2)}</p>
+                          </div>
+                          <Input
+                            value={bump.label_bump}
+                            onChange={(e) => {
+                              setFormBumps((prev) => prev.map((b, j) => j === i ? { ...b, label_bump: e.target.value } : b));
+                            }}
+                            className="w-28 text-xs h-7 bg-input border-border"
+                            placeholder="Label"
+                          />
+                          <button
+                            onClick={() => setFormBumps((prev) => prev.filter((_, j) => j !== i))}
+                            className="p-1 text-destructive hover:text-destructive/80"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="flex items-center justify-between p-3 rounded-xl bg-secondary/50 border border-border">
                 <div><Label>Upsell</Label><p className="text-xs text-muted-foreground">Oferta pós-compra</p></div>
                 <Switch checked={formUpsell} onCheckedChange={setFormUpsell} />
               </div>
