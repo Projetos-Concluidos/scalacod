@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import {
   Eye, TrendingUp, Package, Users, BarChart3, MousePointerClick,
-  ShoppingCart, AlertTriangle, Coins, Calendar, FileText
+  ShoppingCart, AlertTriangle, Coins, Calendar, FileText, MessageCircle
 } from "lucide-react";
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
