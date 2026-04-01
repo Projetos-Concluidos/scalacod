@@ -8,7 +8,7 @@ const AppLayout = () => {
     <MobileSidebarProvider>
       <div className="flex min-h-screen w-full bg-background overflow-hidden">
         <AppSidebar />
-        <div className="flex flex-1 flex-col min-w-0">
+        <div className="flex flex-1 flex-col min-w-0 md:ml-[220px]">
           <TopBar />
           <main className="flex-1 overflow-y-auto overflow-x-hidden px-4 pb-6 md:px-6 lg:px-8 md:pb-8">
             <Outlet />
