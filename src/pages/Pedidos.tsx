@@ -91,7 +91,7 @@ const Pedidos = () => {
 
       // Trigger automation flows for this status change
       if (user) {
-        console.log(`[Kanban] Triggering flow for status=${status} orderId=${id}`);
+        if (import.meta.env.DEV) console.log(`[Kanban] Triggering flow for status=${status} orderId=${id}`);
         supabase.functions.invoke("trigger-flow", {
           body: { userId: user.id, orderId: id, newStatus: status },
         }).catch((err: any) => console.warn("Flow trigger error:", err));
