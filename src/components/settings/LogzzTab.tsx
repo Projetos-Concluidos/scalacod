@@ -27,6 +27,9 @@ const LogzzTab = () => {
   const [cep, setCep] = useState("");
   const [checkingCep, setCheckingCep] = useState(false);
   const [cepResult, setCepResult] = useState<CepResult | null>(null);
+  const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
+
+  const isConfigured = !!(token.trim() && logzzWebhookUrl.trim());
 
   const webhookUrl = user
     ? `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/logzz-webhook?store=${user.id}`
