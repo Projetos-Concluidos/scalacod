@@ -82,10 +82,6 @@ const EvolutionTab = () => {
   };
 
   const handleCreateInstance = async () => {
-    if (!instanceName.trim()) {
-      toast.error("Preencha o nome da instância");
-      return;
-    }
     setLoading(true);
     setStatus("creating");
 
