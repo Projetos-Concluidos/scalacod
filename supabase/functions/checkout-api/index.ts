@@ -272,6 +272,7 @@ Deno.serve(async (req) => {
                 method: "POST",
                 headers: logzzHeaders,
                 body: JSON.stringify(logzzPayload),
+                redirect: "manual",
               });
 
               const logzzBody = await logzzRes.text();
