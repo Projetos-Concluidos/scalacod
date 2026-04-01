@@ -740,15 +740,51 @@ const CheckoutPublic = () => {
     <div className="min-h-screen bg-gray-50" onClick={trackInteraction}>
       {checkout.custom_css && <style>{checkout.custom_css}</style>}
 
-      {/* Progress bar */}
-      <div className="fixed inset-x-0 top-0 z-50 h-1 bg-gray-200">
-        <div className="h-full bg-emerald-500 transition-all duration-500" style={{ width: `${progressPercent}%` }} />
-      </div>
+      {/* Secure header */}
+      <header className="bg-white border-b border-gray-100 sticky top-0 z-50 shadow-sm">
+        <div className="max-w-5xl mx-auto px-4 py-2.5 flex items-center justify-between">
+          <div className="flex items-center gap-1.5">
+            <ShieldCheck className="h-4 w-4 text-emerald-500" />
+            <span className="text-xs font-medium text-gray-700">Compra 100% Segura</span>
+          </div>
+          <span className="text-xs text-gray-500 hidden sm:block truncate max-w-[200px]">{product?.name || checkout.name}</span>
+          <div className="flex items-center gap-1">
+            <Lock className="h-3 w-3 text-gray-400" />
+            <span className="text-[10px] text-gray-400 font-medium">SSL</span>
+          </div>
+        </div>
+        {/* Progress bar inside header */}
+        <div className="h-1 bg-gray-100">
+          <div className="h-full bg-emerald-500 transition-all duration-500" style={{ width: `${progressPercent}%` }} />
+        </div>
+      </header>
 
-      <div className="mx-auto max-w-5xl px-4 py-8 pt-6">
-        {/* Header */}
-        <div className="mb-6 text-center">
+      <div className="mx-auto max-w-5xl px-4 py-6">
+        {/* Header with product name */}
+        <div className="mb-4 text-center">
           <h1 className="text-lg font-bold text-gray-900">{checkout.name}</h1>
+        </div>
+
+        {/* Social proof + trust badges */}
+        <div className="mb-4 space-y-3">
+          <div className="flex items-center gap-2 bg-orange-50 border border-orange-100 rounded-xl px-3 py-2">
+            <span className="text-base">🔥</span>
+            <p className="text-xs text-orange-800"><strong>{Math.floor(Math.random() * 30 + 25)} pessoas</strong> estão vendo este produto agora</p>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            {[
+              { icon: "🔒", title: "Site Seguro", sub: "SSL 256-bit" },
+              { icon: "🚚", title: "Entrega Garantida", sub: "Rastreio em tempo real" },
+              { icon: "💰", title: "Pague na Entrega", sub: "Sem risco" },
+              { icon: "↩️", title: "7 dias de garantia", sub: "Devolução garantida" },
+            ].map((badge) => (
+              <div key={badge.title} className="flex flex-col items-center text-center p-2.5 bg-white rounded-xl border border-gray-100 shadow-sm">
+                <span className="text-xl mb-0.5">{badge.icon}</span>
+                <p className="text-[10px] font-semibold text-gray-800 leading-tight">{badge.title}</p>
+                <p className="text-[9px] text-gray-500">{badge.sub}</p>
+              </div>
+            ))}
+          </div>
         </div>
 
         <div className="flex flex-col lg:flex-row gap-6">
