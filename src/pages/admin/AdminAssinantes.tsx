@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Ban, Coins, Edit, Unlock } from "lucide-react";
+import { Ban, Coins, Edit, Unlock, Search } from "lucide-react";
 
 interface Tenant {
   id: string;
@@ -20,6 +20,7 @@ interface Tenant {
   subscription_status: string | null;
   token_balance: number | null;
   created_at: string | null;
+  store_name: string | null;
 }
 
 interface Plan {
@@ -32,6 +33,8 @@ const AdminAssinantes = () => {
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
 
   // Token modal
   const [tokenModal, setTokenModal] = useState<{ open: boolean; tenant: Tenant | null }>({ open: false, tenant: null });
@@ -45,7 +48,7 @@ const AdminAssinantes = () => {
   const fetchTenants = async () => {
     const { data } = await supabase
       .from("profiles")
-      .select("id, name, email, plan, plan_id, subscription_status, token_balance, created_at")
+      .select("id, name, email, plan, plan_id, subscription_status, token_balance, created_at, store_name")
       .order("created_at", { ascending: false });
     setTenants(data || []);
     setLoading(false);
@@ -115,9 +118,43 @@ const AdminAssinantes = () => {
     return "outline";
   };
 
+  const filtered = tenants.filter((t) => {
+    const matchSearch =
+      !search ||
+      t.name.toLowerCase().includes(search.toLowerCase()) ||
+      t.email.toLowerCase().includes(search.toLowerCase()) ||
+      (t.store_name || "").toLowerCase().includes(search.toLowerCase());
+    const matchStatus = statusFilter === "all" || (t.subscription_status || "inactive") === statusFilter;
+    return matchSearch && matchStatus;
+  });
+
   return (
     <div className="space-y-6">
-      <PageHeader title="Assinantes" subtitle="Gerenciar todos os tenants da plataforma" />
+      <PageHeader title="Assinantes" subtitle={`${tenants.length} tenants cadastrados`} />
+
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por nome, email ou loja..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-44">
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos</SelectItem>
+            <SelectItem value="active">Ativo</SelectItem>
+            <SelectItem value="trial">Trial</SelectItem>
+            <SelectItem value="inactive">Inativo</SelectItem>
+            <SelectItem value="cancelled">Cancelado</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
 
       <div className="rounded-lg border bg-card">
         <Table>
@@ -125,6 +162,7 @@ const AdminAssinantes = () => {
             <TableRow>
               <TableHead>Nome</TableHead>
               <TableHead>Email</TableHead>
+              <TableHead>Loja</TableHead>
               <TableHead>Plano</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Tokens</TableHead>
@@ -135,17 +173,18 @@ const AdminAssinantes = () => {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Carregando...</TableCell>
+                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Carregando...</TableCell>
               </TableRow>
-            ) : tenants.length === 0 ? (
+            ) : filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Nenhum assinante encontrado</TableCell>
+                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Nenhum assinante encontrado</TableCell>
               </TableRow>
             ) : (
-              tenants.map((t) => (
+              filtered.map((t) => (
                 <TableRow key={t.id}>
                   <TableCell className="font-medium">{t.name}</TableCell>
-                  <TableCell>{t.email}</TableCell>
+                  <TableCell className="text-sm">{t.email}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground">{t.store_name || "—"}</TableCell>
                   <TableCell className="capitalize">{t.plan || "free"}</TableCell>
                   <TableCell>
                     <Badge variant={statusColor(t.subscription_status)}>
@@ -197,7 +236,7 @@ const AdminAssinantes = () => {
             <DialogTitle>Adicionar Tokens</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
-            <p className="text-sm text-muted-foreground">Assinante: <strong>{tokenModal.tenant?.email}</strong></p>
+            <p className="text-sm text-muted-foreground">Assinante: <strong>{tokenModal.tenant?.name}</strong> ({tokenModal.tenant?.email})</p>
             <div className="space-y-2">
               <Label>Quantidade de tokens</Label>
               <Input type="number" value={tokenAmount} onChange={(e) => setTokenAmount(e.target.value)} placeholder="1000" />
@@ -221,7 +260,7 @@ const AdminAssinantes = () => {
             <DialogTitle>Editar Plano</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
-            <p className="text-sm text-muted-foreground">Assinante: <strong>{planModal.tenant?.email}</strong></p>
+            <p className="text-sm text-muted-foreground">Assinante: <strong>{planModal.tenant?.name}</strong> ({planModal.tenant?.email})</p>
             <div className="space-y-2">
               <Label>Plano</Label>
               <Select value={selectedPlanId} onValueChange={setSelectedPlanId}>
