@@ -1,62 +1,44 @@
 
 
-## Plano: Fluxo LOGZZ ↔ SCALANINJA + Frete Grátis + Taxas MP
+## Plano: Teste Real LOGZZ ↔ SCALANINJA + Action send_to_logzz
 
-### 4 Problemas a Resolver
+### Situação Atual
 
-1. **Pedidos não são enviados para a Logzz** — Quando um pedido é criado com `logistics_type: "logzz"`, ele fica apenas no banco local. Falta o POST para a URL de webhook da Logzz (`logzz_webhook_url`).
-2. **Logzz order ID não aparece nos detalhes** — A coluna `logzz_order_id` existe mas nunca é preenchida e não é exibida na UI.
-3. **Frete aparecendo no checkout** — O valor `R$ 24,98` está sendo cobrado quando deveria ser entrega grátis.
-4. **Taxas do MercadoPago** — Falta configuração de taxa para cobrir custos do gateway.
+- O pedido #C6Y7DN3Z (Rafael Gomes Costa, CEP 59015-070) existe no banco com `status: "Aguardando"` e `logzz_order_id: null`
+- A lógica de envio para Logzz existe dentro do `create_order`, mas **não existe uma action `send_to_logzz`** separada para reenviar pedidos existentes
+- O User-Agent + Authorization: Bearer já estão no código (linhas 264-269)
+- O usuário confirmou que essa combinação de headers funciona no Cloudflare da Logzz
 
----
-
-### Alterações por arquivo
+### Alterações
 
 #### 1. `supabase/functions/checkout-api/index.ts`
-- **Nova action `send_to_logzz`**: Após criar o pedido, envia para a Logzz via POST no `logzz_webhook_url` com payload no formato esperado pela API (external_id, full_name, phone, customer_document, postal_code, street, etc.)
-- Captura o `logzz_order_id` da resposta e faz UPDATE no pedido local
-- Atualiza status para "Agendado" se Logzz aceitar
-- **Modificar action `create_order`**: Após inserir o pedido, se `logistics_type === "logzz"`, automaticamente chama a lógica de envio para Logzz e retorna o `logzz_order_id` junto com o `order_id`
-- **Nova action `get_mp_fees`**: Retorna a taxa configurada na integração MP do tenant
 
-#### 2. `src/pages/CheckoutPublic.tsx`
-- **Frete grátis**: Alterar linha 278 — `shippingPrice` sempre `0` (remover cálculo de `selectedDate.price`)
-- **Taxas MP**: Buscar taxa configurada do tenant ao carregar checkout. Somar taxa ao `totalPrice` quando provider é "coinzz"
-- Exibir a taxa como linha separada no resumo do pedido ("Taxa de processamento: R$ X,XX")
+Adicionar nova action `send_to_logzz` (antes do bloco `Invalid action` na linha 1036):
 
-#### 3. `src/pages/Pedidos.tsx` (Modal de detalhes)
-- Na aba "Logística", exibir o `logzz_order_id` com link clicável para `https://app.logzz.com.br/meu-pedido/{logzz_order_id}`
-- Ícone `ExternalLink` ao lado do link
+- Recebe `order_id` e `user_id`
+- Busca o pedido completo no banco pelo `order_id`
+- Busca o `offer.hash` se `offer_id` existir
+- Monta o payload no formato Logzz (external_id, full_name, phone, etc.)
+- Envia POST para `logzz_webhook_url` com headers `Authorization: Bearer` + `User-Agent: Mozilla/5.0 Chrome/120` + `Content-Type: application/json`
+- Captura `logzz_order_id` da resposta
+- Atualiza o pedido com `logzz_order_id` e `status: "Agendado"`
+- Registra no `order_status_history`
 
-#### 4. `src/components/settings/MercadoPagoTab.tsx`
-- Adicionar campo "Taxa de processamento (%)" — input numérico (ex: 4.99)
-- Salvar no config da integração como `{ access_token, public_key, processing_fee_percent }`
-- Explicação: "Percentual adicionado ao valor do pedido para cobrir taxas do MercadoPago"
-- Documentação inline: taxas do MP variam (PIX ~0.99%, Cartão ~4.99%, Boleto ~R$3.49)
+Também atualizar o User-Agent no `create_order` (linha 267) de `"ScalaNinja/1.0"` para `"Mozilla/5.0 Chrome/120"` — para consistência com o header que funciona.
 
-### Formato do payload para a Logzz (webhook)
-```json
-{
-  "external_id": "order-uuid",
-  "full_name": "Nome Completo",
-  "phone": "84999999999",
-  "customer_document": "12345678900",
-  "postal_code": "59015070",
-  "street": "Rua ...",
-  "neighborhood": "Bairro",
-  "city": "Natal",
-  "state": "rn",
-  "house_number": "123",
-  "complement": "",
-  "delivery_date": "2026-04-05",
-  "offer": "hash-da-oferta",
-  "affiliate_email": ""
-}
-```
+#### 2. Deploy + Teste Real
 
-### Escopo controlado
-- 4 arquivos: `checkout-api/index.ts`, `CheckoutPublic.tsx`, `Pedidos.tsx`, `MercadoPagoTab.tsx`
-- Sem migrações (coluna `logzz_order_id` já existe)
-- Sem mudanças em RLS ou outras páginas
+Após deploy:
+- Enviar pedido #C6Y7DN3Z para Logzz via `send_to_logzz`
+- Verificar se retorna `logzz_order_id`
+- Confirmar que o status mudou para "Agendado"
+
+#### 3. Atualizar Memory
+
+Registrar que `Authorization: Bearer` + `User-Agent: Mozilla/5.0` é necessário para o webhook de importação da Logzz.
+
+### Escopo
+- 1 arquivo: `checkout-api/index.ts`
+- Deploy da edge function
+- Teste real com pedido existente
 
