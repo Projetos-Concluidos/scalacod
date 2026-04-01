@@ -145,7 +145,7 @@ Deno.serve(async (req) => {
     try {
       for (const node of sortedNodes) {
         console.log(`[execute-flow] Executing node type=${node.type || node.data?.type} id=${node.id}`);
-        await executeNode(node, ctx, targetPhone, flow.user_id, supabase);
+        await executeNode(node, ctx, targetPhone, flow.user_id, supabase, { orderId, flowId });
         nodesExecuted++;
       }
     } catch (e) {
