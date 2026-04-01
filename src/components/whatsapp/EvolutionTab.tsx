@@ -64,8 +64,11 @@ const EvolutionTab = () => {
       // If DB says not connected, do a live check against Evolution API
       if (data.status !== "connected" && data.instance_name) {
         try {
-          const liveStatus = await callEvolutionFunction("status");
-          if (liveStatus.connected) {
+          const res = await supabase.functions.invoke("evolution-instance", {
+            body: { action: "status", instance_name: data.instance_name },
+          });
+          const liveStatus = res.data;
+          if (liveStatus?.connected) {
             setStatus("connected");
             // Re-fetch to get updated phone from DB (edge function updates it)
             const { data: refreshed } = await supabase
