@@ -8,6 +8,7 @@ import {
   ResponsiveContainer, LineChart, Line
 } from "recharts";
 import EmptyState from "@/components/EmptyState";
+import OnboardingChecklist from "@/components/OnboardingChecklist";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 
