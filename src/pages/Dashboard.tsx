@@ -352,13 +352,6 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {metrics.pixelTotal === 0 && metrics.orderCount === 0 && (
-        <EmptyState
-          icon={<BarChart3 className="h-14 w-14" />}
-          title="Sem dados ainda"
-          description="O pixel está ativo. Dados aparecerão aqui quando visitantes acessarem seus checkouts."
-        />
-      )}
     </div>
   );
 };
