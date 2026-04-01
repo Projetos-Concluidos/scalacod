@@ -1,58 +1,31 @@
 
 
-# Auto-gerar Nome da Instância Evolution API
+# Adicionar URL de Webhook na EvolutionTab
 
-Concordo 100% — é muito mais prático e seguro gerar o nome automaticamente. Evita duplicatas, erros de digitação e simplifica o fluxo para o assinante.
+## Problema
+O campo de URL de Webhook (configurada automaticamente) foi removido durante a simplificação do componente. O usuário precisa ver essa informação com botão de copiar.
 
-## Abordagem
+## Solução
 
-Remover o campo de input "Nome da Instância" e gerar automaticamente no formato:
+Adicionar um campo read-only abaixo dos badges de status mostrando a URL do webhook gerada automaticamente, com botão de copiar — exatamente como na screenshot.
 
+### Mudanças em `src/components/whatsapp/EvolutionTab.tsx`
+
+1. Adicionar import de `Copy` do lucide-react
+2. Construir a URL do webhook: `${VITE_SUPABASE_URL}/functions/v1/whatsapp-webhook?user_id=${user.id}&provider=evolution`
+3. Renderizar campo read-only com label "URL de Webhook (configurada automaticamente)" e botão de copiar
+4. Posicionar entre os badges de status e o bloco de ação (criar instância / QR code / conectado)
+
+### UI resultante
 ```text
-scalaninja_<6 primeiros chars do user.id>
+URL de Webhook (configurada automaticamente)
+[https://xxx.supabase.co/functions/v1/whatsapp-webhook?user_id=...&provider=evolution  📋]
 ```
 
-Exemplo: `scalaninja_a3f2b1`
+O campo será visível em todos os estados (conectado, desconectado, QR ready).
 
-Isso garante unicidade (UUID do usuário é único) e o assinante não precisa pensar em nomes.
-
-## Mudanças no `src/components/whatsapp/EvolutionTab.tsx`
-
-1. **Remover** o input de `instanceName` e seu estado manual
-2. **Gerar automaticamente** o nome no `useEffect` quando o user carrega:
-   ```typescript
-   const generatedName = `scalaninja_${user.id.substring(0, 8)}`;
-   setInstanceName(generatedName);
-   ```
-3. **Na UI desconectada**: mostrar apenas o botão "Criar Instância e Conectar" com texto informativo abaixo: _"Sua instância será criada automaticamente como `scalaninja_XXXXXXXX`"_
-4. **Remover** o bloco de formulário com label "Nome da Instância" e o input
-5. **Manter** o nome visível na tela de "conectado" como informação (read-only)
-
-## UI resultante
-
-**Desconectado:**
-```text
-⚠️ Atenção — API Não Oficial...
-
-● DESCONECTADO    [API Ativa]
-
-Sua instância: scalaninja_a3f2b1c4
-
-[⚡ Criar Instância e Conectar]
-```
-
-**Conectado:**
-```text
-● CONECTADO    [API Ativa]
-
-✅ Conexão ativa — Evolution API
-Número: +5511999...    Instância: scalaninja_a3f2b1c4
-[Testar envio] [Reiniciar] [Desconectar]
-```
-
-## Arquivo alterado
-
+### Arquivo alterado
 | Arquivo | Ação |
 |---------|------|
-| `src/components/whatsapp/EvolutionTab.tsx` | Remover input manual, auto-gerar nome com `user.id` |
+| `src/components/whatsapp/EvolutionTab.tsx` | Adicionar campo de webhook URL com copy button |
 
