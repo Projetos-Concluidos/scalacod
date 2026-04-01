@@ -222,6 +222,7 @@ const LogzzTab = () => {
               </div>
               <p className="text-xs text-muted-foreground">Logística para vendas COD</p>
               {renderStatus()}
+            </div>
           </div>
           <div className="flex items-center gap-3">
             <Switch checked={isActive} onCheckedChange={handleToggle} />
