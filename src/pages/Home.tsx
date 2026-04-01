@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useHomeSettings } from "@/hooks/useHomeSettings";
-import { Star, Check, Menu, X, Zap, ShoppingCart, MessageSquare, BarChart3, CheckCircle, Monitor, Image as ImageIcon } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { Star, Check, Menu, X, Zap, ShoppingCart, MessageSquare, BarChart3, CheckCircle, Monitor, Image as ImageIcon, Crown } from "lucide-react";
 import heroMock from "@/assets/home-hero-mock.jpg";
 import featureCheckout from "@/assets/home-feature-checkout.jpg";
 import featureWhatsapp from "@/assets/home-feature-whatsapp.jpg";
