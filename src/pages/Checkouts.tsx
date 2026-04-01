@@ -603,71 +603,182 @@ const Checkouts = () => {
 
               {formOrderBump && (
                 <div className="space-y-3">
-                  <Label className="text-sm">Produtos para Order Bump</Label>
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                    <Input
-                      value={bumpSearchQuery}
-                      onChange={(e) => setBumpSearchQuery(e.target.value)}
-                      placeholder="Buscar oferta por nome..."
-                      className="pl-9 bg-input border-border text-sm"
-                    />
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm">Produtos para Order Bump</Label>
+                    <button
+                      onClick={async () => {
+                        if (logzzOffers.length > 0) {
+                          setBumpLogzzPopoverOpen(true);
+                          return;
+                        }
+                        setSyncingLogzz(true);
+                        try {
+                          const { data, error } = await supabase.functions.invoke("logzz-list-products");
+                          if (error) throw error;
+                          if (data?.offers?.length > 0) {
+                            setLogzzOffers(data.offers);
+                            setBumpLogzzPopoverOpen(true);
+                            toast.success(`${data.offers.length} ofertas encontradas!`);
+                          } else {
+                            toast.info(data?.message || "Nenhuma oferta encontrada.");
+                          }
+                        } catch {
+                          toast.error("Erro ao buscar ofertas da Logzz");
+                        } finally {
+                          setSyncingLogzz(false);
+                        }
+                      }}
+                      disabled={syncingLogzz}
+                      className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 disabled:opacity-50"
+                    >
+                      {syncingLogzz ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+                      {syncingLogzz ? "Buscando..." : "↻ Importar Logzz"}
+                    </button>
                   </div>
 
-                  {bumpSearchQuery && (
-                    <div className="bg-secondary border border-border rounded-xl max-h-48 overflow-y-auto">
-                      {offers
-                        .filter((o) => {
-                          const q = bumpSearchQuery.toLowerCase();
-                          const prod = products.find((p) => p.id === o.product_id);
-                          return (
-                            o.name.toLowerCase().includes(q) ||
-                            prod?.name.toLowerCase().includes(q)
-                          );
-                        })
-                        .filter((o) => !formBumps.some((b) => b.offer_id === o.id))
-                        .map((o) => {
-                          const prod = products.find((p) => p.id === o.product_id);
-                          return (
-                            <button
-                              key={o.id}
-                              onClick={() => {
-                                setFormBumps((prev) => [
-                                  ...prev,
-                                  {
-                                    offer_id: o.id,
-                                    name: o.name,
-                                    price: Number(o.price),
-                                    label_bump: "OFERTA ESPECIAL",
-                                    description: "",
-                                    hash: null,
-                                    image_url: null,
-                                  },
-                                ]);
-                                setBumpSearchQuery("");
-                                toast.success(`"${o.name}" adicionado como order bump`);
-                              }}
-                              className="w-full flex items-center gap-3 p-3 hover:bg-muted text-left border-b border-border/50 last:border-0"
-                            >
-                              <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
-                                <ShoppingBag className="h-4 w-4 text-muted-foreground" />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-foreground truncate">{prod?.name} — {o.name}</p>
-                                <p className="text-xs text-primary">R$ {Number(o.price).toFixed(2)}</p>
-                              </div>
-                              <Plus className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                            </button>
-                          );
-                        })}
-                      {offers.filter((o) => {
-                        const q = bumpSearchQuery.toLowerCase();
-                        const prod = products.find((p) => p.id === o.product_id);
-                        return (o.name.toLowerCase().includes(q) || prod?.name.toLowerCase().includes(q)) && !formBumps.some((b) => b.offer_id === o.id);
-                      }).length === 0 && (
-                        <p className="p-3 text-sm text-muted-foreground text-center">Nenhuma oferta encontrada</p>
+                  {/* Logzz Combobox for bump */}
+                  {logzzOffers.length > 0 && (
+                    <Popover open={bumpLogzzPopoverOpen} onOpenChange={setBumpLogzzPopoverOpen}>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" role="combobox" aria-expanded={bumpLogzzPopoverOpen} className="w-full justify-between bg-input border-border text-left font-normal h-10">
+                          <span className="text-muted-foreground">Buscar oferta da Logzz para bump...</span>
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                        <Command>
+                          <CommandInput placeholder="Buscar por nome, preço, hash..." />
+                          <CommandList>
+                            <CommandEmpty>Nenhuma oferta encontrada.</CommandEmpty>
+                            <CommandGroup>
+                              {logzzOffers
+                                .filter((o) => !formBumps.some((b) => b.hash === o.offer_hash))
+                                .map((o, i) => (
+                                <CommandItem
+                                  key={`bump-${o.offer_hash || i}`}
+                                  value={`${o.product_name} ${o.offer_name} ${o.offer_hash} ${o.price} ${o.role}`}
+                                  onSelect={async () => {
+                                    setBumpLogzzPopoverOpen(false);
+                                    try {
+                                      const { data: existingProd } = await supabase
+                                        .from("products").select("id")
+                                        .eq("user_id", user!.id).eq("hash", o.product_hash).maybeSingle();
+                                      let productId = existingProd?.id;
+                                      if (!productId) {
+                                        const { data: newProd } = await supabase.from("products").insert({
+                                          user_id: user!.id, name: o.product_name, hash: o.product_hash,
+                                          description: o.product_description, main_image_url: o.product_image_url,
+                                          weight: o.product_weight, width: o.product_width, height: o.product_height,
+                                          length: o.product_length, warranty_days: o.product_warranty_days,
+                                          categories: o.product_categories,
+                                        }).select("id").single();
+                                        productId = newProd?.id;
+                                      }
+                                      if (productId) {
+                                        const { data: existingOffer } = await supabase
+                                          .from("offers").select("id")
+                                          .eq("user_id", user!.id).eq("hash", o.offer_hash).maybeSingle();
+                                        let offerId = existingOffer?.id;
+                                        if (!offerId) {
+                                          const { data: newOffer } = await supabase.from("offers").insert({
+                                            user_id: user!.id, product_id: productId, name: o.offer_name,
+                                            hash: o.offer_hash, price: o.price,
+                                            original_price: o.original_price || o.price,
+                                            scheduling_checkout_url: o.scheduling_checkout_url,
+                                            expedition_checkout_url: o.expedition_checkout_url,
+                                          }).select("id").single();
+                                          offerId = newOffer?.id;
+                                        }
+                                        if (offerId) {
+                                          setFormBumps((prev) => [...prev, {
+                                            offer_id: offerId!,
+                                            name: `${o.product_name} — ${o.offer_name}`,
+                                            price: o.price, label_bump: "OFERTA ESPECIAL",
+                                            description: "", hash: o.offer_hash,
+                                            image_url: o.product_image_url, role: o.role,
+                                          }]);
+                                          queryClient.invalidateQueries({ queryKey: ["offers"] });
+                                          queryClient.invalidateQueries({ queryKey: ["products"] });
+                                          toast.success(`"${o.offer_name}" adicionado como bump!`);
+                                        }
+                                      }
+                                    } catch {
+                                      toast.error("Erro ao importar oferta para bump");
+                                    }
+                                  }}
+                                >
+                                  <div className="flex flex-col min-w-0">
+                                    <span className="text-sm font-medium truncate">{o.product_name} — {o.offer_name}</span>
+                                    <span className="text-xs text-muted-foreground flex items-center gap-1.5">
+                                      R$ {o.price.toFixed(2)} ·
+                                      <span className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-bold uppercase ${o.role === "affiliate" ? "bg-success/15 text-success" : o.role === "coproducer" ? "bg-primary/15 text-primary" : "bg-warning/15 text-warning"}`}>
+                                        {o.role === "affiliate" ? "afiliado" : o.role === "coproducer" ? "coprodutor" : "produtor"}
+                                      </span>
+                                      · {o.offer_hash}
+                                    </span>
+                                  </div>
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                  )}
+
+                  {/* Fallback: local search when no Logzz data */}
+                  {logzzOffers.length === 0 && (
+                    <>
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                        <Input
+                          value={bumpSearchQuery}
+                          onChange={(e) => setBumpSearchQuery(e.target.value)}
+                          placeholder="Buscar oferta local por nome..."
+                          className="pl-9 bg-input border-border text-sm"
+                        />
+                      </div>
+                      {bumpSearchQuery && (
+                        <div className="bg-secondary border border-border rounded-xl max-h-48 overflow-y-auto">
+                          {offers
+                            .filter((o) => {
+                              const q = bumpSearchQuery.toLowerCase();
+                              const prod = products.find((p) => p.id === o.product_id);
+                              return (o.name.toLowerCase().includes(q) || prod?.name.toLowerCase().includes(q)) && !formBumps.some((b) => b.offer_id === o.id);
+                            })
+                            .map((o) => {
+                              const prod = products.find((p) => p.id === o.product_id);
+                              return (
+                                <button
+                                  key={o.id}
+                                  onClick={() => {
+                                    setFormBumps((prev) => [...prev, { offer_id: o.id, name: o.name, price: Number(o.price), label_bump: "OFERTA ESPECIAL", description: "", hash: null, image_url: null }]);
+                                    setBumpSearchQuery("");
+                                    toast.success(`"${o.name}" adicionado como order bump`);
+                                  }}
+                                  className="w-full flex items-center gap-3 p-3 hover:bg-muted text-left border-b border-border/50 last:border-0"
+                                >
+                                  <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+                                    <ShoppingBag className="h-4 w-4 text-muted-foreground" />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-medium text-foreground truncate">{prod?.name} — {o.name}</p>
+                                    <p className="text-xs text-primary">R$ {Number(o.price).toFixed(2)}</p>
+                                  </div>
+                                  <Plus className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                                </button>
+                              );
+                            })}
+                          {offers.filter((o) => {
+                            const q = bumpSearchQuery.toLowerCase();
+                            const prod = products.find((p) => p.id === o.product_id);
+                            return (o.name.toLowerCase().includes(q) || prod?.name.toLowerCase().includes(q)) && !formBumps.some((b) => b.offer_id === o.id);
+                          }).length === 0 && (
+                            <p className="p-3 text-sm text-muted-foreground text-center">Nenhuma oferta encontrada</p>
+                          )}
+                        </div>
                       )}
-                    </div>
+                    </>
                   )}
 
                   {formBumps.length > 0 && (
@@ -678,7 +789,15 @@ const Checkouts = () => {
                           <span className="text-xs text-primary font-bold w-5 text-center">{i + 1}</span>
                           <div className="flex-1 min-w-0">
                             <p className="text-sm text-foreground truncate">{bump.name}</p>
-                            <p className="text-xs text-primary">R$ {bump.price.toFixed(2)}</p>
+                            <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                              <span className="text-primary">R$ {bump.price.toFixed(2)}</span>
+                              {bump.role && (
+                                <span className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-bold uppercase ${bump.role === "affiliate" ? "bg-success/15 text-success" : bump.role === "coproducer" ? "bg-primary/15 text-primary" : "bg-warning/15 text-warning"}`}>
+                                  {bump.role === "affiliate" ? "afiliado" : bump.role === "coproducer" ? "coprodutor" : "produtor"}
+                                </span>
+                              )}
+                              {bump.hash && <span>· {bump.hash}</span>}
+                            </p>
                           </div>
                           <Input
                             value={bump.label_bump}
@@ -698,6 +817,8 @@ const Checkouts = () => {
                       ))}
                     </div>
                   )}
+                </div>
+              )}
                 </div>
               )}
 
