@@ -30,7 +30,7 @@ Deno.serve(async (req) => {
     );
 
     // Get user integrations (include inactive for test/sync actions)
-    const skipActiveFilter = ["test_connection", "sync_logzz_products"].includes(action);
+    const skipActiveFilter = ["test_connection", "sync_logzz_products", "test_logzz_mapping"].includes(action);
     let intQuery = supabase.from("integrations").select("*").eq("user_id", user_id);
     if (!skipActiveFilter) {
       intQuery = intQuery.eq("is_active", true);
@@ -1009,6 +1009,92 @@ Deno.serve(async (req) => {
         });
       } catch (e: any) {
         return new Response(JSON.stringify({ error: e.message }), {
+          status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
+    // ── test_logzz_mapping: send test payload to Logzz webhook ──
+    if (action === "test_logzz_mapping") {
+      try {
+        const logzz = getIntegration("logzz");
+        if (!logzz) {
+          return new Response(JSON.stringify({ success: false, message: "Integração Logzz não encontrada. Salve o token primeiro." }), {
+            status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        const config = logzz.config as any;
+        const logzzToken = config?.bearer_token;
+        const webhookUrl = config?.logzz_webhook_url;
+
+        if (!logzzToken) {
+          return new Response(JSON.stringify({ success: false, message: "Bearer Token da Logzz não configurado." }), {
+            status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        if (!webhookUrl) {
+          return new Response(JSON.stringify({ success: false, message: "URL de Importação da Logzz não configurada." }), {
+            status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        const testPayload = {
+          external_id: `test-mapping-${Date.now()}`,
+          full_name: "Teste Mapeamento ScalaNinja",
+          phone: "11999999999",
+          customer_document: "00000000000",
+          postal_code: "59015070",
+          street: "Rua Teste Mapeamento",
+          neighborhood: "Centro",
+          city: "Natal",
+          state: "rn",
+          house_number: "1",
+          complement: "",
+          delivery_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+          offer: "teste-mapeamento",
+        };
+
+        console.log("[test_logzz_mapping] Sending test payload to:", webhookUrl);
+        console.log("[test_logzz_mapping] Payload:", JSON.stringify(testPayload));
+
+        const res = await fetch(webhookUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+            "Authorization": `bearer ${logzzToken}`,
+          },
+          body: JSON.stringify(testPayload),
+        });
+
+        const responseText = await res.text();
+        console.log("[test_logzz_mapping] Status:", res.status, "Response:", responseText);
+
+        let responseData: any = null;
+        try { responseData = JSON.parse(responseText); } catch { responseData = responseText; }
+
+        if (res.ok) {
+          return new Response(JSON.stringify({
+            success: true,
+            message: `Evento de mapeamento enviado com sucesso! (HTTP ${res.status})`,
+            logzz_response: responseData,
+          }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        } else {
+          return new Response(JSON.stringify({
+            success: false,
+            message: `Logzz retornou HTTP ${res.status}. ${res.status === 403 ? "Verifique o hash da URL de importação no painel Logzz." : "Verifique o token e a URL."}`,
+            status_code: res.status,
+            logzz_response: responseData,
+          }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+      } catch (e: any) {
+        console.error("[test_logzz_mapping] Error:", e.message);
+        return new Response(JSON.stringify({ success: false, message: e.message || "Erro ao disparar mapeamento" }), {
           status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }

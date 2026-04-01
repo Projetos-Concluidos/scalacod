@@ -79,18 +79,14 @@ const LogzzTab = () => {
     return res.json();
   };
 
-  const handleTestConnection = async () => {
+  const handleTestMapping = async () => {
     if (!token.trim()) { toast.error("Insira o Bearer Token da Logzz"); return; }
     if (!logzzWebhookUrl.trim()) { toast.error("Insira a URL de Importação de Pedidos da Logzz"); return; }
     setTesting(true);
     setTestResult(null);
     try {
       await handleSave(true);
-      // Real test via edge function
-      const { data, error } = await supabase.functions.invoke("test-integration", {
-        body: { provider: "logzz_tenant", credentials: { bearer_token: token } },
-      });
-      if (error) throw error;
+      const data = await callCheckoutApi("test_logzz_mapping");
       setTestResult(data);
       if (data.success) {
         toast.success(data.message);
@@ -102,7 +98,7 @@ const LogzzTab = () => {
         toast.error(data.message);
       }
     } catch (e: any) {
-      const result = { success: false, message: e.message || "Erro ao testar conexão" };
+      const result = { success: false, message: e.message || "Erro ao disparar mapeamento" };
       setTestResult(result);
       toast.error(result.message);
     } finally {
@@ -284,9 +280,9 @@ const LogzzTab = () => {
         )}
 
         <div className="flex gap-3">
-          <Button variant="outline" onClick={handleTestConnection} disabled={testing || !token.trim()}>
-            {testing ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
-            Testar Conexão
+          <Button variant="outline" onClick={handleTestMapping} disabled={testing || !token.trim() || !logzzWebhookUrl.trim()}>
+            {testing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Truck className="h-4 w-4" />}
+            Disparar Mapeamento
           </Button>
           <Button onClick={() => handleSave()} disabled={saving} className="gradient-primary text-primary-foreground">
             {saving ? "Salvando..." : "Salvar"}
