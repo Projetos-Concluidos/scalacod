@@ -724,10 +724,60 @@ const CheckoutPublic = () => {
             )}
 
             <div className="flex gap-3 mt-6">
-              <button className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-600 transition-colors">
+              <button 
+                onClick={() => {
+                  const supportPhone = checkout?.whatsapp_support || "5599999999999";
+                  const msg = encodeURIComponent(`Olá! Preciso de ajuda com o pedido #${orderNumber}`);
+                  window.open(`https://wa.me/${supportPhone.replace(/\D/g, "")}?text=${msg}`, "_blank");
+                }}
+                className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-600 transition-colors"
+              >
                 <MessageCircle className="h-4 w-4" /> Falar com Suporte
               </button>
-              <button className="flex-1 flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors">
+              <button 
+                onClick={() => {
+                  // Generate receipt HTML and trigger print
+                  const bumpsList = orderBumps.filter(b => selectedBumps.has(b.id));
+                  const bumpsHtml = bumpsList.map(b => `
+                    <tr><td style="padding:6px 0;border-bottom:1px solid #eee">${b.name} (1x)</td><td style="padding:6px 0;text-align:right;border-bottom:1px solid #eee">R$ ${(b.current_price || b.price || 0).toFixed(2)}</td></tr>
+                  `).join("");
+                  const receiptHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Recibo #${orderNumber}</title>
+                    <style>body{font-family:Arial,sans-serif;max-width:400px;margin:20px auto;padding:20px;font-size:14px}
+                    h1{text-align:center;font-size:18px;margin-bottom:4px}
+                    .subtitle{text-align:center;color:#666;font-size:12px;margin-bottom:20px}
+                    .section{margin-bottom:16px;padding:12px;border:1px solid #eee;border-radius:8px}
+                    .section-title{font-size:11px;text-transform:uppercase;color:#999;font-weight:bold;margin-bottom:8px}
+                    table{width:100%;border-collapse:collapse}
+                    .total-row{font-weight:bold;font-size:16px;border-top:2px solid #333}
+                    .total-row td{padding-top:8px}
+                    .footer{text-align:center;font-size:10px;color:#999;margin-top:24px}
+                    @media print{body{margin:0;padding:10px}}
+                    </style></head><body>
+                    <h1>✅ Pedido Confirmado</h1>
+                    <p class="subtitle">Recibo Nº ${orderNumber}</p>
+                    <div class="section"><p class="section-title">Produto</p>
+                    <table><tr><td>${product?.name} (1x)</td><td style="text-align:right">R$ ${Number(offer?.price || 0).toFixed(2)}</td></tr>
+                    ${bumpsHtml}
+                    ${bumpsTotal > 0 ? `<tr><td style="padding:6px 0;color:#666">Subtotal itens adicionais</td><td style="padding:6px 0;text-align:right;color:#666">R$ ${bumpsTotal.toFixed(2)}</td></tr>` : ""}
+                    <tr><td style="padding:6px 0">Frete</td><td style="padding:6px 0;text-align:right;color:#10B981">Grátis</td></tr>
+                    <tr class="total-row"><td>Total</td><td style="text-align:right;color:#10B981">R$ ${totalPrice.toFixed(2)}</td></tr>
+                    </table></div>
+                    <div class="section"><p class="section-title">Cliente</p>
+                    <p>👤 ${form.name}</p><p>📱 ${form.phone}</p>${form.cpf ? `<p>🪪 ${form.cpf}</p>` : ""}</div>
+                    <div class="section"><p class="section-title">Endereço</p>
+                    <p>📍 ${form.street}, ${form.number}</p><p>🏘️ ${form.district} - ${form.city}/${form.state}</p><p>📮 CEP: ${form.cep}</p></div>
+                    ${provider === "logzz" && selectedDate ? `<div class="section"><p class="section-title">Entrega</p><p>🚚 Entrega via Logzz · Pagamento na entrega</p><p>📅 ${selectedDate.date}</p></div>` : ""}
+                    <p class="footer">Compra 100% segura • ScalaNinja</p>
+                    </body></html>`;
+                  const printWindow = window.open("", "_blank");
+                  if (printWindow) {
+                    printWindow.document.write(receiptHtml);
+                    printWindow.document.close();
+                    setTimeout(() => printWindow.print(), 500);
+                  }
+                }}
+                className="flex-1 flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
+              >
                 <FileText className="h-4 w-4" /> Baixar Recibo
               </button>
             </div>
