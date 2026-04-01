@@ -12,11 +12,17 @@ async function getGlobalCredentials(supabaseAdmin: any) {
     .select("key, value")
     .in("key", ["integration_evolution_url", "integration_evolution_api_key"]);
 
-  const url = data?.find((d: any) => d.key === "integration_evolution_url")?.value;
-  const apiKey = data?.find((d: any) => d.key === "integration_evolution_api_key")?.value;
+  const rawUrl = data?.find((d: any) => d.key === "integration_evolution_url")?.value;
+  const rawKey = data?.find((d: any) => d.key === "integration_evolution_api_key")?.value;
 
-  const urlStr = typeof url === "string" ? url.replace(/\/$/, "") : "";
-  const keyStr = typeof apiKey === "string" ? apiKey : "";
+  // JSONB strings may come with extra quotes — strip them
+  const cleanStr = (v: any): string => {
+    if (typeof v === "string") return v.replace(/^"|"$/g, "").trim();
+    return String(v ?? "").replace(/^"|"$/g, "").trim();
+  };
+
+  const urlStr = cleanStr(rawUrl).replace(/\/$/, "");
+  const keyStr = cleanStr(rawKey);
 
   if (!urlStr || !keyStr) {
     throw new Error("Evolution API não configurada pelo administrador da plataforma.");
