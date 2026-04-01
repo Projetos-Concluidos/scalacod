@@ -109,6 +109,7 @@ const Dashboard = () => {
     });
     setSparkData(spark);
     setRecentLeads(leadsRes.data || []);
+    setQueueCount(queueRes.count || 0);
   }, [user, activePeriod]);
 
   useEffect(() => { loadData(); }, [loadData]);
