@@ -221,13 +221,6 @@ const CheckoutPublic = () => {
     const cep = form.cep.replace(/\D/g, "");
     if (cep.length !== 8) return;
     setCepLoading(true);
-    try {
-      const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
-      const data = await res.json();
-      if (!data.erro) {
-        setForm((prev) => ({ ...prev, street: data.logradouro || "", district: data.bairro || "", city: data.localidade || "", state: data.uf || "" }));
-      }
-    } catch { /* ignore */ }
     track("cep_check", { cep });
     await checkDeliveryProvider(cep);
     setCepLoading(false);
@@ -242,12 +235,36 @@ const CheckoutPublic = () => {
         body: JSON.stringify({ action: "check_delivery", user_id: checkout?.user_id, cep: cep.replace(/\D/g, "") }),
       });
       const data = await res.json();
+      console.log("[Checkout] Response da edge function checkout-api:", JSON.stringify(data));
+      console.log("[Checkout] Provider:", data?.provider, "Datas:", data?.dates?.length);
+
+      // Auto-fill address from edge function response (ViaCEP enrichment)
+      if (data.street || data.neighborhood || data.city || data.state) {
+        console.log("[Checkout] Preenchendo endereço:", data.street, data.neighborhood, data.city, data.state);
+        setForm((prev) => ({
+          ...prev,
+          street: data.street || prev.street,
+          district: data.neighborhood || prev.district,
+          city: data.city || prev.city,
+          state: data.state || prev.state,
+        }));
+      }
+
       if (data.provider === "logzz" && data.dates?.length > 0) {
         setProvider("logzz"); setDeliveryDates(data.dates);
       } else {
         setProvider("coinzz"); setDeliveryDates([]);
       }
-    } catch {
+    } catch (err) {
+      console.error("[Checkout] Erro ao verificar CEP:", err);
+      // Fallback: try ViaCEP directly
+      try {
+        const viaCepRes = await fetch(`https://viacep.com.br/ws/${cep.replace(/\D/g, "")}/json/`);
+        const viaCepData = await viaCepRes.json();
+        if (!viaCepData.erro) {
+          setForm((prev) => ({ ...prev, street: viaCepData.logradouro || "", district: viaCepData.bairro || "", city: viaCepData.localidade || "", state: viaCepData.uf || "" }));
+        }
+      } catch { /* ignore */ }
       setProvider("coinzz"); setDeliveryDates([]);
     }
     setDeliveryChecked(true);
@@ -883,11 +900,22 @@ const CheckoutPublic = () => {
                         {form.city} - {form.state} - CEP: {form.cep}
                       </motion.div>
                     )}
-                    {deliveryChecked && (
-                      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className={`rounded-lg border px-3 py-2 text-xs font-medium ${
-                        provider === "logzz" ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-blue-200 bg-blue-50 text-blue-700"
-                      }`}>
-                        {provider === "logzz" ? "✅ Entrega disponível — Pagamento na entrega (COD)" : "📦 Entrega via Correios — Pagamento online"}
+                    {deliveryChecked && provider === "logzz" && (
+                      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-700">
+                        ✅ Entrega disponível — Pagamento na entrega (COD)
+                      </motion.div>
+                    )}
+                    {deliveryChecked && provider === "coinzz" && (
+                      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="rounded-xl border border-amber-200 bg-amber-50 p-3">
+                        <div className="flex items-start gap-2">
+                          <span className="text-lg">📦</span>
+                          <div>
+                            <p className="font-semibold text-amber-800 text-sm">Entrega pelos Correios</p>
+                            <p className="text-amber-700 text-xs mt-0.5">
+                              Este endereço é atendido pelos Correios. O pagamento será realizado online (PIX, Cartão ou Boleto).
+                            </p>
+                          </div>
+                        </div>
                       </motion.div>
                     )}
                     <div>

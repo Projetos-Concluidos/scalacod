@@ -40,47 +40,80 @@ Deno.serve(async (req) => {
         });
       }
 
-      const logzz = getIntegration("logzz");
-      if (!logzz?.config) {
-        return new Response(
-          JSON.stringify({ provider: "coinzz", dates: [], message: "Logzz não configurado" }),
-          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
+      const cleanCep = cep.replace(/\D/g, "");
+      console.log("[CEP] Iniciando verificação para:", cleanCep);
 
-      const token = (logzz.config as any).bearer_token;
-      if (!token) {
+      // Helper: fetch ViaCEP with BrasilAPI fallback
+      const fetchViaCep = async (c: string) => {
+        try {
+          const r = await fetch(`https://viacep.com.br/ws/${c}/json/`);
+          const d = await r.json();
+          if (d.erro) throw new Error("CEP não encontrado");
+          console.log("[CEP] ViaCEP result:", d.logradouro, d.bairro, d.localidade, d.uf);
+          return { street: d.logradouro || null, neighborhood: d.bairro || null, city: d.localidade || null, state: d.uf || null };
+        } catch {
+          try {
+            const r = await fetch(`https://brasilapi.com.br/api/cep/v2/${c}`);
+            const d = await r.json();
+            return { street: d.street || null, neighborhood: d.neighborhood || null, city: d.city || null, state: d.state || null };
+          } catch {
+            return { street: null, neighborhood: null, city: null, state: null };
+          }
+        }
+      };
+
+      const logzz = getIntegration("logzz");
+      const logzzToken = (logzz?.config as any)?.bearer_token;
+      console.log("[CEP] Logzz token configurado:", !!logzzToken);
+
+      if (!logzz?.config || !logzzToken) {
+        console.log("[CEP] Sem token Logzz → fallback Correios");
+        const addr = await fetchViaCep(cleanCep);
         return new Response(
-          JSON.stringify({ provider: "coinzz", dates: [], message: "Token Logzz ausente" }),
+          JSON.stringify({ provider: "coinzz", dates: [], message: "Logzz não configurado", ...addr, zipCode: cleanCep }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
       try {
-        const cleanCep = cep.replace(/\D/g, "");
-        const res = await fetch(
-          `https://app.logzz.com.br/api/delivery-day/options/zip-code/${cleanCep}`,
-          { headers: { Authorization: `Bearer ${token}`, Accept: "application/json" } }
-        );
+        const logzzUrl = `https://app.logzz.com.br/api/delivery-day/options/zip-code/${cleanCep}`;
+        console.log("[CEP] Chamando Logzz:", logzzUrl);
+        const res = await fetch(logzzUrl, {
+          headers: { Authorization: `Bearer ${logzzToken}`, Accept: "application/json", "User-Agent": "Mozilla/5.0 Chrome/120" },
+        });
         const rawCep = await res.text();
+        console.log("[CEP] Logzz response status:", res.status);
         let data: any;
-        try { data = JSON.parse(rawCep); } catch { throw new Error("Invalid response"); }
+        try { data = JSON.parse(rawCep); } catch { throw new Error("Invalid Logzz response"); }
+        console.log("[CEP] Logzz success:", data.success, "dates:", data.data?.response?.dates_available?.length || 0, "errors:", data.errors);
 
         if (data.success && data.data?.response?.dates_available?.length > 0) {
-          const dates = data.data.response.dates_available.map((d: any) => ({
-            date: d.date,
-            type: d.type || "Padrão",
-            price: d.price || 0,
+          const resp = data.data.response;
+          const dates = resp.dates_available.map((d: any) => ({
+            date: d.date, type: d.type || "Padrão", price: d.price || 0,
           }));
+          const addr = await fetchViaCep(cleanCep);
+          console.log("[CEP] Provider escolhido: logzz, datas:", dates.length);
           return new Response(
-            JSON.stringify({ provider: "logzz", dates }),
+            JSON.stringify({
+              provider: "logzz", dates, ...addr, zipCode: cleanCep,
+              city: resp.city || addr.city, state: resp.state || addr.state,
+              operationName: resp.local_operation_name,
+            }),
             { headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
+        console.log("[CEP] Logzz não atende → fallback Correios. Errors:", data.errors);
         throw new Error("No dates available");
-      } catch {
+      } catch (err) {
+        console.log("[CEP] Fallback Correios. Erro:", (err as Error).message);
+        const addr = await fetchViaCep(cleanCep);
+        console.log("[CEP] Provider escolhido: coinzz");
         return new Response(
-          JSON.stringify({ provider: "coinzz", dates: [], message: "Logzz indisponível para este CEP" }),
+          JSON.stringify({
+            provider: "coinzz", dates: [], message: "Logzz indisponível para este CEP",
+            ...addr, zipCode: cleanCep, reason: "Área fora de cobertura Logzz — entrega pelos Correios",
+          }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
