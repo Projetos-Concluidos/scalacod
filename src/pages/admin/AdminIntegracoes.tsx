@@ -120,6 +120,22 @@ const AdminIntegracoes = () => {
     return section.fields.every((f) => !!savedValues[f.key]?.trim());
   };
 
+  const renderSectionStatus = (section: IntegrationSection) => {
+    const configured = isSectionActive(section);
+    if (!configured) {
+      return (
+        <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <Circle className="h-2 w-2" /> Não configurado
+        </span>
+      );
+    }
+    return (
+      <span className="flex items-center gap-1.5 text-xs text-success">
+        <CheckCircle className="h-3 w-3" /> Configurado
+      </span>
+    );
+  };
+
   const handleSave = async (section: IntegrationSection) => {
     setSaving((s) => ({ ...s, [section.provider]: true }));
     try {
