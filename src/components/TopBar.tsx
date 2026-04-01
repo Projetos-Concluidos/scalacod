@@ -42,7 +42,7 @@ const TopBar = () => {
     : "Free";
 
   return (
-    <div className="sticky top-0 z-30 flex items-center justify-between gap-3 px-4 py-3 border-b border-border bg-card md:justify-end md:px-6 md:py-4">
+    <div className="sticky top-0 z-30 flex items-center justify-between gap-3 px-4 py-2 border-b border-border bg-card md:justify-end md:px-6 md:py-2.5">
       {/* Hamburger — mobile only */}
       <button
         onClick={open}
@@ -61,7 +61,11 @@ const TopBar = () => {
           {isDark ? <Sun className="h-[18px] w-[18px]" /> : <Moon className="h-[18px] w-[18px]" />}
         </button>
         <NotificationBell />
-        <button className="hidden h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground sm:flex">
+        <button
+          onClick={() => navigate("/suporte")}
+          className="hidden h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground sm:flex"
+          title="Suporte"
+        >
           <HelpCircle className="h-[18px] w-[18px]" />
         </button>
         {profile?.role === "superadmin" && (

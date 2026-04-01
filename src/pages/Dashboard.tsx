@@ -1,16 +1,21 @@
 import { useState, useEffect, useCallback } from "react";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import {
   Eye, TrendingUp, Package, Users, BarChart3, MousePointerClick,
-  ShoppingCart, AlertTriangle, Coins, Calendar, FileText, MessageCircle
+  ShoppingCart, AlertTriangle, Coins, Calendar as CalendarIcon, FileText, MessageCircle
 } from "lucide-react";
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, LineChart, Line
 } from "recharts";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 import EmptyState from "@/components/EmptyState";
 import OnboardingBanner from "@/components/OnboardingBanner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { cn } from "@/lib/utils";
 
 const periods = ["Hoje", "Ontem", "7 dias", "15 dias", "30 dias", "Máximo"];
 
@@ -43,6 +48,9 @@ function getDateRange(period: string): { from: string; to: string } {
 const Dashboard = () => {
   const { user } = useAuth();
   const [activePeriod, setActivePeriod] = useState("Hoje");
+  const [customDateFrom, setCustomDateFrom] = useState<Date | undefined>();
+  const [customDateTo, setCustomDateTo] = useState<Date | undefined>();
+  const [calendarOpen, setCalendarOpen] = useState(false);
   const [metrics, setMetrics] = useState({
     revenue: 0, orderCount: 0, visitors: 0, pageviews: 0,
     interactions: 0, conversions: 0, abandonment: 0, coinzzPaid: 0, pixelTotal: 0,
@@ -56,7 +64,15 @@ const Dashboard = () => {
 
   const loadData = useCallback(async () => {
     if (!user) return;
-    const { from, to } = getDateRange(activePeriod);
+    let dateRange: { from: string; to: string };
+    if (activePeriod === "Personalizado" && customDateFrom) {
+      const fromDate = new Date(customDateFrom);
+      const toDate = customDateTo ? new Date(customDateTo.getTime() + 86400000) : new Date(fromDate.getTime() + 86400000);
+      dateRange = { from: fromDate.toISOString(), to: toDate.toISOString() };
+    } else {
+      dateRange = getDateRange(activePeriod);
+    }
+    const { from, to } = dateRange;
 
     const [pixelRes, ordersRes, coinzzRes, leadsRes, queueRes] = await Promise.all([
       supabase.from("pixel_events").select("event_type, created_at").eq("user_id", user.id).gte("created_at", from).lt("created_at", to),
@@ -110,7 +126,7 @@ const Dashboard = () => {
     setSparkData(spark);
     setRecentLeads(leadsRes.data || []);
     setQueueCount(queueRes.count || 0);
-  }, [user, activePeriod]);
+  }, [user, activePeriod, customDateFrom, customDateTo]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
@@ -142,7 +158,9 @@ const Dashboard = () => {
     <div className="space-y-6 w-full max-w-full min-w-0">
       {/* Onboarding Banner */}
       <OnboardingBanner />
-      <div className="flex items-start justify-between">
+
+      {/* Header + Filter — aligned with gap */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <p className="text-xs font-semibold uppercase tracking-widest text-primary mb-1">Painel Geral</p>
           <h1 className="text-3xl font-bold text-foreground">Resumo Operacional</h1>
@@ -151,9 +169,9 @@ const Dashboard = () => {
           {periods.map((p) => (
             <button
               key={p}
-              onClick={() => setActivePeriod(p)}
+              onClick={() => { setActivePeriod(p); setCustomDateFrom(undefined); setCustomDateTo(undefined); }}
               className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${
-                activePeriod === p
+                activePeriod === p && activePeriod !== "Personalizado"
                   ? "bg-primary/15 text-primary border border-primary/30"
                   : "text-muted-foreground hover:bg-muted hover:text-foreground border border-transparent"
               }`}
@@ -161,9 +179,62 @@ const Dashboard = () => {
               {p}
             </button>
           ))}
-          <button className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground">
-            <Calendar className="h-4 w-4" />
-          </button>
+          <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+            <PopoverTrigger asChild>
+              <button
+                className={cn(
+                  "flex h-8 w-8 items-center justify-center rounded-lg transition-colors",
+                  activePeriod === "Personalizado"
+                    ? "bg-primary/15 text-primary"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                )}
+                title="Selecionar período personalizado"
+              >
+                <CalendarIcon className="h-4 w-4" />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-4" align="end">
+              <div className="space-y-3">
+                <p className="text-sm font-semibold text-foreground">Período personalizado</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">De</p>
+                    <Calendar
+                      mode="single"
+                      selected={customDateFrom}
+                      onSelect={setCustomDateFrom}
+                      disabled={(date) => date > new Date()}
+                      className={cn("p-2 pointer-events-auto rounded-lg border border-border")}
+                    />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">Até</p>
+                    <Calendar
+                      mode="single"
+                      selected={customDateTo}
+                      onSelect={setCustomDateTo}
+                      disabled={(date) => date > new Date() || (customDateFrom ? date < customDateFrom : false)}
+                      className={cn("p-2 pointer-events-auto rounded-lg border border-border")}
+                    />
+                  </div>
+                </div>
+                <div className="flex items-center justify-between pt-2 border-t border-border">
+                  <p className="text-xs text-muted-foreground">
+                    {customDateFrom ? format(customDateFrom, "dd/MM/yyyy", { locale: ptBR }) : "—"}
+                    {" → "}
+                    {customDateTo ? format(customDateTo, "dd/MM/yyyy", { locale: ptBR }) : "—"}
+                  </p>
+                  <button
+                    onClick={() => { setActivePeriod("Personalizado"); setCalendarOpen(false); }}
+                    disabled={!customDateFrom}
+                    className="rounded-lg bg-primary px-4 py-1.5 text-xs font-semibold text-primary-foreground disabled:opacity-40"
+                  >
+                    Aplicar
+                  </button>
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
         </div>
       </div>
 
@@ -213,18 +284,26 @@ const Dashboard = () => {
           <Eye className="h-4 w-4 text-primary" />
           <h3 className="text-sm font-bold text-foreground">Pixel Analytics</h3>
         </div>
-        <div className="flex flex-wrap gap-4 md:gap-0 md:grid md:grid-cols-7 md:divide-x md:divide-border">
-          {pixelStats.map((stat) => (
-            <div key={stat.label} className="flex flex-col items-start px-4 first:pl-0 last:pr-0">
-              <div className="flex items-center gap-1.5 mb-2">
-                <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: stat.color }} />
-                <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                  {stat.label}
-                </span>
+        <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 gap-4 md:gap-0 md:divide-x md:divide-border">
+          {pixelStats.map((stat) => {
+            const IconComp = stat.icon;
+            return (
+              <div key={stat.label} className="flex items-center gap-3 px-4 first:pl-0 last:pr-0">
+                <div
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
+                  style={{ backgroundColor: `${stat.color}15` }}
+                >
+                  <IconComp className="h-4 w-4" style={{ color: stat.color }} />
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground block">
+                    {stat.label}
+                  </span>
+                  <p className="text-xl font-extrabold text-foreground leading-tight">{stat.value}</p>
+                </div>
               </div>
-              <p className="text-2xl font-extrabold text-foreground">{stat.value}</p>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
