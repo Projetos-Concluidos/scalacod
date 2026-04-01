@@ -476,10 +476,14 @@ const CheckoutPublic = () => {
     setPaymentLoading(true);
     try {
       // Create order first
+      console.log("[Payment] Criando pedido...");
       const oid = await createOrder();
-      if (!oid) { setPaymentLoading(false); return; }
+      if (!oid) { console.error("[Payment] Falha ao criar pedido"); setPaymentLoading(false); return; }
+      console.log("[Payment] Pedido criado:", oid);
 
       const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+      console.log(`[Payment] Chamando create-payment. Method: ${paymentMethod}, Store: ${checkout.user_id}, Amount: ${totalPrice}`);
+      
       const res = await fetch(`https://${projectId}.supabase.co/functions/v1/create-payment?store=${checkout.user_id}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -488,14 +492,16 @@ const CheckoutPublic = () => {
           method: paymentMethod,
           cardToken: paymentMethod === "credit_card" ? bricksCardToken : undefined,
           installments: bricksInstallments || 1,
-          payerEmail: form.email,
+          payerEmail: form.email || "comprador@scalaninja.com",
           payerDocument: form.cpf,
           payerName: form.name,
         }),
       });
       const data = await res.json();
+      console.log("[Payment] Response:", JSON.stringify(data));
 
       if (!res.ok || data.error) {
+        console.error("[Payment] Erro:", data.error, data.details);
         toast.error(data.error || "Erro ao processar pagamento");
         setPaymentLoading(false);
         return;
