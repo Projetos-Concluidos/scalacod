@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Eye, EyeOff, Save, Wifi, WifiOff, Loader2, Zap } from "lucide-react";
+import { Eye, EyeOff, Save, Wifi, WifiOff, Loader2, Zap, Circle, PauseCircle, CheckCircle } from "lucide-react";
 import { useState, useEffect } from "react";
 import InfoTooltip from "@/components/InfoTooltip";
 import NinjaBadge from "@/components/NinjaBadge";
