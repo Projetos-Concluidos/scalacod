@@ -99,14 +99,27 @@ serve(async (req) => {
         });
         const connectData = await connectRes.json();
 
-        // Update DB
-        await supabaseAdmin.from("whatsapp_instances").upsert({
+        // Update DB — select then update or insert
+        const { data: existRow } = await supabaseAdmin
+          .from("whatsapp_instances")
+          .select("id")
+          .eq("user_id", user.id)
+          .eq("provider", "evolution")
+          .maybeSingle();
+
+        const payload = {
           user_id: user.id,
           provider: "evolution",
           instance_name: instanceName,
           status: "qr_ready",
           webhook_url: webhookUrl,
-        }, { onConflict: "user_id,provider" });
+        };
+
+        if (existRow) {
+          await supabaseAdmin.from("whatsapp_instances").update(payload).eq("id", existRow.id);
+        } else {
+          await supabaseAdmin.from("whatsapp_instances").insert(payload);
+        }
 
         return new Response(JSON.stringify({
           success: true,
@@ -156,8 +169,15 @@ serve(async (req) => {
 
       const createData = await createRes.json();
 
-      // Save to DB
-      await supabaseAdmin.from("whatsapp_instances").upsert({
+      // Save to DB — select then update or insert
+      const { data: existingRow } = await supabaseAdmin
+        .from("whatsapp_instances")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("provider", "evolution")
+        .maybeSingle();
+
+      const instancePayload = {
         user_id: user.id,
         provider: "evolution",
         instance_name: instanceName,
@@ -165,7 +185,13 @@ serve(async (req) => {
         webhook_url: webhookUrl,
         api_key: createData.hash || null,
         evolution_server_url: evoUrl,
-      }, { onConflict: "user_id,provider" });
+      };
+
+      if (existingRow) {
+        await supabaseAdmin.from("whatsapp_instances").update(instancePayload).eq("id", existingRow.id);
+      } else {
+        await supabaseAdmin.from("whatsapp_instances").insert(instancePayload);
+      }
 
       // The create response may include QR in qrcode.base64
       let qrBase64 = createData.qrcode?.base64 || null;
@@ -249,10 +275,20 @@ serve(async (req) => {
           phoneNumber = inst?.instance?.owner || "";
         }
 
-        await supabaseAdmin.from("whatsapp_instances")
-          .update({ status: "connected", phone_number: phoneNumber, qr_code: null })
+        // Update or insert whatsapp_instances
+        const { data: existingWi } = await supabaseAdmin
+          .from("whatsapp_instances")
+          .select("id")
           .eq("user_id", user.id)
-          .eq("provider", "evolution");
+          .eq("provider", "evolution")
+          .maybeSingle();
+
+        const wiPayload = { status: "connected", phone_number: phoneNumber, qr_code: null, instance_name: instanceName };
+        if (existingWi) {
+          await supabaseAdmin.from("whatsapp_instances").update(wiPayload).eq("id", existingWi.id);
+        } else {
+          await supabaseAdmin.from("whatsapp_instances").insert({ ...wiPayload, user_id: user.id, provider: "evolution" });
+        }
 
         // Upsert integrations table
         const { data: existing } = await supabaseAdmin
