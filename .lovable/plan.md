@@ -1,60 +1,58 @@
 
 
-# Simplificar EvolutionTab — Credenciais Globais, Usuário Só Cria Instância
+# Auto-gerar Nome da Instância Evolution API
 
-## Problema
-A aba Evolution API pede URL do servidor e API Key ao usuário/assinante. Porém, essas credenciais são **globais da plataforma**, configuradas pelo admin em `/admin/integracoes`. O tenant só precisa criar uma instância e escanear o QR Code.
+Concordo 100% — é muito mais prático e seguro gerar o nome automaticamente. Evita duplicatas, erros de digitação e simplifica o fluxo para o assinante.
 
-## Solução
+## Abordagem
 
-### 1. Remover campos de credenciais do EvolutionTab
-- Remover inputs de "URL do Servidor Evolution" e "API Key Global"
-- Remover estados `serverUrl`, `apiKeyGlobal`, `showApiKey`
-- Manter apenas o campo "Nome da Instância"
-- Botão "Criar Instância e Conectar" depende apenas do nome preenchido
+Remover o campo de input "Nome da Instância" e gerar automaticamente no formato:
 
-### 2. Verificar disponibilidade da API global
-- No `useEffect`, buscar `system_config` com keys `integration_evolution_url` e `integration_evolution_api_key`
-- Se ambas estiverem preenchidas → mostrar formulário com campo de instância + botão
-- Se não configuradas → mostrar aviso: "Evolution API não configurada pelo administrador"
-- Mostrar badge "API Ativa" / "API Inativa" baseado na configuração global
-
-### 3. Usar credenciais globais server-side
-- O `handleCreateInstance` passa apenas `instanceName` e `userId` para uma edge function
-- A edge function busca as credenciais globais da `system_config` e chama a Evolution API
-- Credenciais nunca expostas ao frontend do tenant
-
-### 4. Atualizar disclaimer
-- Simplificar instruções do InfoTooltip (remover passos sobre servidor/API key)
-- Manter aviso de API não oficial
-
-### Arquivos alterados
-
-| Arquivo | Ação |
-|---------|------|
-| `src/components/whatsapp/EvolutionTab.tsx` | Reescrever: remover campos de credenciais, buscar config global, simplificar UI |
-
-### UI resultante (estado desconectado)
 ```text
-┌─ Atenção — API Não Oficial ─────────────────┐
-│ ⚠️ Aviso sobre risco de banimento...         │
-└──────────────────────────────────────────────┘
+scalaninja_<6 primeiros chars do user.id>
+```
 
-● DESCONECTADO    [🟢 API Ativa] ou [🔴 API Inativa]
+Exemplo: `scalaninja_a3f2b1`
 
-Nome da Instância: [minha_loja_________]
-  Nome único para identificar esta conexão
+Isso garante unicidade (UUID do usuário é único) e o assinante não precisa pensar em nomes.
+
+## Mudanças no `src/components/whatsapp/EvolutionTab.tsx`
+
+1. **Remover** o input de `instanceName` e seu estado manual
+2. **Gerar automaticamente** o nome no `useEffect` quando o user carrega:
+   ```typescript
+   const generatedName = `scalaninja_${user.id.substring(0, 8)}`;
+   setInstanceName(generatedName);
+   ```
+3. **Na UI desconectada**: mostrar apenas o botão "Criar Instância e Conectar" com texto informativo abaixo: _"Sua instância será criada automaticamente como `scalaninja_XXXXXXXX`"_
+4. **Remover** o bloco de formulário com label "Nome da Instância" e o input
+5. **Manter** o nome visível na tela de "conectado" como informação (read-only)
+
+## UI resultante
+
+**Desconectado:**
+```text
+⚠️ Atenção — API Não Oficial...
+
+● DESCONECTADO    [API Ativa]
+
+Sua instância: scalaninja_a3f2b1c4
 
 [⚡ Criar Instância e Conectar]
 ```
 
-### UI resultante (estado conectado)
+**Conectado:**
 ```text
-● CONECTADO    [🟢 API Ativa]
+● CONECTADO    [API Ativa]
 
-┌─ ✅ Conexão ativa — Evolution API ──────────┐
-│ Número: +5511999...    Instância: minha_loja │
-│ [Testar envio] [Reiniciar] [Desconectar]    │
-└──────────────────────────────────────────────┘
+✅ Conexão ativa — Evolution API
+Número: +5511999...    Instância: scalaninja_a3f2b1c4
+[Testar envio] [Reiniciar] [Desconectar]
 ```
+
+## Arquivo alterado
+
+| Arquivo | Ação |
+|---------|------|
+| `src/components/whatsapp/EvolutionTab.tsx` | Remover input manual, auto-gerar nome com `user.id` |
 
