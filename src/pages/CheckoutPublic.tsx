@@ -281,11 +281,30 @@ const CheckoutPublic = () => {
   // Initialize MercadoPago Bricks when credit_card is selected on step 3
   useEffect(() => {
     if (step !== 3 || provider !== "coinzz" || paymentMethod !== "credit_card" || !mpPublicKey || !offer) return;
-    if (!window.MercadoPago) return;
 
     setBricksReady(false);
 
+    const waitForMPSDK = (): Promise<void> => {
+      return new Promise((resolve) => {
+        if (window.MercadoPago) { resolve(); return; }
+        console.log("[Cartão] Aguardando SDK MercadoPago carregar...");
+        let attempts = 0;
+        const check = setInterval(() => {
+          attempts++;
+          if (window.MercadoPago) { clearInterval(check); resolve(); }
+          if (attempts > 50) { clearInterval(check); resolve(); } // 5s max
+        }, 100);
+      });
+    };
+
     const initBricks = async () => {
+      await waitForMPSDK();
+      if (!window.MercadoPago) {
+        console.error("[Cartão] SDK MercadoPago não carregou após 5s");
+        toast.error("Erro ao carregar SDK de pagamento. Recarregue a página.");
+        return;
+      }
+
       try {
         if (bricksControllerRef.current) {
           try { bricksControllerRef.current.unmount(); } catch {}
@@ -294,6 +313,7 @@ const CheckoutPublic = () => {
         const container = document.getElementById("cardPaymentBrick_container");
         if (container) container.innerHTML = "";
 
+        console.log("[Cartão] Inicializando Bricks com publicKey:", mpPublicKey.substring(0, 15) + "...");
         const mp = new window.MercadoPago(mpPublicKey, { locale: "pt-BR" });
         const bricksBuilder = mp.bricks();
 
@@ -317,20 +337,26 @@ const CheckoutPublic = () => {
             },
           },
           callbacks: {
-            onReady: () => setBricksReady(true),
+            onReady: () => {
+              console.log("[Cartão] Bricks pronto!");
+              setBricksReady(true);
+            },
             onSubmit: async (cardFormData: any) => {
+              console.log("[Cartão] Formulário submetido, token:", !!cardFormData.token);
               await processPayment(cardFormData.token, cardFormData.installments);
             },
             onError: (error: any) => {
-              console.error("Bricks error:", error);
+              console.error("[Cartão] Bricks error:", error);
               toast.error("Erro no formulário de pagamento");
             },
           },
         });
 
         bricksControllerRef.current = controller;
+        console.log("[Cartão] Bricks controller criado com sucesso");
       } catch (err) {
-        console.error("Failed to init Bricks:", err);
+        console.error("[Cartão] Failed to init Bricks:", err);
+        toast.error("Erro ao inicializar formulário de cartão");
       }
     };
 
@@ -450,10 +476,14 @@ const CheckoutPublic = () => {
     setPaymentLoading(true);
     try {
       // Create order first
+      console.log("[Payment] Criando pedido...");
       const oid = await createOrder();
-      if (!oid) { setPaymentLoading(false); return; }
+      if (!oid) { console.error("[Payment] Falha ao criar pedido"); setPaymentLoading(false); return; }
+      console.log("[Payment] Pedido criado:", oid);
 
       const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+      console.log(`[Payment] Chamando create-payment. Method: ${paymentMethod}, Store: ${checkout.user_id}, Amount: ${totalPrice}`);
+      
       const res = await fetch(`https://${projectId}.supabase.co/functions/v1/create-payment?store=${checkout.user_id}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -462,33 +492,44 @@ const CheckoutPublic = () => {
           method: paymentMethod,
           cardToken: paymentMethod === "credit_card" ? bricksCardToken : undefined,
           installments: bricksInstallments || 1,
-          payerEmail: form.email,
+          payerEmail: form.email || "comprador@scalaninja.com",
           payerDocument: form.cpf,
           payerName: form.name,
         }),
       });
       const data = await res.json();
+      console.log("[Payment] Response:", JSON.stringify(data));
 
       if (!res.ok || data.error) {
+        console.error("[Payment] Erro:", data.error, data.details);
         toast.error(data.error || "Erro ao processar pagamento");
         setPaymentLoading(false);
         return;
       }
 
       if (data.status === "approved") {
+        console.log("[Payment] ✅ Pagamento aprovado imediatamente");
         track("payment_approved", { method: paymentMethod });
         setStep(4);
       } else if (paymentMethod === "pix") {
-        setPixData({ pixQrCode: data.pixQrCode, pixQrCodeBase64: data.pixQrCodeBase64, paymentId: data.paymentId });
-        startPixPolling(data.paymentId);
+        console.log("[Payment] PIX gerado. QR:", !!data.pixQrCode, "Base64:", !!data.pixQrCodeBase64, "PaymentId:", data.paymentId);
+        if (!data.pixQrCodeBase64) {
+          toast.error("Erro: QR Code PIX não foi gerado. Verifique as credenciais MercadoPago.");
+          console.error("[Payment] pixQrCodeBase64 ausente na resposta:", data);
+        } else {
+          setPixData({ pixQrCode: data.pixQrCode, pixQrCodeBase64: data.pixQrCodeBase64, paymentId: data.paymentId });
+          startPixPolling(data.paymentId);
+        }
       } else if (paymentMethod === "boleto") {
+        console.log("[Payment] Boleto gerado:", data.boletoUrl);
         if (data.boletoUrl) window.open(data.boletoUrl, "_blank");
         toast.success("Boleto gerado! Aguardando pagamento.");
         startPixPolling(data.paymentId);
       } else if (paymentMethod === "wallet" && data.walletRedirectUrl) {
+        console.log("[Payment] Redirecionando para wallet:", data.walletRedirectUrl);
         window.location.href = data.walletRedirectUrl;
       } else {
-        // credit_card pending
+        console.log("[Payment] Pagamento pendente, polling...", data);
         toast.info("Pagamento em processamento...");
         startPixPolling(data.paymentId);
       }
