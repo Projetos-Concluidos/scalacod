@@ -134,8 +134,13 @@ const Checkouts = () => {
 
   const createMutation = useMutation({
     mutationFn: async (payload: any) => {
-      const { error } = await supabase.from("checkouts").insert(payload);
+      const { data, error } = await supabase.from("checkouts").insert(payload).select("id, offer_id").single();
       if (error) throw error;
+      // Save order bumps if enabled
+      if (payload.order_bump_enabled && payload.offer_id && formBumps.length > 0) {
+        await saveBumps(payload.offer_id);
+      }
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["checkouts"] });
@@ -149,6 +154,13 @@ const Checkouts = () => {
     mutationFn: async ({ id, ...payload }: any) => {
       const { error } = await supabase.from("checkouts").update(payload).eq("id", id);
       if (error) throw error;
+      // Save order bumps if enabled
+      if (payload.order_bump_enabled && payload.offer_id && formBumps.length > 0) {
+        await saveBumps(payload.offer_id);
+      } else if (!payload.order_bump_enabled && payload.offer_id) {
+        // Remove bumps if disabled
+        await supabase.from("order_bumps").delete().eq("offer_id", payload.offer_id);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["checkouts"] });
@@ -157,6 +169,23 @@ const Checkouts = () => {
     },
     onError: (e: any) => toast.error(e.message),
   });
+
+  async function saveBumps(offerId: string) {
+    // Delete existing bumps for this offer, then re-insert
+    await supabase.from("order_bumps").delete().eq("offer_id", offerId);
+    if (formBumps.length > 0) {
+      const bumpsToInsert = formBumps.map(b => ({
+        offer_id: offerId,
+        name: b.name,
+        price: b.price,
+        current_price: b.price,
+        hash: b.hash,
+        label_bump: b.label_bump || "OFERTA ESPECIAL",
+        description: b.description || null,
+      }));
+      await supabase.from("order_bumps").insert(bumpsToInsert);
+    }
+  }
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
