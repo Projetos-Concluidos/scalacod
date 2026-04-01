@@ -645,7 +645,7 @@ const CheckoutPublic = () => {
             </div>
 
             {/* Product */}
-            <div className="flex items-center gap-3 rounded-xl border border-gray-100 bg-gray-50 p-3 text-left mb-4">
+            <div className="flex items-center gap-3 rounded-xl border border-gray-100 bg-gray-50 p-3 text-left mb-2">
               {product?.main_image_url ? (
                 <img src={product.main_image_url} alt={product.name} className="h-12 w-12 rounded-lg object-cover" />
               ) : (
@@ -653,8 +653,43 @@ const CheckoutPublic = () => {
               )}
               <div className="flex-1">
                 <p className="text-sm font-semibold text-gray-900">{product?.name}</p>
+                <p className="text-xs text-gray-500">1 unidade</p>
               </div>
               <p className="text-sm font-bold text-emerald-600">R$ {Number(offer?.price || 0).toFixed(2)}</p>
+            </div>
+
+            {/* Order Bumps purchased */}
+            {orderBumps.filter(b => selectedBumps.has(b.id)).length > 0 && (
+              <div className="rounded-xl border border-emerald-100 bg-emerald-50/50 p-3 text-left mb-4 space-y-2">
+                <p className="text-xs font-semibold text-emerald-700 uppercase tracking-wider flex items-center gap-1">
+                  <Plus className="h-3 w-3" /> Itens adicionais
+                </p>
+                {orderBumps.filter(b => selectedBumps.has(b.id)).map(b => (
+                  <div key={b.id} className="flex items-center justify-between py-1 border-t border-emerald-100 first:border-0">
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-gray-900">{b.name}</p>
+                      <p className="text-xs text-gray-500">1 unidade</p>
+                    </div>
+                    <p className="text-sm font-bold text-emerald-600">R$ {(b.current_price || b.price || 0).toFixed(2)}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Total breakdown */}
+            <div className="rounded-xl border border-gray-100 bg-gray-50 p-3 text-left mb-4">
+              <div className="space-y-1 text-sm">
+                <div className="flex justify-between"><span className="text-gray-500">Produto principal</span><span className="text-gray-800">R$ {Number(offer?.price || 0).toFixed(2)}</span></div>
+                {bumpsTotal > 0 && (
+                  <div className="flex justify-between"><span className="text-gray-500">Itens adicionais</span><span className="text-gray-800">R$ {bumpsTotal.toFixed(2)}</span></div>
+                )}
+                <div className="flex justify-between"><span className="text-gray-500">Frete</span><span className="text-emerald-600 font-medium">Grátis</span></div>
+                {mpFeeAmount > 0 && (
+                  <div className="flex justify-between"><span className="text-gray-500">Taxa de processamento</span><span className="text-gray-800">R$ {mpFeeAmount.toFixed(2)}</span></div>
+                )}
+                <div className="h-px bg-gray-200 my-1" />
+                <div className="flex justify-between font-bold text-base"><span className="text-gray-900">Total</span><span className="text-emerald-600">R$ {totalPrice.toFixed(2)}</span></div>
+              </div>
             </div>
 
             {/* Client data */}
@@ -689,10 +724,60 @@ const CheckoutPublic = () => {
             )}
 
             <div className="flex gap-3 mt-6">
-              <button className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-600 transition-colors">
+              <button 
+                onClick={() => {
+                  const supportPhone = checkout?.whatsapp_support || "5599999999999";
+                  const msg = encodeURIComponent(`Olá! Preciso de ajuda com o pedido #${orderNumber}`);
+                  window.open(`https://wa.me/${supportPhone.replace(/\D/g, "")}?text=${msg}`, "_blank");
+                }}
+                className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-600 transition-colors"
+              >
                 <MessageCircle className="h-4 w-4" /> Falar com Suporte
               </button>
-              <button className="flex-1 flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors">
+              <button 
+                onClick={() => {
+                  // Generate receipt HTML and trigger print
+                  const bumpsList = orderBumps.filter(b => selectedBumps.has(b.id));
+                  const bumpsHtml = bumpsList.map(b => `
+                    <tr><td style="padding:6px 0;border-bottom:1px solid #eee">${b.name} (1x)</td><td style="padding:6px 0;text-align:right;border-bottom:1px solid #eee">R$ ${(b.current_price || b.price || 0).toFixed(2)}</td></tr>
+                  `).join("");
+                  const receiptHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Recibo #${orderNumber}</title>
+                    <style>body{font-family:Arial,sans-serif;max-width:400px;margin:20px auto;padding:20px;font-size:14px}
+                    h1{text-align:center;font-size:18px;margin-bottom:4px}
+                    .subtitle{text-align:center;color:#666;font-size:12px;margin-bottom:20px}
+                    .section{margin-bottom:16px;padding:12px;border:1px solid #eee;border-radius:8px}
+                    .section-title{font-size:11px;text-transform:uppercase;color:#999;font-weight:bold;margin-bottom:8px}
+                    table{width:100%;border-collapse:collapse}
+                    .total-row{font-weight:bold;font-size:16px;border-top:2px solid #333}
+                    .total-row td{padding-top:8px}
+                    .footer{text-align:center;font-size:10px;color:#999;margin-top:24px}
+                    @media print{body{margin:0;padding:10px}}
+                    </style></head><body>
+                    <h1>✅ Pedido Confirmado</h1>
+                    <p class="subtitle">Recibo Nº ${orderNumber}</p>
+                    <div class="section"><p class="section-title">Produto</p>
+                    <table><tr><td>${product?.name} (1x)</td><td style="text-align:right">R$ ${Number(offer?.price || 0).toFixed(2)}</td></tr>
+                    ${bumpsHtml}
+                    ${bumpsTotal > 0 ? `<tr><td style="padding:6px 0;color:#666">Subtotal itens adicionais</td><td style="padding:6px 0;text-align:right;color:#666">R$ ${bumpsTotal.toFixed(2)}</td></tr>` : ""}
+                    <tr><td style="padding:6px 0">Frete</td><td style="padding:6px 0;text-align:right;color:#10B981">Grátis</td></tr>
+                    <tr class="total-row"><td>Total</td><td style="text-align:right;color:#10B981">R$ ${totalPrice.toFixed(2)}</td></tr>
+                    </table></div>
+                    <div class="section"><p class="section-title">Cliente</p>
+                    <p>👤 ${form.name}</p><p>📱 ${form.phone}</p>${form.cpf ? `<p>🪪 ${form.cpf}</p>` : ""}</div>
+                    <div class="section"><p class="section-title">Endereço</p>
+                    <p>📍 ${form.street}, ${form.number}</p><p>🏘️ ${form.district} - ${form.city}/${form.state}</p><p>📮 CEP: ${form.cep}</p></div>
+                    ${provider === "logzz" && selectedDate ? `<div class="section"><p class="section-title">Entrega</p><p>🚚 Entrega via Logzz · Pagamento na entrega</p><p>📅 ${selectedDate.date}</p></div>` : ""}
+                    <p class="footer">Compra 100% segura • ScalaNinja</p>
+                    </body></html>`;
+                  const printWindow = window.open("", "_blank");
+                  if (printWindow) {
+                    printWindow.document.write(receiptHtml);
+                    printWindow.document.close();
+                    setTimeout(() => printWindow.print(), 500);
+                  }
+                }}
+                className="flex-1 flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
+              >
                 <FileText className="h-4 w-4" /> Baixar Recibo
               </button>
             </div>
