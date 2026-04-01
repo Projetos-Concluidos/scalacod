@@ -264,7 +264,7 @@ Deno.serve(async (req) => {
               const logzzHeaders: Record<string, string> = {
                 "Content-Type": "application/json",
                 "Accept": "application/json",
-                "User-Agent": "ScalaNinja/1.0",
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
               };
               if (bearerToken) logzzHeaders["Authorization"] = `Bearer ${bearerToken}`;
 
@@ -1031,6 +1031,121 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({
         success: true, from: fromStatus, to: newStatus, order_id: order.id,
       }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    // ── send_to_logzz: manually push an existing order to Logzz ──
+    if (action === "send_to_logzz") {
+      const { order_id } = body;
+      if (!order_id) {
+        return new Response(JSON.stringify({ error: "order_id required" }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Fetch the order
+      const { data: order, error: orderErr } = await supabase
+        .from("orders").select("*").eq("id", order_id).maybeSingle();
+      if (orderErr || !order) {
+        return new Response(JSON.stringify({ error: "Order not found" }), {
+          status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Fetch Logzz integration for the order's user
+      const { data: integrations } = await supabase
+        .from("integrations").select("*").eq("user_id", order.user_id);
+      const logzzInt = (integrations || []).find((i: any) => i.type === "logzz" && i.is_active);
+      const logzzCfg = logzzInt?.config as any;
+      const webhookUrl = logzzCfg?.logzz_webhook_url;
+      const bearerToken = logzzCfg?.bearer_token;
+
+      if (!webhookUrl) {
+        return new Response(JSON.stringify({ error: "Logzz webhook URL not configured" }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Get offer hash
+      let offerHash = "";
+      if (order.offer_id) {
+        const { data: offerData } = await supabase.from("offers").select("hash").eq("id", order.offer_id).maybeSingle();
+        offerHash = offerData?.hash || "";
+      }
+
+      const logzzPayload = {
+        external_id: order.id,
+        full_name: order.client_name,
+        phone: order.client_phone?.replace(/\D/g, ""),
+        customer_document: order.client_document?.replace(/\D/g, "") || "",
+        postal_code: order.client_zip_code?.replace(/\D/g, ""),
+        street: order.client_address,
+        neighborhood: order.client_address_district,
+        city: order.client_address_city,
+        state: order.client_address_state?.toLowerCase(),
+        house_number: order.client_address_number,
+        complement: order.client_address_comp || "",
+        delivery_date: order.delivery_date || "",
+        offer: offerHash,
+        affiliate_email: order.affiliate_email || "",
+      };
+
+      console.log("[send_to_logzz] Payload:", JSON.stringify(logzzPayload));
+      console.log("[send_to_logzz] Webhook URL:", webhookUrl);
+
+      const logzzHeaders: Record<string, string> = {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      };
+      if (bearerToken) logzzHeaders["Authorization"] = `Bearer ${bearerToken}`;
+
+      const logzzRes = await fetch(webhookUrl, {
+        method: "POST",
+        headers: logzzHeaders,
+        body: JSON.stringify(logzzPayload),
+      });
+
+      const logzzBody = await logzzRes.text();
+      console.log("[send_to_logzz] Logzz response:", logzzRes.status, logzzBody.substring(0, 1000));
+
+      if (logzzRes.status === 200 || logzzRes.status === 201) {
+        let logzzOrderId: string | null = null;
+        try {
+          const parsed = JSON.parse(logzzBody);
+          logzzOrderId = parsed?.id || parsed?.order_id || parsed?.logzz_order_id || parsed?.data?.id || null;
+        } catch { /* not JSON */ }
+
+        const prevStatus = order.status;
+
+        // Update order
+        await supabase.from("orders").update({
+          logzz_order_id: logzzOrderId,
+          status: "Agendado",
+          updated_at: new Date().toISOString(),
+        }).eq("id", order.id);
+
+        // Log status change
+        await supabase.from("order_status_history").insert({
+          order_id: order.id,
+          from_status: prevStatus,
+          to_status: "Agendado",
+          source: "send_to_logzz",
+          raw_payload: { logzz_status: logzzRes.status, logzz_body: logzzBody.substring(0, 500) },
+        });
+
+        return new Response(JSON.stringify({
+          success: true,
+          logzz_order_id: logzzOrderId,
+          logzz_status: logzzRes.status,
+          logzz_response: logzzBody.substring(0, 500),
+        }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      } else {
+        return new Response(JSON.stringify({
+          success: false,
+          logzz_status: logzzRes.status,
+          logzz_response: logzzBody.substring(0, 1000),
+        }), { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
     }
 
     return new Response(
