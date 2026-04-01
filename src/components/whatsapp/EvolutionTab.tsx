@@ -137,7 +137,7 @@ const EvolutionTab = () => {
           toast.success("WhatsApp conectado via Evolution API!");
         }
       } catch (e) {
-        console.error("Polling error:", e);
+        if (import.meta.env.DEV) console.error("Polling error:", e);
       }
     }, 4000);
 
