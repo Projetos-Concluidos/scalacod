@@ -945,6 +945,8 @@ export type Database = {
           logistic_operator: string | null
           logistics_type: string | null
           logzz_order_id: string | null
+          mp_payment_status: string | null
+          mp_payment_status_detail: string | null
           offer_id: string | null
           order_final_price: number
           order_number: string | null
@@ -1000,6 +1002,8 @@ export type Database = {
           logistic_operator?: string | null
           logistics_type?: string | null
           logzz_order_id?: string | null
+          mp_payment_status?: string | null
+          mp_payment_status_detail?: string | null
           offer_id?: string | null
           order_final_price: number
           order_number?: string | null
@@ -1055,6 +1059,8 @@ export type Database = {
           logistic_operator?: string | null
           logistics_type?: string | null
           logzz_order_id?: string | null
+          mp_payment_status?: string | null
+          mp_payment_status_detail?: string | null
           offer_id?: string | null
           order_final_price?: number
           order_number?: string | null
