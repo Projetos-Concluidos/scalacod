@@ -949,11 +949,11 @@ const Vozes = () => {
               >
                 <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
                 <p className="text-sm text-foreground font-medium">Clique ou arraste arquivos aqui</p>
-                <p className="text-xs text-muted-foreground mt-1">.mp3 ou .wav — mínimo 1 min, máximo 30 min</p>
+                <p className="text-xs text-muted-foreground mt-1">.mp3, .wav ou .m4a — máx 25 amostras</p>
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept=".mp3,.wav"
+                  accept=".mp3,.wav,.m4a"
                   multiple
                   className="hidden"
                   onChange={e => {
