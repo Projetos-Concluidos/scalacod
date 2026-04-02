@@ -306,7 +306,7 @@ const Vozes = () => {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 mb-8">
         <div className="ninja-card lg:col-span-2">
           <div className="flex items-center justify-between mb-4">
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Saldo de Tokens</p>
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">💰 Saldo Disponível</p>
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
               <Music className="h-4 w-4 text-primary" />
             </div>
@@ -314,15 +314,18 @@ const Vozes = () => {
           {loading ? (
             <Skeleton className="h-12 w-32 mb-4" />
           ) : (
-            <p className="text-4xl font-bold text-foreground mb-4">{balance.toLocaleString("pt-BR")}</p>
+            <p className="text-4xl font-bold text-foreground mb-2">{balance.toLocaleString("pt-BR")} <span className="text-base font-medium text-muted-foreground">tokens</span></p>
           )}
-          <div className="flex items-center gap-8 text-sm text-muted-foreground mb-4">
-            <span>Tokens Usados: <strong className="text-foreground">{totalUsed.toLocaleString("pt-BR")}</strong></span>
-            <span>Total Comprado: <strong className="text-foreground">{totalPurchased.toLocaleString("pt-BR")}</strong></span>
+          <div className="flex items-center gap-6 text-sm text-muted-foreground mb-4">
+            <span>📊 Total Adquirido: <strong className="text-foreground">{totalPurchased.toLocaleString("pt-BR")}</strong></span>
+            <span>🔥 Tokens Usados: <strong className="text-foreground">{totalUsed.toLocaleString("pt-BR")}</strong></span>
           </div>
           <Progress value={usagePercent} className="h-2 mb-3" />
           <p className="text-xs text-muted-foreground">
-            Sua utilização atual é de {usagePercent}% do limite contratado. Tokens são descontados conforme a geração de áudio por inteligência artificial.
+            Uso: {usagePercent}% · <span className="font-medium">Saldo = Total Adquirido − Tokens Usados</span>
+          </p>
+          <p className="text-[11px] text-muted-foreground/70 mt-1">
+            Inclui tokens comprados + creditados pelo administrador. Cada caractere do texto consome 1 token.
           </p>
         </div>
         <div className="ninja-card">
