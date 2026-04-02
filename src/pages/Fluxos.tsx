@@ -351,8 +351,23 @@ const Fluxos = () => {
 
       {/* Tabs */}
       <div className="flex items-center gap-3 mb-6">
-        <button className="gradient-primary flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-primary-foreground">
+        <button
+          onClick={() => setFlowFilter("all")}
+          className={flowFilter === "all" ? "gradient-primary flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-primary-foreground" : "flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground"}
+        >
           <GitBranch className="h-4 w-4" /> Todos
+        </button>
+        <button
+          onClick={() => setFlowFilter("cod")}
+          className={flowFilter === "cod" ? "flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold bg-emerald-500/15 text-emerald-500 border border-emerald-500/30" : "flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground"}
+        >
+          🟢 Logzz
+        </button>
+        <button
+          onClick={() => setFlowFilter("coinzz")}
+          className={flowFilter === "coinzz" ? "flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold bg-purple-500/15 text-purple-400 border border-purple-500/30" : "flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground"}
+        >
+          🟣 Coinzz
         </button>
         <button className="flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground">
           <Folder className="h-4 w-4" /> Nova pasta
