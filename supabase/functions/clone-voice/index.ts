@@ -15,6 +15,7 @@ serve(async (req) => {
     const formData = await req.formData();
     const name = formData.get("name") as string;
     const userId = formData.get("userId") as string;
+    const description = formData.get("description") as string || "";
     const files = formData.getAll("files") as File[];
 
     if (!name || !userId || files.length === 0) {
