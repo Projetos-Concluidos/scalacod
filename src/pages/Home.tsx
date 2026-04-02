@@ -27,7 +27,7 @@ const painPoints = [
     emoji: "😤",
     problem: "CEP fora da área Logzz?",
     pain: "Pedido perdido. Cliente sumiu. Você não fatura.",
-    solution: "ScalaNinja roteia automaticamente para Coinzz + Correios. Zero perda.",
+    solution: "ScalaCOD roteia automaticamente para Coinzz + Correios. Zero perda.",
   },
   {
     emoji: "📵",
