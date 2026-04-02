@@ -111,7 +111,7 @@ const Vozes = () => {
   };
 
   useEffect(() => { fetchData(); }, [user]);
-  useEffect(() => { if (tab === "library") fetchLibrary(); }, [tab]);
+  useEffect(() => { fetchLibrary(); }, [tab]);
 
   const balance = tokenData?.balance || 0;
   const totalUsed = tokenData?.total_used || 0;
