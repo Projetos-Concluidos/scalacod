@@ -140,6 +140,7 @@ Deno.serve(async (req) => {
         if (datesAvailable.length > 0) {
           const dates = datesAvailable.map((d: any) => ({
             date: d.date, type: d.type_name || d.type || "Padrão", type_code: d.type_code || "", price: d.price || 0,
+            local_operation_code: d.local_operation_code || "", local_operation_name: d.local_operation_name || "",
           }));
           const addr = await fetchViaCep(cleanCep);
           console.log("[CEP] Provider escolhido: logzz, datas:", dates.length);
