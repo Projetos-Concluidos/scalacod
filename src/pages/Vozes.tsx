@@ -136,7 +136,18 @@ const Vozes = () => {
     }
   };
 
-  useEffect(() => { fetchData(); }, [user]);
+  const fetchPacks = async () => {
+    setPacksLoading(true);
+    const { data } = await supabase
+      .from("token_packs")
+      .select("*")
+      .eq("is_active", true)
+      .order("sort_order", { ascending: true });
+    setPacks((data as TokenPack[]) || []);
+    setPacksLoading(false);
+  };
+
+  useEffect(() => { fetchData(); fetchPacks(); }, [user]);
   useEffect(() => { fetchLibrary(); }, [tab]);
 
   // Fetch MP platform public key for card payments
