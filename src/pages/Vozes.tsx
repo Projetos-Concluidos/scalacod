@@ -79,6 +79,7 @@ const Vozes = () => {
   const [cloneOpen, setCloneOpen] = useState(false);
   const [cloneStep, setCloneStep] = useState(1);
   const [cloneName, setCloneName] = useState("");
+  const [cloneDescription, setCloneDescription] = useState("");
   const [cloneFiles, setCloneFiles] = useState<File[]>([]);
   const [cloning, setCloning] = useState(false);
   const [playingId, setPlayingId] = useState<string | null>(null);
