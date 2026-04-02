@@ -539,7 +539,7 @@ const CheckoutPublic = () => {
           method: paymentMethod,
           cardToken: paymentMethod === "credit_card" ? bricksCardToken : undefined,
           installments: bricksInstallments || 1,
-          payerEmail: form.email || "comprador@scalaninja.com",
+          payerEmail: "comprador@checkout.com",
           payerDocument: form.cpf,
           payerName: form.name,
         }),
