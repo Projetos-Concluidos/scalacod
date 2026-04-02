@@ -1,60 +1,97 @@
 
 
-## Plano: Cartão de Crédito para Tokens + Dashboard de Vendas Admin
+## Plano: Gerenciamento Dinâmico de Packs de Tokens + Badges Promocionais
 
-### 3 Entregas
+### Problema Atual
 
----
+Os packs de tokens estão **hardcoded** em 3 lugares:
+- `src/pages/Vozes.tsx` (frontend, array `packs`)
+- `supabase/functions/purchase-tokens/index.ts` (edge function, `TOKEN_PACKS`)
 
-### 1. Ativar Pagamento por Cartão de Crédito (MercadoPago Bricks)
+Isso impede alterar preços, criar promoções ou adicionar/remover packs sem deploy. Também não existe análise de custo por token para o assinante.
 
-**Problema**: O botão "Cartão" no modal de compra de tokens está desabilitado com aviso "em breve".
+### Análise de Custo por Token (atual)
 
-**Solução**: Usar o mesmo padrão do `CheckoutPublic.tsx` — carregar o SDK MercadoPago Bricks e renderizar o formulário `cardPayment` dentro do modal.
+| Pack | Tokens | Preço | Custo/Token |
+|------|--------|-------|-------------|
+| Iniciante | 5.000 | R$ 19,90 | R$ 0,00398 |
+| Essencial | 10.000 | R$ 39,90 | R$ 0,00399 |
+| Profissional | 50.000 | R$ 197,00 | R$ 0,00394 |
+| Enterprise | 100.000 | R$ 397,00 | R$ 0,00397 |
 
-**Alterações em `src/pages/Vozes.tsx`**:
-- Buscar a `MP_PUBLIC_KEY` do tenant da tabela `system_config` (chave `integration_mp_public_key`) ou `integrations` tipo `mercadopago`
-- Quando o usuário selecionar "Cartão", renderizar o container `cardPaymentBrick_container` no modal
-- Inicializar `MercadoPago Bricks` com a public key da plataforma (do `system_config` chave `mp_public_key`)
-- No callback `onSubmit` do Bricks, chamar `purchase-tokens` passando `paymentMethod: "credit_card"` e `cardToken`
-- Remover o aviso "em breve" e habilitar o botão
-- Carregar o script `https://sdk.mercadopago.com/js/v2` no `<head>` via `index.html` ou dinamicamente
-
-**Edge function `purchase-tokens`**: Já suporta `credit_card` com `cardToken` — não precisa de alteração.
-
----
-
-### 2. Dashboard Admin — Vendas de Tokens (`AdminTokens.tsx` reescrita)
-
-**Problema**: A página `/admin/tokens` só mostra consumo por usuário, sem dados de vendas/compras.
-
-**Solução**: Redesenhar com 2 abas: **Vendas** e **Consumo**.
-
-**Aba "Vendas"** (nova):
-- Cards de métricas: Receita Total (R$), Total de Vendas, Vendas Pagas, Vendas Pendentes
-- Tabela com dados da `token_purchases`: usuário, pack, tokens, valor, método de pagamento, status (badge colorido: pago/pendente/falhou), data
-- Filtro por status e busca por nome/email
-- Busca `token_purchases` + join com `profiles` para nome/email
-
-**Aba "Consumo"** (existente, melhorada):
-- Cards: Total Adquirido (compras + admin), Total Consumido, Taxa de Uso
-- Tabela por usuário: nome, email, comprados, admin (créditos manuais), usados, saldo
-- Separar tokens de compras (`token_purchases` status=paid) vs créditos admin (`admin_action_logs` action=add_tokens)
+Os preços são quase lineares — sem benefício real por volume. O gerenciamento dinâmico permitirá ajustar isso.
 
 ---
 
-### 3. Detalhes Técnicos
+### Entrega 1: Tabela `token_packs` no banco
 
-**Busca da Public Key MP**:
-- A plataforma usa `MP_PLATFORM_ACCESS_TOKEN` como secret para cobranças
-- Para o Bricks SDK no frontend, precisa da **public key** correspondente
-- Buscar de `system_config` (chave `mp_public_key`) — se não existir, será necessário adicionar via painel admin de integrações
-- Alternativa: usar a mesma public key que o checkout do tenant busca de `integrations` tipo `mercadopago`
+Nova tabela para armazenar os packs dinamicamente:
 
-**Migração**: Nenhuma — tabela `token_purchases` já tem todos os campos necessários.
+```sql
+CREATE TABLE public.token_packs (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  name text NOT NULL,
+  slug text NOT NULL UNIQUE,
+  tokens integer NOT NULL,
+  price numeric NOT NULL,
+  is_active boolean DEFAULT true,
+  is_popular boolean DEFAULT false,
+  badge_type text DEFAULT null, -- 'blackfriday', 'promo', 'oferta', 'semana_assinante', null
+  badge_label text DEFAULT null, -- texto custom do badge ex: "🔥 Black Friday -40%"
+  sort_order integer DEFAULT 0,
+  original_price numeric DEFAULT null, -- preço original (riscado) para promoções
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+```
+
+RLS: leitura pública, escrita superadmin.
+
+Migração inclui seed dos 4 packs atuais.
+
+---
+
+### Entrega 2: Painel Admin — Aba "Packs" no AdminTokens
+
+Nova aba **"📦 Packs"** na página `/admin/tokens`:
+
+- **Tabela de packs**: nome, tokens, preço, custo/token (calculado), badge, status ativo/inativo
+- **Botão "Novo Pack"** + modal de criação/edição com:
+  - Nome, slug, tokens, preço atual, preço original (para mostrar "de/por")
+  - Toggle ativo, toggle popular
+  - Seletor de badge promocional com preview visual:
+    - 🖤 **Black Friday** (fundo preto, texto dourado)
+    - 🔥 **Promoção** (fundo vermelho, texto branco)
+    - 💰 **Em Oferta** (fundo verde, texto branco)
+    - 🎉 **Semana do Assinante** (fundo roxo, texto branco)
+    - Sem badge
+  - Campo "Label do badge" para texto personalizado
+- **Coluna "Custo/Token"**: calculada automaticamente (preço / tokens) para facilitar análise
+
+---
+
+### Entrega 3: Frontend Vozes.tsx — Packs dinâmicos
+
+- Remove o array `packs` hardcoded
+- Busca `token_packs` do banco (apenas `is_active = true`, ordenado por `sort_order`)
+- Renderiza badges promocionais nos cards:
+  - `original_price` aparece riscado quando presente
+  - Badge colorido no canto do card conforme `badge_type`
+- O `popular` continua destacando o card com borda especial
+
+---
+
+### Entrega 4: Edge Function `purchase-tokens` — Validação dinâmica
+
+- Remove `TOKEN_PACKS` hardcoded
+- Busca o pack por `slug` na tabela `token_packs` (via service role)
+- Valida `is_active = true` antes de processar
+- Usa `price` e `tokens` do banco para criar o pagamento
+
+---
 
 ### Escopo
-- 2 arquivos editados: `src/pages/Vozes.tsx`, `src/pages/admin/AdminTokens.tsx`
-- Possível: adicionar script MP SDK em `index.html` (já existe para checkout)
-- Sem migrações, sem edge functions novas
+- **1 migração**: tabela `token_packs` + seed + RLS
+- **1 edge function editada**: `purchase-tokens`
+- **2 arquivos frontend editados**: `AdminTokens.tsx` (nova aba), `Vozes.tsx` (packs dinâmicos)
 
