@@ -798,7 +798,6 @@ const CheckoutPublic = () => {
   }
 
   // ── MAIN CHECKOUT (Steps 1-3) ──
-  const quantity = extractQty(checkout.name);
 
   const OrderSummary = ({ className = "" }: { className?: string }) => (
     <div className={`checkout-summary ${className}`}>
