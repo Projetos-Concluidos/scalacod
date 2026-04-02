@@ -484,7 +484,7 @@ const CheckoutPublic = () => {
             capiToken: checkout.meta_capi_token,
             eventSourceUrl: window.location.href,
             userData: {
-              email: form.email, phone: form.phone,
+              phone: form.phone,
               firstName: form.name.split(" ")[0],
               lastName: form.name.split(" ").slice(1).join(" "),
               fbp: getCookie("_fbp"), fbc: getCookie("_fbc"),
