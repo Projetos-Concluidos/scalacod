@@ -1,68 +1,60 @@
 
 
-## Plano: Fallback ElevenLabs → OpenAI TTS
+## Plano: Cartão de Crédito para Tokens + Dashboard de Vendas Admin
 
-### Contexto
+### 3 Entregas
 
-Atualmente, a edge function `generate-audio` usa **apenas** ElevenLabs. As chaves de integração ficam salvas na tabela `system_config` (ex: `integration_elevenlabs_api_key`, `integration_openai_api_key`). Quando o admin desativa ElevenLabs (removendo a chave), o sistema quebra.
+---
 
-### Lógica de Fallback
+### 1. Ativar Pagamento por Cartão de Crédito (MercadoPago Bricks)
 
-A edge function `generate-audio` passa a verificar na `system_config` qual provedor está ativo:
+**Problema**: O botão "Cartão" no modal de compra de tokens está desabilitado com aviso "em breve".
 
-1. Busca `integration_elevenlabs_api_key` e `integration_openai_api_key` da `system_config`
-2. Se ElevenLabs tiver chave configurada → usa ElevenLabs (comportamento atual)
-3. Se ElevenLabs **não** tiver chave mas OpenAI tiver → usa OpenAI TTS (`POST https://api.openai.com/v1/audio/speech`)
-4. Se nenhum tiver chave → retorna erro claro
+**Solução**: Usar o mesmo padrão do `CheckoutPublic.tsx` — carregar o SDK MercadoPago Bricks e renderizar o formulário `cardPayment` dentro do modal.
 
-### OpenAI TTS
+**Alterações em `src/pages/Vozes.tsx`**:
+- Buscar a `MP_PUBLIC_KEY` do tenant da tabela `system_config` (chave `integration_mp_public_key`) ou `integrations` tipo `mercadopago`
+- Quando o usuário selecionar "Cartão", renderizar o container `cardPaymentBrick_container` no modal
+- Inicializar `MercadoPago Bricks` com a public key da plataforma (do `system_config` chave `mp_public_key`)
+- No callback `onSubmit` do Bricks, chamar `purchase-tokens` passando `paymentMethod: "credit_card"` e `cardToken`
+- Remover o aviso "em breve" e habilitar o botão
+- Carregar o script `https://sdk.mercadopago.com/js/v2` no `<head>` via `index.html` ou dinamicamente
 
-A API OpenAI TTS é simples:
-- Endpoint: `POST https://api.openai.com/v1/audio/speech`
-- Body: `{ model: "tts-1", voice: "nova", input: text }`
-- Retorna audio binário (MP3)
-- Vozes disponíveis: `alloy`, `echo`, `fable`, `onyx`, `nova`, `shimmer`
+**Edge function `purchase-tokens`**: Já suporta `credit_card` com `cardToken` — não precisa de alteração.
 
-Como OpenAI não usa `voiceId` do ElevenLabs, a function fará um mapeamento: se o `voiceId` enviado for um ID ElevenLabs, mapeia para uma voz OpenAI padrão (ex: `nova` para feminino, `onyx` para masculino), ou aceita diretamente nomes de voz OpenAI.
+---
 
-### Alterações na Biblioteca (Frontend)
+### 2. Dashboard Admin — Vendas de Tokens (`AdminTokens.tsx` reescrita)
 
-A página `Vozes.tsx` precisa adaptar a aba "Biblioteca":
-- Se ElevenLabs está ativo → mostra biblioteca ElevenLabs (comportamento atual)
-- Se apenas OpenAI está ativo → mostra as 6 vozes OpenAI como opções na biblioteca (alloy, echo, fable, onyx, nova, shimmer)
-- O frontend busca o status do provedor via `system_config`
+**Problema**: A página `/admin/tokens` só mostra consumo por usuário, sem dados de vendas/compras.
 
-### Alterações
+**Solução**: Redesenhar com 2 abas: **Vendas** e **Consumo**.
 
-#### 1. Edge Function `generate-audio/index.ts`
+**Aba "Vendas"** (nova):
+- Cards de métricas: Receita Total (R$), Total de Vendas, Vendas Pagas, Vendas Pendentes
+- Tabela com dados da `token_purchases`: usuário, pack, tokens, valor, método de pagamento, status (badge colorido: pago/pendente/falhou), data
+- Filtro por status e busca por nome/email
+- Busca `token_purchases` + join com `profiles` para nome/email
 
-- Remove dependência do secret `ELEVENLABS_API_KEY` (que é fixo)
-- Busca chaves dinâmicas da `system_config` via Supabase client
-- Implementa dois caminhos: ElevenLabs ou OpenAI TTS
-- OpenAI: `POST /v1/audio/speech` com model `tts-1-hd`, voz mapeada
-- Mesmo fluxo de upload para Storage e débito de tokens
+**Aba "Consumo"** (existente, melhorada):
+- Cards: Total Adquirido (compras + admin), Total Consumido, Taxa de Uso
+- Tabela por usuário: nome, email, comprados, admin (créditos manuais), usados, saldo
+- Separar tokens de compras (`token_purchases` status=paid) vs créditos admin (`admin_action_logs` action=add_tokens)
 
-#### 2. Edge Function `list-voice-library/index.ts`
+---
 
-- Verifica qual provedor está ativo na `system_config`
-- Se ElevenLabs → busca vozes da API ElevenLabs (atual)
-- Se OpenAI → retorna lista fixa das 6 vozes OpenAI com metadados (nome, idioma, gênero, caso de uso)
+### 3. Detalhes Técnicos
 
-#### 3. `src/pages/Vozes.tsx`
+**Busca da Public Key MP**:
+- A plataforma usa `MP_PLATFORM_ACCESS_TOKEN` como secret para cobranças
+- Para o Bricks SDK no frontend, precisa da **public key** correspondente
+- Buscar de `system_config` (chave `mp_public_key`) — se não existir, será necessário adicionar via painel admin de integrações
+- Alternativa: usar a mesma public key que o checkout do tenant busca de `integrations` tipo `mercadopago`
 
-- Ao carregar, busca `system_config` para saber o provedor ativo
-- Exibe badge "ElevenLabs" ou "OpenAI" no header
-- Adapta o fallback de biblioteca para vozes OpenAI quando necessário
-- O campo `elevenlabs_voice_id` na tabela `voices` passa a aceitar também IDs OpenAI (são strings simples como "nova", "alloy")
-
-#### 4. Edge Function `clone-voice/index.ts`
-
-- Clonagem de voz só funciona com ElevenLabs
-- Se ElevenLabs não estiver ativo, retorna erro: "Clonagem de voz requer ElevenLabs ativo"
+**Migração**: Nenhuma — tabela `token_purchases` já tem todos os campos necessários.
 
 ### Escopo
-- 3 edge functions editadas: `generate-audio`, `list-voice-library`, `clone-voice`
-- 1 arquivo frontend: `src/pages/Vozes.tsx`
-- Sem migrações (reutiliza campo `elevenlabs_voice_id` para IDs OpenAI)
-- Sem novos secrets (chave OpenAI já fica na `system_config`)
+- 2 arquivos editados: `src/pages/Vozes.tsx`, `src/pages/admin/AdminTokens.tsx`
+- Possível: adicionar script MP SDK em `index.html` (já existe para checkout)
+- Sem migrações, sem edge functions novas
 
