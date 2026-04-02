@@ -658,7 +658,7 @@ const CheckoutPublic = () => {
               )}
               <div className="flex-1">
                 <p className="text-sm font-semibold text-gray-900">{product?.name}</p>
-                <p className="text-xs text-gray-500">1 unidade</p>
+                <p className="text-xs text-gray-500">{quantity} {quantity === 1 ? "unidade" : "unidades"}</p>
               </div>
               <p className="text-sm font-bold text-emerald-600">R$ {Number(offer?.price || 0).toFixed(2)}</p>
             </div>
