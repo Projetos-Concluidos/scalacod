@@ -143,7 +143,7 @@ const Login = () => {
               {phrases[phraseIndex]}
             </motion.p>
           </AnimatePresence>
-          <p className="mt-2 text-sm text-gray-400">ScalaNinja — Automação COD</p>
+          <p className="mt-2 text-sm text-gray-400">ScalaCOD — Automação COD</p>
         </div>
       </div>
     </div>

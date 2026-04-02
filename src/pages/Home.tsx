@@ -536,7 +536,7 @@ export default function Home() {
           </div>
         </div>
         <div className="mx-auto mt-8 max-w-6xl border-t border-white/5 px-4 pt-6 text-center">
-          <p className="text-xs text-gray-600">© 2026 ScalaNinja. Todos os direitos reservados.</p>
+          <p className="text-xs text-gray-600">© 2026 ScalaCOD. Todos os direitos reservados.</p>
           <p className="mt-1 text-xs text-gray-700">Feito 🥷 para afiliados COD brasileiros</p>
         </div>
       </footer>
