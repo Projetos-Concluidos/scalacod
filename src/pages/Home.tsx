@@ -440,42 +440,7 @@ export default function Home() {
       </section>
 
       {/* FOOTER */}
-      <footer className="relative border-t border-white/5 bg-black/60 py-12">
-        <div className="mx-auto grid max-w-6xl gap-8 px-4 md:grid-cols-4">
-          <div>
-            <div className="flex items-center gap-2">
-              <ScalaCODLogo size={20} />
-              <ScalaCODBrandName className="text-lg font-extrabold" />
-            </div>
-            <p className="mt-2 text-sm text-gray-500">{ft.tagline}</p>
-          </div>
-          <div>
-            <h4 className="mb-3 text-sm font-bold text-gray-300">{ft.col1_title}</h4>
-            <ul className="space-y-2">
-              {ft.col1_links.map(l => (
-                <li key={l}><a href="#" className="text-sm text-gray-500 transition hover:text-emerald-400">{l}</a></li>
-              ))}
-            </ul>
-          </div>
-          <div>
-            <h4 className="mb-3 text-sm font-bold text-gray-300">{ft.col2_title}</h4>
-            <ul className="space-y-2">
-              {ft.col2_links.map(l => (
-                <li key={l}><a href="#" className="text-sm text-gray-500 transition hover:text-emerald-400">{l}</a></li>
-              ))}
-            </ul>
-          </div>
-          <div>
-            <h4 className="mb-3 text-sm font-bold text-gray-300">Contato</h4>
-            <p className="text-sm text-gray-500">📧 {ft.email}</p>
-            <p className="mt-1 text-sm text-gray-500">💬 WhatsApp</p>
-          </div>
-        </div>
-        <div className="mx-auto mt-8 max-w-6xl border-t border-white/5 px-4 pt-6 text-center">
-          <p className="text-xs text-gray-600">{ft.copyright}</p>
-          <p className="mt-1 text-xs text-gray-700">​</p>
-        </div>
-      </footer>
+      <PublicFooter />
     </div>
   );
 }
