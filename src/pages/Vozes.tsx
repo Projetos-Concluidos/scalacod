@@ -100,6 +100,9 @@ const Vozes = () => {
       if (!error && data?.voices?.length > 0) {
         setLibraryVoices(data.voices);
       }
+      if (data?.provider) {
+        setTtsProvider(data.provider as "elevenlabs" | "openai" | "none");
+      }
     } catch {
       // fallback already set
     } finally {
