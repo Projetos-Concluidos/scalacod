@@ -16,6 +16,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tables } from "@/integrations/supabase/types";
 import NinjaBadge from "@/components/NinjaBadge";
 
+declare global {
+  interface Window {
+    MercadoPago: any;
+  }
+}
+
 type Voice = Tables<"voices">;
 type VoiceTokens = Tables<"voice_tokens">;
 
