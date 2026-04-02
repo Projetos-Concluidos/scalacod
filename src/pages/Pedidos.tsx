@@ -362,7 +362,7 @@ const Pedidos = () => {
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => { setFilterDateFrom(""); setFilterDateTo(""); setFilterProvider(""); setFilterCity(""); }}
+                  onClick={() => { setFilterDateFrom(""); setFilterDateTo(""); setFilterProvider(""); setFilterCity(""); setFilterPayment(""); }}
                   className="text-destructive hover:text-destructive h-9"
                 >
                   <X className="h-3.5 w-3.5 mr-1" /> Limpar
