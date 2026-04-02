@@ -492,7 +492,7 @@ export default function Home() {
           </h2>
           <p className="reveal mt-6 text-base text-gray-400">
             7 dias grátis. Sem cartão. Setup em 5 minutos.<br />
-            Junte-se a +500 afiliados que já escalam com a ScalaNinja.
+            Junte-se a +500 afiliados que já escalam com o ScalaCOD.
           </p>
           <button onClick={() => navigate("/register")} className="reveal mt-8 rounded-xl bg-emerald-500 px-10 py-4 text-lg font-black text-black shadow-lg shadow-emerald-500/25 transition-all hover:bg-emerald-400 hover:-translate-y-0.5">
             Criar conta grátis 🥷
