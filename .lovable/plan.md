@@ -1,66 +1,69 @@
+## Plano: Integração Coinzz — POST /api/sales
 
+### Problema Atual
+O `create_coinzz_order` no `checkout-api/index.ts` (linha 431) usa:
+- **Endpoint errado**: `https://app.coinzz.com.br/api/orders` → retorna HTML (erro de redirect)
+- **Payload errado**: estrutura `{ customer, shipping, items, total }` que não existe na API Coinzz
+- **Não é chamado automaticamente**: quando `logistics_type === "coinzz"`, o pedido é criado no banco mas NUNCA enviado à Coinzz
 
-## Plano: Páginas Públicas + Footer Premium
+### O que será feito
 
-### Problema
-- Links do footer apontam para `#` (nao funcionam)
-- Nao existem as paginas publicas: Funcionalidades, Planos, FAQ, Central de Ajuda, Status, Termos
-- Footer esta simples, precisa ser premium como o concorrente (3 colunas + contato + links legais)
-- Falta menu "Acesso" com Login e Criar conta
+#### 1. Corrigir `create_coinzz_order` no checkout-api
 
-### O que sera feito
+Atualizar para usar a API oficial documentada:
 
-#### 1. Criar 6 paginas publicas
+| De (atual) | Para (correto) |
+|---|---|
+| `POST /api/orders` | `POST /api/sales` |
+| `{ customer, shipping, items, total }` | `{ offer_hash, payment_method: "afterpay", customer: { name, email, document, phone, address: {...} }, shipping_value }` |
+| Sem validação de HTML | `redirect: "manual"` + validação content-type |
 
-| Pagina | Rota | Conteudo |
-|---|---|---|
-| Funcionalidades | `/funcionalidades` | Grid de 8 features com icones, titulos e descricoes (Checkout COD, Automacao WhatsApp, Flow Builder, Dashboard & Pixel, Logistica Integrada, Leads & CRM, Remarketing, Webhooks & API) |
-| Planos | `/planos` | 2 cards (Iniciante R$297 e Escala R$497) + card Empresarial + secao "Qual escolher?" |
-| FAQ | `/faq` | Perguntas frequentes em accordion, consumindo dados do CMS |
-| Central de Ajuda | `/ajuda` | Hub de suporte com categorias (Primeiros Passos, Checkouts, Pedidos, WhatsApp, etc) |
-| Status | `/status` | Status dos servicos (API, WhatsApp, Checkout, Logzz) com indicadores |
-| Termos | `/termos` | Termos de Uso e Politica de Privacidade |
+O payload seguirá exatamente a documentação fornecida, usando `payment_method: "afterpay"` (COD) como padrão para pedidos Coinzz.
 
-Todas com navbar + footer premium reutilizaveis, tema dark BLACK COD.
+#### 2. Envio automático após criação do pedido
 
-#### 2. Redesenhar o Footer (premium)
+No bloco `create_order`, quando `logistics_type === "coinzz"`, chamar a Coinzz automaticamente (igual já faz com Logzz na linha 276). O fluxo:
 
-```text
-┌─────────────────────────────────────────────────────────────┐
-│  [Logo] ScalaCOD                                            │
-│  Automacao COD com checkout hibrido                         │
-│                                                             │
-│  PRODUTO          ACESSO         SUPORTE        CONTATO     │
-│  Funcionalidades  Login          Central Ajuda  email       │
-│  Planos           Criar conta    Status         WhatsApp    │
-│  FAQ                             Termos                     │
-│                                                             │
-│  ─────────────────────────────────────────────────────────── │
-│  © 2026 ScalaCOD    Termos de Uso  •  Politica de Privacid. │
-└─────────────────────────────────────────────────────────────┘
-```
+1. Pedido inserido no banco → recebe `order_id`
+2. Buscar integração Coinzz do tenant
+3. Buscar `offer_hash` da oferta vinculada ao checkout
+4. Montar payload `/api/sales` com dados do pedido
+5. Enviar à Coinzz → receber `order_hash` da resposta
+6. Salvar `coinzz_order_hash` no pedido
 
-4 colunas com links reais, visual elegante dark com acentos emerald.
+#### 3. Criar webhook `coinzz-webhook` (receber atualizações)
 
-#### 3. Atualizar Navbar + Rotas
+Nova Edge Function `supabase/functions/coinzz-webhook/index.ts` para receber callbacks da Coinzz quando o status do pedido mudar. Fluxo:
+- Recebe POST com dados do pedido
+- Busca pedido por `coinzz_order_hash`
+- Atualiza status + tracking_code
+- Dispara `trigger-flow` para automações
 
-- Links "Recursos", "Planos", "FAQ" apontam para as novas rotas
-- 6 rotas publicas adicionadas ao App.tsx (sem AuthGuard)
+#### 4. Configurar `offer_hash` no checkout
+
+O checkout precisa saber qual `offer_hash` da Coinzz usar. Adicionar campo `coinzz_offer_hash` na tabela `checkouts` (ou usar o `hash` da oferta existente se for da Coinzz).
+
+### Segurança
+- Logzz NÃO será alterada — nenhuma linha do fluxo Logzz será tocada
+- O bloco `create_coinzz_order` existente será reescrito IN-PLACE
+- O novo envio automático será um bloco `else if` separado do bloco Logzz
 
 ### Arquivos
 
-| Arquivo | Acao |
+| Arquivo | Ação |
 |---|---|
-| `src/pages/Funcionalidades.tsx` | Criar |
-| `src/pages/Planos.tsx` | Criar |
-| `src/pages/Faq.tsx` | Criar |
-| `src/pages/Ajuda.tsx` | Criar |
-| `src/pages/StatusPage.tsx` | Criar |
-| `src/pages/Termos.tsx` | Criar |
-| `src/components/PublicFooter.tsx` | Criar — footer premium reutilizavel |
-| `src/components/PublicNavbar.tsx` | Criar — navbar reutilizavel |
-| `src/pages/Home.tsx` | Usar PublicFooter + PublicNavbar |
-| `src/App.tsx` | Adicionar 6 rotas |
+| `supabase/functions/checkout-api/index.ts` | Corrigir `create_coinzz_order` (linhas 412-468) + adicionar envio automático no `create_order` |
+| `supabase/functions/coinzz-webhook/index.ts` | **Criar** — webhook para receber atualizações de pedidos |
+| Migração SQL | Adicionar `coinzz_offer_hash` na tabela `checkouts` (se necessário) |
 
-Nenhuma migracao de banco necessaria.
+### Fluxo Final
 
+```text
+Cliente → Checkout → CEP sem cobertura Logzz
+  → provider = "coinzz"
+  → Pagamento via MercadoPago (PIX/Cartão)
+  → create_order (banco)
+  → POST /api/sales (Coinzz) com offer_hash + afterpay
+  → Salva coinzz_order_hash
+  → Coinzz processa → webhook → atualiza status
+```
