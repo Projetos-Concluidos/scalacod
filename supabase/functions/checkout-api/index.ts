@@ -813,7 +813,7 @@ Deno.serve(async (req) => {
       try {
         const testPayload = {
           external_id: `test-${Date.now()}`,
-          full_name: "Teste ScalaNinja",
+          full_name: "Teste ScalaCOD",
           phone: "11999999999",
           customer_document: "00000000000",
           postal_code: "01310100",
