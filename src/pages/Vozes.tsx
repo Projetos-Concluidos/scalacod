@@ -85,7 +85,7 @@ const Vozes = () => {
   const [playingId, setPlayingId] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [libFilter, setLibFilter] = useState({ lang: "", gender: "" });
+  const [libFilter, setLibFilter] = useState({ lang: "", gender: "", search: "", useCase: "" });
   const [libraryVoices, setLibraryVoices] = useState<LibraryVoice[]>(FALLBACK_LIBRARY);
   const [libLoading, setLibLoading] = useState(false);
   const [ttsProvider, setTtsProvider] = useState<"elevenlabs" | "openai" | "none">("elevenlabs");
