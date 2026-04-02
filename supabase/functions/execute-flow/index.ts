@@ -33,7 +33,7 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    const { flowId, orderId, variables, userId: callerUserId } = await req.json();
+    const { flowId, orderId, variables, userId: callerUserId, phone: directPhone } = await req.json();
 
     if (!flowId) {
       return new Response(JSON.stringify({ error: "flowId is required" }), {
@@ -106,7 +106,7 @@ Deno.serve(async (req) => {
       ...(variables || {}),
     };
 
-    const targetPhone = ctx.cliente_telefone || order?.client_phone;
+    const targetPhone = directPhone || ctx.cliente_telefone || order?.client_phone;
     if (!targetPhone) {
       console.warn("[execute-flow] No target phone available");
       return new Response(
