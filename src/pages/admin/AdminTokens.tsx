@@ -491,6 +491,185 @@ const AdminTokens = () => {
             </Table>
           </div>
         </TabsContent>
+        {/* ══════ CALCULADORA TAB ══════ */}
+        <TabsContent value="calculadora" className="space-y-6">
+          {/* Seção 1 — Parâmetros de custo */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Calculator className="h-4 w-4 text-primary" />
+                Parâmetros de Custo Real
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-4 sm:grid-cols-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Custo API / 1.000 tokens (USD)</Label>
+                  <Input type="number" step="0.001" value={calcApiCost} onChange={e => setCalcApiCost(Number(e.target.value))} />
+                  <p className="text-[10px] text-muted-foreground">OpenAI tts-1-hd = $0.030</p>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Câmbio USD → BRL</Label>
+                  <Input type="number" step="0.01" value={calcExchange} onChange={e => setCalcExchange(Number(e.target.value))} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Taxa Gateway (%)</Label>
+                  <Input type="number" step="0.01" value={calcGatewayFee} onChange={e => setCalcGatewayFee(Number(e.target.value))} />
+                  <p className="text-[10px] text-muted-foreground">MercadoPago = 4,99%</p>
+                </div>
+              </div>
+              <div className="rounded-lg bg-muted px-4 py-3">
+                <p className="text-sm text-muted-foreground">
+                  Custo real por token: <strong className="text-foreground">R$ {((calcApiCost / 1000) * calcExchange).toFixed(6).replace(".", ",")}</strong>
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Seção 2 — Simulador de Pack */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Package className="h-4 w-4 text-primary" />
+                Simulador de Pack
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="max-w-xs space-y-1.5">
+                <Label className="text-xs">Quantidade de tokens</Label>
+                <Input type="number" value={calcTokens} onChange={e => setCalcTokens(Number(e.target.value))} />
+              </div>
+
+              {(() => {
+                const costPerTokenBRL = (calcApiCost / 1000) * calcExchange;
+                const apiCost = calcTokens * costPerTokenBRL;
+                const margins = [30, 50, 80, 100];
+
+                return (
+                  <div className="rounded-lg border bg-card overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Margem</TableHead>
+                          <TableHead>Preço Sugerido</TableHead>
+                          <TableHead>Custo API</TableHead>
+                          <TableHead>Taxa Gateway</TableHead>
+                          <TableHead>Lucro Líquido</TableHead>
+                          <TableHead>Custo/Token</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {margins.map(margin => {
+                          const price = apiCost * (1 + margin / 100) / (1 - calcGatewayFee / 100);
+                          const gatewayDeduction = price * (calcGatewayFee / 100);
+                          const profit = price - gatewayDeduction - apiCost;
+                          return (
+                            <TableRow key={margin}>
+                              <TableCell>
+                                <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                                  margin <= 30 ? "bg-destructive/20 text-destructive" :
+                                  margin <= 50 ? "bg-yellow-500/20 text-yellow-600" :
+                                  "bg-emerald-500/20 text-emerald-600"
+                                }`}>
+                                  {margin}%
+                                </span>
+                              </TableCell>
+                              <TableCell className="font-semibold">R$ {price.toFixed(2)}</TableCell>
+                              <TableCell className="text-sm text-muted-foreground">R$ {apiCost.toFixed(2)}</TableCell>
+                              <TableCell className="text-sm text-muted-foreground">R$ {gatewayDeduction.toFixed(2)}</TableCell>
+                              <TableCell className="font-semibold text-emerald-600">R$ {profit.toFixed(2)}</TableCell>
+                              <TableCell className="text-xs">R$ {(price / calcTokens).toFixed(5).replace(".", ",")}</TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+                );
+              })()}
+            </CardContent>
+          </Card>
+
+          {/* Seção 3 — Análise dos Packs Atuais */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <TrendingUp className="h-4 w-4 text-primary" />
+                Análise dos Packs Atuais
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {packsLoading ? (
+                <p className="text-center py-8 text-muted-foreground">Carregando...</p>
+              ) : packs.length === 0 ? (
+                <p className="text-center py-8 text-muted-foreground">Nenhum pack cadastrado</p>
+              ) : (
+                <div className="rounded-lg border bg-card overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Pack</TableHead>
+                        <TableHead>Tokens</TableHead>
+                        <TableHead>Preço Atual</TableHead>
+                        <TableHead>Custo Real</TableHead>
+                        <TableHead>Taxa Gateway</TableHead>
+                        <TableHead>Lucro</TableHead>
+                        <TableHead>Margem Real</TableHead>
+                        <TableHead>Saúde</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {(() => {
+                        const costPerTokenBRL = (calcApiCost / 1000) * calcExchange;
+                        const smallestCPT = Math.min(...packs.filter(p => p.is_active).map(p => Number(p.price) / p.tokens));
+
+                        return packs.map(pack => {
+                          const price = Number(pack.price);
+                          const apiCost = pack.tokens * costPerTokenBRL;
+                          const gateway = price * (calcGatewayFee / 100);
+                          const profit = price - apiCost - gateway;
+                          const margin = ((profit / price) * 100);
+                          const packCPT = price / pack.tokens;
+                          const hasVolumeDiscount = packCPT < smallestCPT * 0.99;
+
+                          return (
+                            <TableRow key={pack.id}>
+                              <TableCell>
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium">{pack.name}</span>
+                                  {hasVolumeDiscount && (
+                                    <span className="inline-flex rounded-full bg-primary/10 px-1.5 py-0.5 text-[9px] font-bold text-primary">
+                                      📉 Volume
+                                    </span>
+                                  )}
+                                </div>
+                              </TableCell>
+                              <TableCell>{pack.tokens.toLocaleString("pt-BR")}</TableCell>
+                              <TableCell className="font-medium">R$ {price.toFixed(2)}</TableCell>
+                              <TableCell className="text-sm text-muted-foreground">R$ {apiCost.toFixed(2)}</TableCell>
+                              <TableCell className="text-sm text-muted-foreground">R$ {gateway.toFixed(2)}</TableCell>
+                              <TableCell className="font-semibold text-emerald-600">R$ {profit.toFixed(2)}</TableCell>
+                              <TableCell className="font-bold">{margin.toFixed(1)}%</TableCell>
+                              <TableCell>
+                                <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                                  margin > 50 ? "bg-emerald-500/20 text-emerald-600" :
+                                  margin > 30 ? "bg-yellow-500/20 text-yellow-600" :
+                                  "bg-destructive/20 text-destructive"
+                                }`}>
+                                  {margin > 50 ? "🟢 Saudável" : margin > 30 ? "🟡 Atenção" : "🔴 Baixa"}
+                                </span>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        });
+                      })()}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
 
       {/* Pack Modal */}
