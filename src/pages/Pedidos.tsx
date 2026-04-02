@@ -78,6 +78,7 @@ const Pedidos = () => {
   const [filterDateTo, setFilterDateTo] = useState("");
   const [filterProvider, setFilterProvider] = useState("");
   const [filterCity, setFilterCity] = useState("");
+  const [filterPayment, setFilterPayment] = useState("");
 
   // Edit modal
   const [editOrder, setEditOrder] = useState<Order | null>(null);
