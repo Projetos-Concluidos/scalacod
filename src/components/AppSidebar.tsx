@@ -68,7 +68,7 @@ const AppSidebar = () => {
         </button>
 
         <div className="flex items-center gap-3 px-6 py-6">
-          <ShurikenLogo />
+          <ScalaCODLogo size={32} centerFill="#0F1923" />
           <div>
             <h1 className="text-base font-bold leading-tight">
               <span className="text-white">Scala</span>
