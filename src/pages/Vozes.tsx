@@ -607,7 +607,7 @@ const Vozes = () => {
                     {voice.elevenlabs_voice_id && (
                       <div className="mb-3 space-y-2">
                         <Textarea
-                          value={generateText[voice.id] ?? "Olá! Esta é minha voz no ScalaNinja."}
+                          value={generateText[voice.id] ?? "Olá! Esta é minha voz no ScalaCOD."}
                           onChange={e => setGenerateText(t => ({ ...t, [voice.id]: e.target.value }))}
                           placeholder="Digite o texto para gerar áudio..."
                           rows={2}
@@ -617,7 +617,7 @@ const Vozes = () => {
                           <Button size="sm" onClick={() => handleGenerateAudio(voice)} disabled={generating[voice.id]} className="flex-1 gradient-primary text-primary-foreground text-xs">
                             {generating[voice.id] ? <><Loader2 className="h-3 w-3 animate-spin mr-1" /> Gerando...</> : <><Volume2 className="h-3 w-3 mr-1" /> Gerar Áudio</>}
                           </Button>
-                          <span className="text-[10px] text-muted-foreground whitespace-nowrap">{(generateText[voice.id] ?? "Olá! Esta é minha voz no ScalaNinja.").length} tokens</span>
+                          <span className="text-[10px] text-muted-foreground whitespace-nowrap">{(generateText[voice.id] ?? "Olá! Esta é minha voz no ScalaCOD.").length} tokens</span>
                         </div>
                         {generatedAudio[voice.id] && <audio controls src={generatedAudio[voice.id]} className="w-full h-8" />}
                       </div>
@@ -673,7 +673,7 @@ const Vozes = () => {
                     {voice.elevenlabs_voice_id && (
                       <div className="mb-3 space-y-2">
                         <Textarea
-                          value={generateText[voice.id] ?? "Olá! Esta é minha voz no ScalaNinja."}
+                          value={generateText[voice.id] ?? "Olá! Esta é minha voz no ScalaCOD."}
                           onChange={e => setGenerateText(t => ({ ...t, [voice.id]: e.target.value }))}
                           placeholder="Digite o texto para gerar áudio..."
                           rows={2}
@@ -683,7 +683,7 @@ const Vozes = () => {
                           <Button size="sm" onClick={() => handleGenerateAudio(voice)} disabled={generating[voice.id]} className="flex-1 gradient-primary text-primary-foreground text-xs">
                             {generating[voice.id] ? <><Loader2 className="h-3 w-3 animate-spin mr-1" /> Gerando...</> : <><Volume2 className="h-3 w-3 mr-1" /> Gerar Áudio</>}
                           </Button>
-                          <span className="text-[10px] text-muted-foreground whitespace-nowrap">{(generateText[voice.id] ?? "Olá! Esta é minha voz no ScalaNinja.").length} tokens</span>
+                          <span className="text-[10px] text-muted-foreground whitespace-nowrap">{(generateText[voice.id] ?? "Olá! Esta é minha voz no ScalaCOD.").length} tokens</span>
                         </div>
                         {generatedAudio[voice.id] && <audio controls src={generatedAudio[voice.id]} className="w-full h-8" />}
                       </div>
