@@ -532,7 +532,7 @@ const Pedidos = () => {
                           <a href={`https://wa.me/${o.client_phone.replace(/\D/g, "")}`} target="_blank" rel="noreferrer" className="text-emerald-400 hover:underline font-medium">{o.client_phone}</a>
                           <CopyBtn value={o.client_phone} label="Telefone" />
                         </div>
-                        {o.client_email && <div className="flex items-center gap-1.5"><span className="text-muted-foreground">Email:</span><span className="text-foreground">{o.client_email}</span><CopyBtn value={o.client_email} label="Email" /></div>}
+                        
                         {o.client_document && <div className="flex items-center gap-1.5"><span className="text-muted-foreground">CPF/CNPJ:</span><span className="text-foreground">{o.client_document}</span><CopyBtn value={o.client_document} label="Documento" /></div>}
                       </div>
                     </div>

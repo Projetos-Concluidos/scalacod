@@ -1157,10 +1157,6 @@ const CheckoutPublic = () => {
                         </AnimatePresence>
                       </div>
                     </div>
-                    <div>
-                      <Label className="text-xs text-gray-600">E-mail</Label>
-                      <Input value={form.email} onChange={(e) => updateField("email", e.target.value)} type="email" placeholder="seu@email.com" className="mt-1 border-gray-200 bg-white focus:border-emerald-500 focus:ring-emerald-500" />
-                    </div>
                   </div>
                   <button
                     onClick={() => goToStep(2)}
