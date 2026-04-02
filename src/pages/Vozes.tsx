@@ -36,12 +36,26 @@ interface LibraryVoice {
   useCase: string | null;
 }
 
-const packs = [
-  { id: "starter", name: "Pack Iniciante", tokens: 5000, display: "5.000", price: "R$ 19,90", amount: 19.90, popular: false },
-  { id: "essencial", name: "Pack Essencial", tokens: 10000, display: "10.000", price: "R$ 39,90", amount: 39.90, popular: false },
-  { id: "profissional", name: "Pack Profissional", tokens: 50000, display: "50.000", price: "R$ 197,00", amount: 197.00, popular: true },
-  { id: "enterprise", name: "Pack Enterprise", tokens: 100000, display: "100.000", price: "R$ 397,00", amount: 397.00, popular: false },
-];
+interface TokenPack {
+  id: string;
+  slug: string;
+  name: string;
+  tokens: number;
+  price: number;
+  original_price: number | null;
+  is_active: boolean;
+  is_popular: boolean;
+  badge_type: string | null;
+  badge_label: string | null;
+  sort_order: number;
+}
+
+const BADGE_STYLES: Record<string, { bg: string; text: string; fallback: string }> = {
+  blackfriday: { bg: "bg-black", text: "text-yellow-400", fallback: "🖤 Black Friday" },
+  promo: { bg: "bg-red-600", text: "text-white", fallback: "🔥 Promoção" },
+  oferta: { bg: "bg-emerald-600", text: "text-white", fallback: "💰 Em Oferta" },
+  semana_assinante: { bg: "bg-purple-600", text: "text-white", fallback: "🎉 Semana do Assinante" },
+};
 
 const FALLBACK_LIBRARY: LibraryVoice[] = [
   { id: "CwhRBWXzGAHq8TQ4Fs17", name: "Roger", previewUrl: null, category: "premade", labels: {}, language: "en", gender: "male", useCase: "narration" },
