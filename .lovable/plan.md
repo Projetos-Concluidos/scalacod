@@ -1,49 +1,21 @@
 
 
-## Plano: Melhorias Funcionais na Página de Vozes (ElevenLabs API)
+## Plano: Corrigir Teste de Conexão ElevenLabs e OpenAI
 
-Baseado na análise dos prints do concorrente, identifiquei 6 diferenças funcionais a implementar:
+### Problema
 
----
+O erro `"The API key you used is missing the permission user_read"` vem da ElevenLabs. O endpoint de teste atual (`/v1/user`) exige a permissão `user_read` na API Key, que nem todas as chaves possuem por padrão.
 
-### 1. Separar "Minhas Vozes" em 2 seções
+Para OpenAI, o endpoint `/v1/models` pode também falhar com chaves restritas.
 
-**Atual**: Grid flat misturando clonadas e favoritadas.
-**Melhoria**: Dividir em **"Vozes Clonadas"** (esquerda, com contador) e **"Vozes Escolhidas"** (direita, com link "Ver Biblioteca").
+### Solução
 
-- Slot "Novo slot de clonagem" sempre visível na seção de clonadas
-- Vozes escolhidas com botão "Desfavoritar" que remove da tabela `voices`
+Alterar os endpoints de teste na edge function `test-integration` para usar endpoints que exigem permissões mais básicas:
 
-### 2. Busca + filtro de categoria na Biblioteca
+**ElevenLabs**: Trocar `/v1/user` por `/v1/voices` (requer apenas `voices_read`, permissão padrão em qualquer chave).
 
-**Atual**: Só filtros de idioma e gênero.
-**Melhoria**: Adicionar campo de busca por nome e filtro de categoria/use_case (Todas, Narração, Conversacional, etc.). Busca local nos dados já carregados.
-
-### 3. Descrição nos cards da Biblioteca
-
-**Atual**: Cards mostram só nome e tags básicas.
-**Melhoria**: Exibir descrição da voz (campo `description` da API ElevenLabs). Requer pequena alteração na edge function `list-voice-library` para incluir `v.description`.
-
-### 4. Modal de clonagem melhorado
-
-- Adicionar campo **"Descrição (opcional)"**
-- Aceitar **.m4a** além de .mp3/.wav
-- Texto "Máx 25 amostras" (limite real da API ElevenLabs)
-- Enviar `description` na edge function `clone-voice`
-
-### 5. Botão Desfavoritar na Biblioteca
-
-Vozes já favoritadas mostram botão **"Favoritada"** (estilo diferente) que permite desfavoritar com um clique (deleta da tabela `voices`).
-
-### 6. Edge functions atualizadas
-
-- **`list-voice-library`**: Adicionar `description: v.description || ""` ao mapeamento
-- **`clone-voice`**: Aceitar campo `description` no FormData e enviá-lo à API ElevenLabs
-
----
+**OpenAI**: Trocar `/v1/models?limit=1` por `/v1/models/tts-1` (verifica se a chave é válida e tem acesso ao modelo TTS usado no sistema).
 
 ### Escopo
-- **2 edge functions editadas**: `list-voice-library`, `clone-voice`
-- **1 arquivo frontend editado**: `src/pages/Vozes.tsx`
-- Sem migrações
+- **1 edge function editada**: `supabase/functions/test-integration/index.ts` (linhas 104-139)
 
