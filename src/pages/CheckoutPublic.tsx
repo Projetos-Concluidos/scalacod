@@ -1165,7 +1165,7 @@ const CheckoutPublic = () => {
                   <button
                     onClick={() => goToStep(2)}
                     disabled={!step1Valid}
-                    className={`mt-5 w-full rounded-2xl py-3.5 text-sm font-bold text-white transition-all flex items-center justify-center gap-2 ${step1Valid ? "bg-emerald-500 hover:bg-emerald-600 shadow-lg shadow-emerald-500/20 active:scale-[0.98]" : "bg-gray-300 cursor-not-allowed"}`}
+                    className={`checkout-btn-primary mt-5 w-full rounded-2xl py-3.5 text-sm font-bold text-white transition-all flex items-center justify-center gap-2 ${step1Valid ? "bg-emerald-500 hover:bg-emerald-600 shadow-lg shadow-emerald-500/20 active:scale-[0.98]" : "bg-gray-300 cursor-not-allowed"}`}
                   >
                     <Lock className="h-4 w-4" /> Continuar com segurança →
                   </button>
