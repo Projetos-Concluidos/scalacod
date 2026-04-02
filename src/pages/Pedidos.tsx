@@ -106,6 +106,18 @@ const Pedidos = () => {
     enabled: !!user,
   });
 
+  // Fetch checkout names for cards
+  const { data: checkoutsMap } = useQuery({
+    queryKey: ["checkouts-map"],
+    queryFn: async () => {
+      const { data } = await supabase.from("checkouts").select("id, name");
+      const map: Record<string, string> = {};
+      data?.forEach((c) => { map[c.id] = c.name; });
+      return map;
+    },
+    enabled: !!user,
+  });
+
   // Realtime
   useEffect(() => {
     if (!user) return;
