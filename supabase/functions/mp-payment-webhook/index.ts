@@ -54,7 +54,7 @@ serve(async (req) => {
     });
     const payment = await paymentRes.json();
 
-    console.log("Payment status:", payment.status, "for order ref:", payment.external_reference);
+    console.log("Payment status:", payment.status, "detail:", payment.status_detail, "for order ref:", payment.external_reference);
 
     const statusMap: Record<string, string> = {
       approved: "Aprovado",
@@ -70,14 +70,72 @@ serve(async (req) => {
 
     const newStatus = statusMap[payment.status] || "Aguardando";
 
+    // Extract detailed financial info
+    const gatewayFee = payment.fee_details?.length > 0
+      ? payment.fee_details.reduce((sum: number, f: any) => sum + (f.amount || 0), 0)
+      : null;
+
+    const updateData: Record<string, any> = {
+      status: newStatus,
+      coinzz_order_hash: paymentId.toString(),
+      payment_method: payment.payment_method_id || payment.payment_type_id,
+      status_description: `MP: ${payment.status} - ${payment.status_detail || ""}`,
+      mp_payment_status: payment.status || null,
+      mp_payment_status_detail: payment.status_detail || null,
+    };
+
+    // Only update if we have values
+    if (payment.installments && payment.installments > 1) {
+      updateData.total_installments = payment.installments;
+    }
+    if (gatewayFee !== null && gatewayFee > 0) {
+      updateData.gateway_fee = gatewayFee;
+    }
+
     // Update order
     if (payment.external_reference) {
-      await supabase.from("orders").update({
-        status: newStatus,
-        coinzz_order_hash: paymentId.toString(),
-        payment_method: payment.payment_method_id || payment.payment_type_id,
-        status_description: `MP: ${payment.status} - ${payment.status_detail || ""}`,
-      }).eq("id", payment.external_reference);
+      // Get current order status for history
+      const { data: currentOrder } = await supabase
+        .from("orders")
+        .select("status, user_id")
+        .eq("id", payment.external_reference)
+        .maybeSingle();
+
+      const fromStatus = currentOrder?.status || null;
+
+      await supabase.from("orders").update(updateData).eq("id", payment.external_reference);
+
+      // Insert status history
+      await supabase.from("order_status_history").insert({
+        order_id: payment.external_reference,
+        from_status: fromStatus,
+        to_status: newStatus,
+        source: "mp-payment-webhook",
+        raw_payload: {
+          mp_status: payment.status,
+          mp_status_detail: payment.status_detail,
+          mp_payment_method: payment.payment_method_id,
+          mp_payment_type: payment.payment_type_id,
+          mp_installments: payment.installments,
+          mp_fee: gatewayFee,
+          mp_payment_id: paymentId,
+        },
+      });
+
+      // Trigger flows for status change
+      if (currentOrder?.user_id && fromStatus !== newStatus) {
+        try {
+          await supabase.functions.invoke("trigger-flow", {
+            body: {
+              userId: currentOrder.user_id,
+              orderId: payment.external_reference,
+              newStatus,
+            },
+          });
+        } catch (err) {
+          console.error("trigger-flow error:", err);
+        }
+      }
     }
 
     return new Response("ok", { headers: corsHeaders });
