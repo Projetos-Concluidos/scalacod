@@ -7,24 +7,68 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-// Map Coinzz statuses → ScalaCOD statuses
-const STATUS_MAP: Record<string, string> = {
-  PENDING: "Aguardando",
-  APPROVED: "Confirmado",
-  WAITING_PAYMENT: "Aguardando",
-  PROCESSING: "Em Separação",
-  SHIPPED: "Em Trânsito",
-  DELIVERED: "Entregue",
-  CANCELLED: "Cancelado",
-  REFUNDED: "Devolvido",
-  REFUSED: "Cancelado",
-  OVERDUE: "Inadimplente",
-  IN_TRANSIT: "Em Trânsito",
-  OUT_FOR_DELIVERY: "Saiu para Entrega",
+// Map Coinzz order_status → ScalaCOD Kanban status
+const ORDER_STATUS_MAP: Record<string, string> = {
+  "pedido criado": "Aguardando",
+  "aguardando pagamento": "Aguardando",
+  "aprovado": "Confirmado",
+  "cancelado": "Frustrado",
+  "expirado": "Frustrado",
+  "reclamado": "Frustrado",
+  "reembolso em andamento": "Frustrado",
+  "reembolsado": "Frustrado",
+  "contestado": "Frustrado",
+  "chargeback": "Frustrado",
+  "aguardando envio": "Em Separação",
+  "aguardando chegada": "Em Separação",
+  "em análise": "Aguardando",
+  "rejeitado": "Frustrado",
+  "inadimplente": "Aguardando",
+  "processando": "Em Separação",
+  "aguardando afiliado": "Aguardando",
+  "recusado": "Frustrado",
+  "análise de risco": "Aguardando",
+  "excluído": "Frustrado",
+  "período de teste": "Aguardando",
+  "parcial": "Aguardando",
 };
 
-function mapCoinzzStatus(coinzzStatus: string): string {
-  return STATUS_MAP[coinzzStatus?.toUpperCase()] || STATUS_MAP[coinzzStatus] || coinzzStatus || "Aguardando";
+// Map Coinzz shipping_status → ScalaCOD Kanban status (takes priority over order_status)
+const SHIPPING_STATUS_MAP: Record<string, string> = {
+  "a enviar": "Em Separação",
+  "enviado": "Em Rota",
+  "recebido": "Entregue",
+  "devolvido": "Frustrado",
+  "sem sucesso": "Reagendar",
+  "fundos insuficientes": "Frustrado",
+  "cancelado": "Frustrado",
+  "aguardando análise": "Em Separação",
+  "suspenso": "Frustrado",
+  "aguardando retirada na agência": "Em Rota",
+  "saldo insuficiente": "Frustrado",
+  "a confirmar": "Em Separação",
+  "a caminho": "Em Rota",
+  "a reagendar": "Reagendar",
+  "processando": "Em Separação",
+  "erro": "Frustrado",
+  "em devolução": "Frustrado",
+  "processando nota": "Em Separação",
+  "falha na emissão fiscal": "Em Separação",
+  "parcialmente enviado": "Em Rota",
+  "parcialmente recebido": "Em Rota",
+};
+
+function resolveKanbanStatus(orderStatus: string | null, shippingStatus: string | null): string {
+  // Shipping status takes priority when available and meaningful
+  if (shippingStatus) {
+    const mapped = SHIPPING_STATUS_MAP[shippingStatus.toLowerCase()];
+    if (mapped) return mapped;
+  }
+  if (orderStatus) {
+    const mapped = ORDER_STATUS_MAP[orderStatus.toLowerCase()];
+    if (mapped) return mapped;
+  }
+  return "Aguardando";
 }
 
 Deno.serve(async (req) => {
@@ -32,7 +76,6 @@ Deno.serve(async (req) => {
     return new Response("ok", { headers: corsHeaders });
   }
 
-  // Rate limit: 200 requests per 60 seconds
   const { limited } = await checkRateLimit(req, {
     action: "coinzz-webhook",
     windowSeconds: 60,
@@ -53,38 +96,78 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    console.log("[coinzz-webhook] Received:", JSON.stringify(body).substring(0, 1000));
+    console.log("[coinzz-webhook] Received:", JSON.stringify(body).substring(0, 2000));
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Extract order hash and status from webhook payload
-    // Coinzz may send different structures; handle common ones
-    const orderHash = body.order_hash || body.data?.order_hash || body.hash || null;
-    const coinzzStatus = body.status || body.data?.status || null;
-    const trackingCode = body.tracking_code || body.data?.tracking_code || null;
-    const deliveryMan = body.delivery_man || body.data?.delivery_man || null;
+    // ── Parse Coinzz dotted-key payload ──
+    const clientData = body.client || {};
+    const orderData = body.order || {};
+    const utmsData = body.utms || {};
 
-    if (!orderHash) {
-      console.error("[coinzz-webhook] No order_hash in payload");
-      return new Response(JSON.stringify({ error: "No order_hash found" }), {
+    // Extract fields using dotted keys (Coinzz format)
+    const orderNumber = orderData["order.order_number"] || null;
+    const orderStatus = orderData["order.order_status"] || null;
+    const shippingStatus = orderData["order.shipping_status"] || null;
+    const trackingCode = orderData["order.tracking_code"]?.trim() || null;
+    const courierName = orderData["order.courier_name"] || null;
+    const paymentMethod = orderData["order.method_payment"] || null;
+    const totalInstallments = parseInt(orderData["order.total_installments"]) || null;
+    const orderFinalPrice = parseFloat(orderData["order.order_final_price"]) || null;
+    const orderQuantity = parseInt(orderData["order.order_quantity"]) || null;
+    const firstOrder = orderData["order.first_order"] === "true" || orderData["order.first_order"] === true;
+    const secondOrder = orderData["order.second_order"] === "true" || orderData["order.second_order"] === true;
+    const affiliateName = orderData["order.affiliate_name"] || null;
+    const affiliateEmail = orderData["order.affiliate_email"] || null;
+    const affiliateCommission = parseFloat(orderData["order.affiliate_commission"]) || null;
+    const producerCommission = parseFloat(orderData["order.producer_commission"]) || null;
+
+    // UTMs
+    const utmSource = utmsData["utms.utm_source"] || null;
+    const utmMedium = utmsData["utms.utm_medium"] || null;
+    const utmCampaign = utmsData["utms.utm_campaign"] || null;
+    const utmContent = utmsData["utms.utm_content"] || null;
+    const utmTerm = utmsData["utms.utm_term"] || null;
+
+    if (!orderNumber) {
+      console.error("[coinzz-webhook] No order_number in payload");
+      return new Response(JSON.stringify({ error: "No order_number found" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Find order by coinzz_order_hash
-    const { data: order, error: findErr } = await supabase
+    console.log("[coinzz-webhook] order_number:", orderNumber, "order_status:", orderStatus, "shipping_status:", shippingStatus);
+
+    // ── Find order: try coinzz_order_hash first, then order_number ──
+    let order: any = null;
+
+    // Try by coinzz_order_hash
+    const { data: byHash } = await supabase
       .from("orders")
       .select("id, status, user_id")
-      .eq("coinzz_order_hash", orderHash)
+      .eq("coinzz_order_hash", orderNumber)
       .eq("user_id", storeUserId)
       .maybeSingle();
 
-    if (findErr || !order) {
-      console.error("[coinzz-webhook] Order not found for hash:", orderHash, findErr?.message);
+    if (byHash) {
+      order = byHash;
+    } else {
+      // Fallback: try by order_number
+      const { data: byNumber } = await supabase
+        .from("orders")
+        .select("id, status, user_id")
+        .eq("order_number", orderNumber)
+        .eq("user_id", storeUserId)
+        .maybeSingle();
+      order = byNumber;
+    }
+
+    if (!order) {
+      console.error("[coinzz-webhook] Order not found for:", orderNumber);
       return new Response(JSON.stringify({ error: "Order not found" }), {
         status: 404,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -93,19 +176,35 @@ Deno.serve(async (req) => {
 
     console.log("[coinzz-webhook] Found order:", order.id, "current status:", order.status);
 
-    const newStatus = coinzzStatus ? mapCoinzzStatus(coinzzStatus) : null;
+    // ── Resolve Kanban status ──
+    const newKanbanStatus = resolveKanbanStatus(orderStatus, shippingStatus);
 
-    // Build update payload
-    const updatePayload: any = {};
-    if (newStatus && newStatus !== order.status) {
-      updatePayload.status = newStatus;
+    // ── Build update payload ──
+    const updatePayload: Record<string, any> = {};
+
+    if (newKanbanStatus && newKanbanStatus !== order.status) {
+      updatePayload.status = newKanbanStatus;
     }
-    if (trackingCode) {
-      updatePayload.tracking_code = trackingCode;
-    }
-    if (deliveryMan) {
-      updatePayload.delivery_man = deliveryMan;
-    }
+    if (trackingCode) updatePayload.tracking_code = trackingCode;
+    if (courierName) updatePayload.delivery_man = courierName;
+    if (paymentMethod) updatePayload.payment_method = paymentMethod;
+    if (orderStatus) updatePayload.coinzz_payment_status = orderStatus;
+    if (shippingStatus) updatePayload.coinzz_shipping_status = shippingStatus;
+    if (totalInstallments) updatePayload.total_installments = totalInstallments;
+    if (orderFinalPrice) updatePayload.order_final_price = orderFinalPrice;
+    if (orderQuantity) updatePayload.order_quantity = orderQuantity;
+    if (firstOrder !== undefined) updatePayload.first_order = firstOrder;
+    if (secondOrder !== undefined) updatePayload.second_order = secondOrder;
+    if (affiliateName) updatePayload.affiliate_name = affiliateName;
+    if (affiliateEmail) updatePayload.affiliate_email = affiliateEmail;
+    if (affiliateCommission) updatePayload.affiliate_commission = affiliateCommission;
+
+    // UTMs (only if not already set)
+    if (utmSource) updatePayload.utm_source = utmSource;
+    if (utmMedium) updatePayload.utm_medium = utmMedium;
+    if (utmCampaign) updatePayload.utm_campaign = utmCampaign;
+    if (utmContent) updatePayload.utm_content = utmContent;
+    if (utmTerm) updatePayload.utm_term = utmTerm;
 
     if (Object.keys(updatePayload).length > 0) {
       updatePayload.updated_at = new Date().toISOString();
@@ -120,16 +219,16 @@ Deno.serve(async (req) => {
         console.log("[coinzz-webhook] Order updated:", JSON.stringify(updatePayload));
       }
 
-      // Insert status history
-      if (newStatus && newStatus !== order.status) {
+      // Insert status history when kanban status changed
+      if (newKanbanStatus && newKanbanStatus !== order.status) {
         await supabase.from("order_status_history").insert({
           order_id: order.id,
           from_status: order.status,
-          to_status: newStatus,
+          to_status: newKanbanStatus,
           source: "coinzz-webhook",
           raw_payload: body,
         });
-        console.log("[coinzz-webhook] Status history recorded:", order.status, "→", newStatus);
+        console.log("[coinzz-webhook] Status history:", order.status, "→", newKanbanStatus);
 
         // Trigger automation flows
         try {
@@ -145,7 +244,7 @@ Deno.serve(async (req) => {
             body: JSON.stringify({
               userId: order.user_id,
               orderId: order.id,
-              newStatus,
+              newStatus: newKanbanStatus,
               triggerEvent: "order_status_changed",
             }),
           }).catch((e) =>
