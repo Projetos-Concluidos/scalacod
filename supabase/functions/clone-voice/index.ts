@@ -62,7 +62,7 @@ serve(async (req) => {
     // Clone voice on ElevenLabs
     const elevenForm = new FormData();
     elevenForm.append("name", name);
-    elevenForm.append("description", `Voz clonada por ${userId} via ScalaNinja`);
+    elevenForm.append("description", description || `Voz clonada por ${userId} via ScalaNinja`);
     for (const file of files) {
       elevenForm.append("files", file);
     }
