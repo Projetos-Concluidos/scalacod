@@ -1,0 +1,1 @@
+ALTER TABLE public.orders ADD COLUMN local_operation_code text;
