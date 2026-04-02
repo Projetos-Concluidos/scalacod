@@ -438,7 +438,7 @@ const CheckoutPublic = () => {
             checkout_id: checkout.id,
             offer_id: offer.id,
             client_name: form.name,
-            client_email: form.email || null,
+            client_email: null,
             client_document: form.cpf.replace(/\D/g, "") || null,
             client_phone: form.phone.replace(/\D/g, ""),
             client_zip_code: form.cep.replace(/\D/g, ""),
