@@ -476,7 +476,7 @@ export default function Home() {
       {/* FAQ */}
       <section className="py-20 md:py-28">
         <div className="mx-auto max-w-3xl px-4">
-          <h2 className="reveal mb-10 text-center text-3xl font-black text-white">Perguntas sobre a ScalaNinja</h2>
+          <h2 className="reveal mb-10 text-center text-3xl font-black text-white">Perguntas sobre o ScalaCOD</h2>
           {faqs.map((faq) => <FAQ key={faq.q} q={faq.q} a={faq.a} />)}
         </div>
       </section>
