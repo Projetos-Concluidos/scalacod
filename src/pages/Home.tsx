@@ -41,12 +41,21 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
+    const elements = document.querySelectorAll(".reveal");
+    if (!("IntersectionObserver" in window)) {
+      elements.forEach((el) => el.classList.add("revealed"));
+      return;
+    }
     const observer = new IntersectionObserver(
       (entries) => entries.forEach((e) => e.isIntersecting && e.target.classList.add("revealed")),
-      { threshold: 0.1 }
+      { threshold: 0.05, rootMargin: "0px 0px 50px 0px" }
     );
-    document.querySelectorAll(".reveal").forEach((el) => observer.observe(el));
-    return () => observer.disconnect();
+    elements.forEach((el) => observer.observe(el));
+    // Fallback: reveal all after 3s in case observer doesn't trigger
+    const fallback = setTimeout(() => {
+      document.querySelectorAll(".reveal:not(.revealed)").forEach((el) => el.classList.add("revealed"));
+    }, 3000);
+    return () => { observer.disconnect(); clearTimeout(fallback); };
   }, [isLoading]);
 
   // Update SEO meta tags dynamically
