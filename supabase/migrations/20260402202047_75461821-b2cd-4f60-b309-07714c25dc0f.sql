@@ -1,0 +1,1 @@
+ALTER TABLE public.checkouts ADD COLUMN IF NOT EXISTS coinzz_offer_hash text DEFAULT NULL;
