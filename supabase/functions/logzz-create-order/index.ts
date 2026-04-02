@@ -209,7 +209,7 @@ Deno.serve(async (req) => {
     const logzzPayload: Record<string, unknown> = {
       external_id: order.id,
       full_name: order.client_name,
-      phone: (order.client_phone || "").replace(/\D/g, ""),
+      phone: (() => { const raw = (order.client_phone || "").replace(/\D/g, ""); return raw.startsWith("55") ? raw : `55${raw}`; })(),
       customer_document: (order.client_document || "").replace(/\D/g, ""),
       postal_code: (order.client_zip_code || "").replace(/\D/g, ""),
       street: order.client_address || "",

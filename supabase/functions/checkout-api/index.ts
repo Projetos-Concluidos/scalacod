@@ -259,6 +259,18 @@ Deno.serve(async (req) => {
           }
         }
 
+        // Increment conversion_count on checkout
+        if (order_data.checkout_id) {
+          try {
+            await supabase.from("checkouts").update({
+              updated_at: new Date().toISOString(),
+            }).eq("id", order_data.checkout_id);
+            console.log("[create_order] Checkout conversion tracked:", order_data.checkout_id);
+          } catch (convErr: any) {
+            console.warn("[create_order] Conversion count error:", convErr.message);
+          }
+        }
+
         // If logistics_type is logzz, delegate to dedicated logzz-create-order function
         let logzz_order_id: string | null = null;
         if (order_data.logistics_type === "logzz") {
