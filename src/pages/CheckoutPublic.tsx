@@ -947,9 +947,79 @@ const CheckoutPublic = () => {
           </div>
         </div>
 
+        {/* EXPRESS CHECKOUT — single step */}
+        {checkout.type === "express" ? (
+          <div className="flex flex-col lg:flex-row gap-6">
+            <div className="checkout-form flex-1">
+              <motion.div variants={stepVariants} initial="initial" animate="animate">
+                <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 text-white text-xs font-bold">⚡</div>
+                    <h2 className="text-sm font-bold text-gray-900">Checkout Rápido</h2>
+                  </div>
+                  <div className="space-y-3">
+                    <div>
+                      <Label className="text-xs text-gray-600">Nome completo *</Label>
+                      <Input value={form.name} onChange={(e) => updateField("name", e.target.value)} placeholder="Seu nome completo" className="mt-1 border-gray-200 bg-white focus:border-emerald-500 focus:ring-emerald-500" />
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <Label className="text-xs text-gray-600">Telefone / WhatsApp *</Label>
+                        <Input value={form.phone} onChange={(e) => updateField("phone", maskPhone(e.target.value))} placeholder="(00) 00000-0000" className="mt-1 border-gray-200 bg-white focus:border-emerald-500 focus:ring-emerald-500" />
+                      </div>
+                      <div>
+                        <Label className="text-xs text-gray-600">CPF *</Label>
+                        <Input value={form.cpf} onChange={(e) => updateField("cpf", maskCpf(e.target.value))} placeholder="000.000.000-00" className="mt-1 border-gray-200 bg-white focus:border-emerald-500 focus:ring-emerald-500" />
+                      </div>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-gray-600">CEP *</Label>
+                      <div className="mt-1 flex gap-2">
+                        <Input value={form.cep} onChange={(e) => updateField("cep", maskCep(e.target.value))} onBlur={lookupCep} placeholder="00000-000" className="flex-1 border-gray-200 bg-white focus:border-emerald-500 focus:ring-emerald-500" />
+                        <button onClick={lookupCep} disabled={cepLoading} className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50">
+                          {cepLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Buscar"}
+                        </button>
+                      </div>
+                    </div>
+                    {form.street && (
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <Label className="text-xs text-gray-600">Rua</Label>
+                          <Input value={form.street} onChange={(e) => updateField("street", e.target.value)} className="mt-1 border-gray-200 bg-white" />
+                        </div>
+                        <div>
+                          <Label className="text-xs text-gray-600">Número *</Label>
+                          <Input value={form.number} onChange={(e) => updateField("number", e.target.value)} className="mt-1 border-gray-200 bg-white" />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <button
+                    onClick={async () => {
+                      if (!step1Valid) { toast.error("Preencha nome, telefone e CPF válido"); return; }
+                      if (!step2Valid) { toast.error("Preencha o CEP e número"); return; }
+                      setSubmitting(true);
+                      track("order_submitted");
+                      const oid = await createOrder();
+                      if (oid) setStep(4);
+                      setSubmitting(false);
+                    }}
+                    disabled={submitting || !step1Valid || !step2Valid}
+                    className={`checkout-btn-primary mt-5 w-full rounded-2xl py-4 text-base font-bold text-white transition-all flex items-center justify-center gap-2 ${
+                      step1Valid && step2Valid ? "bg-emerald-500 hover:bg-emerald-600 shadow-lg shadow-emerald-500/20 active:scale-[0.98]" : "bg-gray-300 cursor-not-allowed"
+                    }`}
+                  >
+                    {submitting ? <><Loader2 className="h-5 w-5 animate-spin" /> Processando...</> : <><Lock className="h-5 w-5" /> Confirmar Pedido → R$ {totalPrice.toFixed(2)}</>}
+                  </button>
+                </div>
+              </motion.div>
+            </div>
+            <OrderSummary className="hidden lg:block w-[340px] flex-shrink-0" />
+          </div>
+        ) : (
         <div className="flex flex-col lg:flex-row gap-6">
           {/* LEFT: Form Column */}
-          <div className="flex-1 space-y-4">
+          <div className="checkout-form flex-1 space-y-4">
 
             {/* ── STEP 1: Suas Informações ── */}
             <AnimatePresence mode="wait">
