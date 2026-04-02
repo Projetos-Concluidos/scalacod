@@ -715,28 +715,6 @@ const Pedidos = () => {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* ─── Filters Drawer ─── */}
-      <Sheet open={filtersOpen} onOpenChange={setFiltersOpen}>
-        <SheetContent className="bg-card border-border w-[340px]">
-          <SheetHeader><SheetTitle className="text-foreground">Filtros Avançados</SheetTitle></SheetHeader>
-          <div className="space-y-5 mt-6">
-            <div><Label className="text-xs text-muted-foreground">Data início</Label><Input type="date" value={filterDateFrom} onChange={(e) => setFilterDateFrom(e.target.value)} className="bg-input border-border mt-1" /></div>
-            <div><Label className="text-xs text-muted-foreground">Data fim</Label><Input type="date" value={filterDateTo} onChange={(e) => setFilterDateTo(e.target.value)} className="bg-input border-border mt-1" /></div>
-            <div>
-              <Label className="text-xs text-muted-foreground">Provider logístico</Label>
-              <Select value={filterProvider} onValueChange={setFilterProvider}>
-                <SelectTrigger className="bg-input border-border mt-1"><SelectValue placeholder="Todos" /></SelectTrigger>
-                <SelectContent><SelectItem value="all">Todos</SelectItem><SelectItem value="logzz">Logzz</SelectItem><SelectItem value="coinzz">Coinzz</SelectItem></SelectContent>
-              </Select>
-            </div>
-            <div><Label className="text-xs text-muted-foreground">Cidade</Label><Input value={filterCity} onChange={(e) => setFilterCity(e.target.value)} placeholder="Ex: São Paulo" className="bg-input border-border mt-1" /></div>
-            <div className="flex gap-2 pt-4">
-              <Button variant="outline" className="flex-1 border-border" onClick={() => { setFilterDateFrom(""); setFilterDateTo(""); setFilterProvider(""); setFilterCity(""); }}>Limpar</Button>
-              <Button className="flex-1 gradient-primary text-primary-foreground" onClick={() => setFiltersOpen(false)}>Aplicar</Button>
-            </div>
-          </div>
-        </SheetContent>
-      </Sheet>
     </div>
   );
 };
