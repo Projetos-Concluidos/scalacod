@@ -36,11 +36,13 @@ serve(async (req) => {
 
     let apiKey = "";
     for (const c of configs || []) {
+      let val = "";
       if (c.value && typeof c.value === "string") {
-        apiKey = c.value;
+        val = c.value.trim();
       } else if (c.value && typeof c.value === "object" && (c.value as any).value) {
-        apiKey = (c.value as any).value;
+        val = String((c.value as any).value).trim();
       }
+      if (val) apiKey = val;
     }
 
     // Fallback to env secret only if no system_config entry exists
