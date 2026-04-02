@@ -284,6 +284,7 @@ const Checkouts = () => {
       google_analytics_id: formGoogleAnalyticsId || null,
       thank_you_page_url: formThankYouUrl || null,
       whatsapp_support: formWhatsappSupport || null,
+      coinzz_offer_hash: formCoinzzOfferHash || null,
     };
     if (editingCheckout) {
       updateMutation.mutate({ id: editingCheckout.id, ...payload });
