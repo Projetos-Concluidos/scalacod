@@ -313,7 +313,7 @@ export default function Home() {
           <div className="reveal mt-14 grid gap-4 md:grid-cols-4">
             {[
               { icon: "📍", step: "1", title: "Cliente digita CEP", sub: "No checkout público" },
-              { icon: "⚡", step: "2", title: "ScalaNinja verifica", sub: "API Logzz em tempo real" },
+              { icon: "⚡", step: "2", title: "ScalaCOD verifica", sub: "API Logzz em tempo real" },
               { icon: "🚚", step: "3A", title: "Logzz disponível", sub: "COD. Paga na entrega." },
               { icon: "📦", step: "3B", title: "Sem cobertura", sub: "Coinzz Correios. Paga agora." },
             ].map((s) => (
