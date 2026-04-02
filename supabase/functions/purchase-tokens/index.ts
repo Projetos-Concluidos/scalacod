@@ -6,13 +6,6 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const TOKEN_PACKS: Record<string, { tokens: number; amount: number; name: string }> = {
-  starter: { tokens: 5000, amount: 19.90, name: "Pack Iniciante" },
-  essencial: { tokens: 10000, amount: 39.90, name: "Pack Essencial" },
-  profissional: { tokens: 50000, amount: 197.00, name: "Pack Profissional" },
-  enterprise: { tokens: 100000, amount: 397.00, name: "Pack Enterprise" },
-};
-
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
@@ -22,7 +15,6 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Auth
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) throw new Error("Não autorizado");
 
@@ -32,8 +24,16 @@ serve(async (req) => {
 
     const { packId, paymentMethod, cardToken, payerEmail } = await req.json();
 
-    if (!packId || !TOKEN_PACKS[packId]) {
-      return new Response(JSON.stringify({ error: "Pack inválido" }), {
+    // Fetch pack from database by slug
+    const { data: pack, error: packError } = await supabase
+      .from("token_packs")
+      .select("*")
+      .eq("slug", packId)
+      .eq("is_active", true)
+      .maybeSingle();
+
+    if (packError || !pack) {
+      return new Response(JSON.stringify({ error: "Pack inválido ou inativo" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -44,10 +44,8 @@ serve(async (req) => {
       });
     }
 
-    const pack = TOKEN_PACKS[packId];
     const email = payerEmail || user.email;
 
-    // Get platform MP token
     const mpToken = Deno.env.get("MP_PLATFORM_ACCESS_TOKEN");
     if (!mpToken) {
       return new Response(JSON.stringify({ error: "Pagamentos não configurados na plataforma" }), {
@@ -55,12 +53,12 @@ serve(async (req) => {
       });
     }
 
-    const idempotencyKey = `tokens-${user.id}-${packId}-${Date.now()}`;
+    const idempotencyKey = `tokens-${user.id}-${pack.slug}-${Date.now()}`;
 
     const paymentPayload: Record<string, unknown> = {
-      transaction_amount: pack.amount,
+      transaction_amount: Number(pack.price),
       description: `ScalaNinja — ${pack.name} (${pack.tokens.toLocaleString("pt-BR")} tokens)`,
-      external_reference: `tokens-${user.id}-${packId}-${Date.now()}`,
+      external_reference: `tokens-${user.id}-${pack.slug}-${Date.now()}`,
       notification_url: `${Deno.env.get("SUPABASE_URL")}/functions/v1/mp-token-webhook`,
       payer: { email },
     };
@@ -96,18 +94,16 @@ serve(async (req) => {
       });
     }
 
-    // Record purchase
     await supabase.from("token_purchases").insert({
       user_id: user.id,
-      pack_id: packId,
+      pack_id: pack.slug,
       tokens: pack.tokens,
-      amount: pack.amount,
+      amount: Number(pack.price),
       mp_payment_id: payment.id?.toString(),
       status: payment.status === "approved" ? "paid" : "pending",
       paid_at: payment.status === "approved" ? new Date().toISOString() : null,
     });
 
-    // If approved immediately (credit card), credit tokens
     if (payment.status === "approved") {
       await supabase.rpc("add_tokens_to_user", {
         p_user_id: user.id,

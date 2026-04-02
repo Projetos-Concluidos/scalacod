@@ -1579,6 +1579,54 @@ export type Database = {
         }
         Relationships: []
       }
+      token_packs: {
+        Row: {
+          badge_label: string | null
+          badge_type: string | null
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          is_popular: boolean | null
+          name: string
+          original_price: number | null
+          price: number
+          slug: string
+          sort_order: number | null
+          tokens: number
+          updated_at: string | null
+        }
+        Insert: {
+          badge_label?: string | null
+          badge_type?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_popular?: boolean | null
+          name: string
+          original_price?: number | null
+          price: number
+          slug: string
+          sort_order?: number | null
+          tokens: number
+          updated_at?: string | null
+        }
+        Update: {
+          badge_label?: string | null
+          badge_type?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_popular?: boolean | null
+          name?: string
+          original_price?: number | null
+          price?: number
+          slug?: string
+          sort_order?: number | null
+          tokens?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       token_purchases: {
         Row: {
           amount: number
