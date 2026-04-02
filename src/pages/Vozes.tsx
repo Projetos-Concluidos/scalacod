@@ -123,6 +123,118 @@ const Vozes = () => {
   useEffect(() => { fetchData(); }, [user]);
   useEffect(() => { fetchLibrary(); }, [tab]);
 
+  // Fetch MP platform public key for card payments
+  useEffect(() => {
+    const fetchMpKey = async () => {
+      try {
+        const { data } = await supabase
+          .from("system_config")
+          .select("value")
+          .eq("key", "mp_public_key")
+          .maybeSingle();
+        if (data?.value) {
+          const key = typeof data.value === "string" ? data.value : JSON.stringify(data.value);
+          const cleaned = key.replace(/^"+|"+$/g, "");
+          if (cleaned) setMpPublicKey(cleaned);
+        }
+      } catch {}
+    };
+    fetchMpKey();
+  }, []);
+
+  // Initialize MercadoPago Bricks when credit_card is selected
+  useEffect(() => {
+    if (paymentMethod !== "credit_card" || !mpPublicKey || !selectedPack || !purchaseOpen || pixData || purchaseSuccess) return;
+
+    setBricksReady(false);
+
+    const waitForSDK = () => new Promise<void>((resolve) => {
+      if (window.MercadoPago) return resolve();
+      let attempts = 0;
+      const interval = setInterval(() => {
+        attempts++;
+        if (window.MercadoPago || attempts > 25) { clearInterval(interval); resolve(); }
+      }, 200);
+    });
+
+    const initBricks = async () => {
+      await waitForSDK();
+      if (!window.MercadoPago) {
+        toast.error("Erro ao carregar SDK de pagamento. Recarregue a página.");
+        return;
+      }
+      try {
+        if (bricksControllerRef.current) {
+          try { bricksControllerRef.current.unmount(); } catch {}
+          bricksControllerRef.current = null;
+        }
+        const container = document.getElementById("tokenCardPaymentBrick");
+        if (container) container.innerHTML = "";
+
+        const mp = new window.MercadoPago(mpPublicKey, { locale: "pt-BR" });
+        const bricksBuilder = mp.bricks();
+
+        const controller = await bricksBuilder.create("cardPayment", "tokenCardPaymentBrick", {
+          initialization: {
+            amount: selectedPack.amount,
+            payer: { email: user?.email || "" },
+          },
+          customization: {
+            paymentMethods: { minInstallments: 1, maxInstallments: 1 },
+            visual: {
+              style: {
+                theme: "default",
+                customVariables: { formBackgroundColor: "#ffffff", baseColor: "#10B981" },
+              },
+            },
+          },
+          callbacks: {
+            onReady: () => setBricksReady(true),
+            onSubmit: async (cardFormData: any) => {
+              setPurchasing(true);
+              try {
+                const { data, error } = await supabase.functions.invoke("purchase-tokens", {
+                  body: {
+                    packId: selectedPack.id,
+                    paymentMethod: "credit_card",
+                    cardToken: cardFormData.token,
+                    payerEmail: user?.email,
+                  },
+                });
+                if (error) throw new Error("Erro ao processar pagamento");
+                if (data.error) throw new Error(data.error);
+                if (data.status === "approved") {
+                  setPurchaseSuccess(true);
+                  toast.success(`${selectedPack.display} tokens creditados!`);
+                  fetchData();
+                } else {
+                  toast.info("Pagamento em análise. Tokens serão creditados após aprovação.");
+                }
+              } catch (err: any) {
+                toast.error(err.message || "Erro ao processar pagamento");
+              } finally {
+                setPurchasing(false);
+              }
+            },
+            onError: () => toast.error("Erro no formulário de pagamento"),
+          },
+        });
+        bricksControllerRef.current = controller;
+      } catch {
+        toast.error("Erro ao inicializar formulário de cartão");
+      }
+    };
+
+    const timer = setTimeout(initBricks, 300);
+    return () => {
+      clearTimeout(timer);
+      if (bricksControllerRef.current) {
+        try { bricksControllerRef.current.unmount(); } catch {}
+        bricksControllerRef.current = null;
+      }
+    };
+  }, [paymentMethod, mpPublicKey, selectedPack, purchaseOpen, pixData, purchaseSuccess]);
+
   const balance = tokenData?.balance || 0;
   const totalUsed = tokenData?.total_used || 0;
   const totalPurchased = tokenData?.total_purchased || 0;
