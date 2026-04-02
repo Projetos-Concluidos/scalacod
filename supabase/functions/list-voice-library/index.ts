@@ -34,10 +34,10 @@ serve(async (req) => {
     const configMap: Record<string, string> = {};
     for (const c of configs || []) {
       let val = "";
-      if (c.value && typeof c.value === "string") {
-        val = c.value.trim();
+      if (typeof c.value === "string") {
+        val = c.value.replace(/^"+|"+$/g, "").trim();
       } else if (c.value && typeof c.value === "object" && (c.value as any).value) {
-        val = String((c.value as any).value).trim();
+        val = String((c.value as any).value).replace(/^"+|"+$/g, "").trim();
       }
       if (val) configMap[c.key] = val;
     }
