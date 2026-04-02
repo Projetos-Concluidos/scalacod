@@ -5,18 +5,25 @@ import { useAuth } from "@/contexts/AuthContext";
 import {
   Search, SlidersHorizontal, RefreshCw, Phone, Eye, MoreHorizontal,
   Package, CalendarDays, MapPin, DollarSign, Printer, Truck, Clock,
-  Download, X, ExternalLink, MessageSquare,
+  Download, X, ExternalLink, MessageSquare, Copy, Edit, Trash2, XCircle,
 } from "lucide-react";
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
 import PageHeader from "@/components/PageHeader";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import type { Tables } from "@/integrations/supabase/types";
 
@@ -37,6 +44,28 @@ const STATUSES = [
 
 const STATUS_KEYS = STATUSES.map((s) => s.key);
 
+/* ─── CopyBtn ─── */
+const CopyBtn = ({ value, label }: { value: string; label?: string }) => (
+  <button
+    type="button"
+    onClick={(e) => {
+      e.stopPropagation();
+      navigator.clipboard.writeText(value);
+      toast.success(label ? `${label} copiado!` : "Copiado!");
+    }}
+    className="inline-flex items-center justify-center h-5 w-5 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground shrink-0"
+    title="Copiar"
+  >
+    <Copy className="h-3 w-3" />
+  </button>
+);
+
+/* ─── Platform Badge ─── */
+const PlatformBadge = ({ type }: { type: string | null }) => {
+  if (type === "coinzz") return <Badge className="bg-purple-600 text-white border-0 text-[9px] px-1.5 py-0 font-bold">COINZZ</Badge>;
+  return <Badge className="bg-emerald-500 text-white border-0 text-[9px] px-1.5 py-0 font-bold">LOGZZ</Badge>;
+};
+
 const Pedidos = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -48,6 +77,19 @@ const Pedidos = () => {
   const [filterDateTo, setFilterDateTo] = useState("");
   const [filterProvider, setFilterProvider] = useState("");
   const [filterCity, setFilterCity] = useState("");
+
+  // Edit modal
+  const [editOrder, setEditOrder] = useState<Order | null>(null);
+  const [editForm, setEditForm] = useState({ client_name: "", client_phone: "", client_address: "", client_address_number: "", client_address_comp: "", client_address_district: "", client_address_city: "", client_address_state: "", client_zip_code: "", delivery_date: "" });
+
+  // Confirm dialogs
+  const [cancelTarget, setCancelTarget] = useState<Order | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Order | null>(null);
+
+  // Detail modal extra data
+  const [detailOffer, setDetailOffer] = useState<any>(null);
+  const [detailBumps, setDetailBumps] = useState<any[]>([]);
+  const [detailTimeline, setDetailTimeline] = useState<any[]>([]);
 
   const { data: orders = [], isLoading, refetch } = useQuery({
     queryKey: ["orders"],
@@ -62,7 +104,7 @@ const Pedidos = () => {
     enabled: !!user,
   });
 
-  // Realtime subscription
+  // Realtime
   useEffect(() => {
     if (!user) return;
     const channel = supabase
@@ -74,68 +116,102 @@ const Pedidos = () => {
     return () => { supabase.removeChannel(channel); };
   }, [user, queryClient]);
 
+  // Fetch detail data when selectedOrder changes
+  useEffect(() => {
+    if (!selectedOrder) { setDetailOffer(null); setDetailBumps([]); setDetailTimeline([]); return; }
+    // Offer
+    if (selectedOrder.offer_id) {
+      supabase.from("offers").select("*").eq("id", selectedOrder.offer_id).maybeSingle().then(({ data }) => setDetailOffer(data));
+      supabase.from("order_bumps").select("*").eq("offer_id", selectedOrder.offer_id).eq("is_active", true).then(({ data }) => setDetailBumps(data || []));
+    } else { setDetailOffer(null); setDetailBumps([]); }
+    // Timeline
+    supabase.from("order_status_history").select("*").eq("order_id", selectedOrder.id).order("created_at", { ascending: true }).then(({ data }) => setDetailTimeline(data || []));
+  }, [selectedOrder]);
+
   const updateStatusMutation = useMutation({
     mutationFn: async ({ id, status, fromStatus }: { id: string; status: string; fromStatus?: string }) => {
       const { error } = await supabase.from("orders").update({ status }).eq("id", id);
       if (error) throw error;
-
-      // Record status history
-      supabase.from("order_status_history").insert({
-        order_id: id,
-        from_status: fromStatus || null,
-        to_status: status,
-        source: "kanban_drag",
-      }).then(({ error: histErr }) => {
-        if (histErr && import.meta.env.DEV) console.warn("Status history insert error:", histErr);
-      });
-
-      // Trigger automation flows for this status change
+      supabase.from("order_status_history").insert({ order_id: id, from_status: fromStatus || null, to_status: status, source: "kanban_drag" }).then(() => {});
       if (user) {
-        if (import.meta.env.DEV) console.log(`[Kanban] Triggering flow for status=${status} orderId=${id}`);
-        supabase.functions.invoke("trigger-flow", {
-          body: { userId: user.id, orderId: id, newStatus: status },
-        }).catch((err: any) => { if (import.meta.env.DEV) console.warn("Flow trigger error:", err); });
+        supabase.functions.invoke("trigger-flow", { body: { userId: user.id, orderId: id, newStatus: status } }).catch(() => {});
       }
     },
-    onError: (e: any) => {
-      toast.error("Erro ao mover pedido: " + e.message);
-      queryClient.invalidateQueries({ queryKey: ["orders"] });
-    },
+    onError: (e: any) => { toast.error("Erro ao mover pedido: " + e.message); queryClient.invalidateQueries({ queryKey: ["orders"] }); },
   });
+
+  // Cancel order
+  const cancelMutation = useMutation({
+    mutationFn: async (order: Order) => {
+      const { error } = await supabase.from("orders").update({ status: "Frustrado" }).eq("id", order.id);
+      if (error) throw error;
+      await supabase.from("order_status_history").insert({ order_id: order.id, from_status: order.status, to_status: "Frustrado", source: "cancelamento_manual" });
+    },
+    onSuccess: () => { toast.success("Pedido cancelado (Frustrado)"); queryClient.invalidateQueries({ queryKey: ["orders"] }); setCancelTarget(null); },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  // Delete order
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("orders").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => { toast.success("Pedido apagado"); queryClient.invalidateQueries({ queryKey: ["orders"] }); setDeleteTarget(null); if (selectedOrder && deleteTarget && selectedOrder.id === deleteTarget.id) setSelectedOrder(null); },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  // Edit order
+  const editMutation = useMutation({
+    mutationFn: async () => {
+      if (!editOrder) return;
+      const { error } = await supabase.from("orders").update({
+        client_name: editForm.client_name, client_phone: editForm.client_phone,
+        client_address: editForm.client_address, client_address_number: editForm.client_address_number,
+        client_address_comp: editForm.client_address_comp, client_address_district: editForm.client_address_district,
+        client_address_city: editForm.client_address_city, client_address_state: editForm.client_address_state,
+        client_zip_code: editForm.client_zip_code,
+        delivery_date: editForm.delivery_date || null,
+      }).eq("id", editOrder.id);
+      if (error) throw error;
+    },
+    onSuccess: () => { toast.success("Pedido atualizado!"); queryClient.invalidateQueries({ queryKey: ["orders"] }); setEditOrder(null); },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  function openEdit(order: Order) {
+    setEditForm({
+      client_name: order.client_name, client_phone: order.client_phone,
+      client_address: order.client_address, client_address_number: order.client_address_number,
+      client_address_comp: order.client_address_comp || "", client_address_district: order.client_address_district,
+      client_address_city: order.client_address_city, client_address_state: order.client_address_state,
+      client_zip_code: order.client_zip_code, delivery_date: order.delivery_date || "",
+    });
+    setEditOrder(order);
+  }
 
   // Filter orders
   const filtered = useMemo(() => {
     let result = orders;
     if (search) {
       const q = search.toLowerCase();
-      result = result.filter(
-        (o) =>
-          o.client_name.toLowerCase().includes(q) ||
-          o.order_number?.toLowerCase().includes(q) ||
-          o.client_phone.includes(q) ||
-          o.id.toLowerCase().includes(q)
-      );
+      result = result.filter((o) => o.client_name.toLowerCase().includes(q) || o.order_number?.toLowerCase().includes(q) || o.client_phone.includes(q) || o.id.toLowerCase().includes(q));
     }
     if (activeFilter) result = result.filter((o) => o.status === activeFilter);
     if (filterDateFrom) result = result.filter((o) => o.created_at && o.created_at >= filterDateFrom);
     if (filterDateTo) result = result.filter((o) => o.created_at && o.created_at <= filterDateTo + "T23:59:59");
-    if (filterProvider) result = result.filter((o) => o.logistics_type === filterProvider);
+    if (filterProvider && filterProvider !== "all") result = result.filter((o) => o.logistics_type === filterProvider);
     if (filterCity) result = result.filter((o) => o.client_address_city.toLowerCase().includes(filterCity.toLowerCase()));
     return result;
   }, [orders, search, activeFilter, filterDateFrom, filterDateTo, filterProvider, filterCity]);
 
-  // Group by status
   const columns = useMemo(() => {
     const map: Record<string, Order[]> = {};
     STATUS_KEYS.forEach((s) => (map[s] = []));
-    filtered.forEach((o) => {
-      if (map[o.status]) map[o.status].push(o);
-      else if (map["Aguardando"]) map["Aguardando"].push(o);
-    });
+    filtered.forEach((o) => { if (map[o.status]) map[o.status].push(o); else if (map["Aguardando"]) map["Aguardando"].push(o); });
     return map;
   }, [filtered]);
 
-  // Status counts (from all orders, not filtered)
   const statusCounts = useMemo(() => {
     const c: Record<string, number> = {};
     STATUS_KEYS.forEach((s) => (c[s] = 0));
@@ -143,48 +219,31 @@ const Pedidos = () => {
     return c;
   }, [orders]);
 
-  const handleDragEnd = useCallback(
-    (result: DropResult) => {
-      if (!result.destination) return;
-      const newStatus = result.destination.droppableId;
-      const fromStatus = result.source.droppableId;
-      const orderId = result.draggableId;
-      if (fromStatus === newStatus) return;
-      // Optimistic update
-      queryClient.setQueryData<Order[]>(["orders"], (old) =>
-        old?.map((o) => (o.id === orderId ? { ...o, status: newStatus } : o))
-      );
-      updateStatusMutation.mutate({ id: orderId, status: newStatus, fromStatus });
-      toast.success(`Pedido movido para ${newStatus}`);
-    },
-    [queryClient, updateStatusMutation]
-  );
+  const handleDragEnd = useCallback((result: DropResult) => {
+    if (!result.destination) return;
+    const newStatus = result.destination.droppableId;
+    const fromStatus = result.source.droppableId;
+    const orderId = result.draggableId;
+    if (fromStatus === newStatus) return;
+    queryClient.setQueryData<Order[]>(["orders"], (old) => old?.map((o) => (o.id === orderId ? { ...o, status: newStatus } : o)));
+    updateStatusMutation.mutate({ id: orderId, status: newStatus, fromStatus });
+    toast.success(`Pedido movido para ${newStatus}`);
+  }, [queryClient, updateStatusMutation]);
 
   function exportCSV() {
     if (filtered.length === 0) return toast.error("Nenhum pedido para exportar");
     const headers = ["Número", "Status", "Cliente", "Telefone", "Cidade", "UF", "Valor", "Data"];
-    const rows = filtered.map((o) => [
-      o.order_number || o.id.slice(0, 8),
-      o.status,
-      o.client_name,
-      o.client_phone,
-      o.client_address_city,
-      o.client_address_state,
-      Number(o.order_final_price).toFixed(2),
-      o.created_at ? new Date(o.created_at).toLocaleDateString("pt-BR") : "",
-    ]);
+    const rows = filtered.map((o) => [o.order_number || o.id.slice(0, 8), o.status, o.client_name, o.client_phone, o.client_address_city, o.client_address_state, Number(o.order_final_price).toFixed(2), o.created_at ? new Date(o.created_at).toLocaleDateString("pt-BR") : ""]);
     const csv = [headers, ...rows].map((r) => r.join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `pedidos-${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+    const a = document.createElement("a"); a.href = url; a.download = `pedidos-${new Date().toISOString().slice(0, 10)}.csv`; a.click(); URL.revokeObjectURL(url);
     toast.success("CSV exportado!");
   }
 
   const statusMeta = (key: string) => STATUSES.find((s) => s.key === key) || STATUSES[0];
+
+  const fullAddress = (o: Order) => `${o.client_address}, ${o.client_address_number}${o.client_address_comp ? ` - ${o.client_address_comp}` : ""}, ${o.client_address_district}, ${o.client_address_city}/${o.client_address_state} — CEP ${o.client_zip_code}`;
 
   return (
     <div className="flex flex-col h-full">
@@ -193,15 +252,9 @@ const Pedidos = () => {
         subtitle="Gerencie o fluxo operacional em tempo real"
         actions={
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={exportCSV} className="border-border text-muted-foreground">
-              <Download className="h-4 w-4 mr-1.5" /> Exportar
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => setFiltersOpen(true)} className="border-border text-muted-foreground">
-              <SlidersHorizontal className="h-4 w-4 mr-1.5" /> Filtros
-            </Button>
-            <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground" onClick={() => refetch()}>
-              <RefreshCw className="h-4 w-4" />
-            </Button>
+            <Button variant="outline" size="sm" onClick={exportCSV} className="border-border text-muted-foreground"><Download className="h-4 w-4 mr-1.5" /> Exportar</Button>
+            <Button variant="outline" size="sm" onClick={() => setFiltersOpen(true)} className="border-border text-muted-foreground"><SlidersHorizontal className="h-4 w-4 mr-1.5" /> Filtros</Button>
+            <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground" onClick={() => refetch()}><RefreshCw className="h-4 w-4" /></Button>
           </div>
         }
       />
@@ -209,27 +262,13 @@ const Pedidos = () => {
       {/* Search */}
       <div className="relative mb-4 max-w-lg">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <input
-          type="text"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Buscar pedidos, clientes ou IDs..."
-          className="h-10 w-full rounded-lg border border-border bg-input pl-9 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
-        />
+        <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar pedidos, clientes ou IDs..." className="h-10 w-full rounded-lg border border-border bg-input pl-9 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30" />
       </div>
 
       {/* Status chips */}
       <div className="mb-4 flex flex-wrap gap-2">
         {STATUSES.map((s) => (
-          <button
-            key={s.key}
-            onClick={() => setActiveFilter(activeFilter === s.key ? null : s.key)}
-            className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors border ${
-              activeFilter === s.key
-                ? "border-primary bg-primary/15 text-primary"
-                : "border-border bg-card text-muted-foreground hover:bg-secondary"
-            }`}
-          >
+          <button key={s.key} onClick={() => setActiveFilter(activeFilter === s.key ? null : s.key)} className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors border ${activeFilter === s.key ? "border-primary bg-primary/15 text-primary" : "border-border bg-card text-muted-foreground hover:bg-secondary"}`}>
             <span className={`h-2 w-2 rounded-full ${s.color}`} />
             {s.key}
             <span className="ml-0.5 font-bold">{statusCounts[s.key] || 0}</span>
@@ -249,128 +288,77 @@ const Pedidos = () => {
         </div>
       ) : (
         <DragDropContext onDragEnd={handleDragEnd}>
-          <div role="region" aria-label="Quadro Kanban de pedidos" className="flex gap-3 overflow-x-auto pb-4 flex-1">
+          <div className="flex gap-3 overflow-x-auto pb-4 flex-1">
             {STATUS_KEYS.map((status) => {
               const meta = statusMeta(status);
               const items = columns[status] || [];
               return (
-                <div key={status} className="min-w-[270px] w-[270px] flex flex-col" role="group" aria-label={`Coluna ${status} — ${items.length} pedidos`}>
+                <div key={status} className="min-w-[270px] w-[270px] flex flex-col">
                   <div className="mb-2 flex items-center gap-2 px-1">
-                    <span className={`h-2.5 w-2.5 rounded-full ${meta.color}`} aria-hidden="true" />
+                    <span className={`h-2.5 w-2.5 rounded-full ${meta.color}`} />
                     <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">{status}</h3>
-                    <Badge variant="secondary" className="h-5 min-w-5 justify-center text-[10px] font-bold bg-muted text-muted-foreground" aria-label={`${items.length} pedidos`}>
-                      {items.length}
-                    </Badge>
+                    <Badge variant="secondary" className="h-5 min-w-5 justify-center text-[10px] font-bold bg-muted text-muted-foreground">{items.length}</Badge>
                   </div>
                   <Droppable droppableId={status}>
                     {(provided, snapshot) => (
-                      <div
-                        ref={provided.innerRef}
-                        {...provided.droppableProps}
-                        role="list"
-                        aria-label={`Pedidos com status ${status}`}
-                        className={`flex-1 rounded-xl border p-2 space-y-2 min-h-[200px] max-h-[calc(100vh-340px)] overflow-y-auto transition-colors ${
-                          snapshot.isDraggingOver
-                            ? "border-primary/40 bg-primary/5"
-                            : "border-border/50 bg-card/30"
-                        }`}
-                      >
-                        {items.length === 0 && !snapshot.isDraggingOver && (
-                          <p className="text-xs text-muted-foreground text-center py-8">Mova cards para aqui</p>
-                        )}
+                      <div ref={provided.innerRef} {...provided.droppableProps} className={`flex-1 rounded-xl border p-2 space-y-2 min-h-[200px] max-h-[calc(100vh-340px)] overflow-y-auto transition-colors ${snapshot.isDraggingOver ? "border-primary/40 bg-primary/5" : "border-border/50 bg-card/30"}`}>
+                        {items.length === 0 && !snapshot.isDraggingOver && <p className="text-xs text-muted-foreground text-center py-8">Mova cards para aqui</p>}
                         {items.map((order, index) => (
                           <Draggable key={order.id} draggableId={order.id} index={index}>
                             {(provided, snapshot) => (
-                              <div
-                                ref={provided.innerRef}
-                                {...provided.draggableProps}
-                                {...provided.dragHandleProps}
-                                role="listitem"
-                                aria-label={`Pedido ${order.order_number || order.id.slice(0, 8)} — ${order.client_name} — R$ ${Number(order.order_final_price).toFixed(2)}`}
-                                className={`rounded-lg border bg-card p-3 transition-shadow cursor-grab active:cursor-grabbing ${
-                                  snapshot.isDragging ? "shadow-lg shadow-primary/10 border-primary/30" : "border-border hover:border-primary/20"
-                                }`}
-                              >
+                              <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps} className={`rounded-lg border bg-card p-3 transition-shadow cursor-grab active:cursor-grabbing ${snapshot.isDragging ? "shadow-lg shadow-primary/10 border-primary/30" : "border-border hover:border-primary/20"}`}>
                                 <div className="flex items-center justify-between mb-2">
-                                  <span className="text-xs font-mono text-primary font-semibold">
-                                    #{order.order_number || order.id.slice(0, 8)}
-                                  </span>
-                                  <Badge className={`text-[10px] ${meta.color} text-white border-0 px-1.5 py-0`}>
-                                    {order.status}
-                                  </Badge>
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="text-xs font-mono text-primary font-semibold">#{order.order_number || order.id.slice(0, 8)}</span>
+                                    <PlatformBadge type={order.logistics_type} />
+                                  </div>
+                                  <Badge className={`text-[10px] ${meta.color} text-white border-0 px-1.5 py-0`}>{order.status}</Badge>
                                 </div>
                                 <p className="text-sm font-semibold text-foreground truncate mb-1.5">{order.client_name}</p>
                                 <div className="space-y-1 text-xs text-muted-foreground">
-                                  <div className="flex items-center gap-1.5">
-                                    <Package className="h-3 w-3 shrink-0" />
-                                    <span className="truncate">x{order.order_quantity || 1}</span>
-                                  </div>
+                                  <div className="flex items-center gap-1.5"><Package className="h-3 w-3 shrink-0" /><span>x{order.order_quantity || 1}</span></div>
                                   {order.delivery_date && (
-                                    <div className="flex items-center gap-1.5">
-                                      <CalendarDays className="h-3 w-3 shrink-0" />
-                                      <span>{new Date(order.delivery_date).toLocaleDateString("pt-BR")}</span>
-                                    </div>
+                                    <div className="flex items-center gap-1.5"><CalendarDays className="h-3 w-3 shrink-0" /><span>{new Date(order.delivery_date).toLocaleDateString("pt-BR")}</span></div>
                                   )}
-                                  <div className="flex items-center gap-1.5">
-                                    <DollarSign className="h-3 w-3 shrink-0" />
-                                    <span className="font-semibold text-foreground">R$ {Number(order.order_final_price).toFixed(2)}</span>
-                                  </div>
-                                  <div className="flex items-center gap-1.5">
-                                    <MapPin className="h-3 w-3 shrink-0" />
-                                    <span className="truncate">{order.client_address_city} - {order.client_address_state}</span>
-                                  </div>
+                                  <div className="flex items-center gap-1.5"><DollarSign className="h-3 w-3 shrink-0" /><span className="font-semibold text-foreground">R$ {Number(order.order_final_price).toFixed(2)}</span></div>
+                                  <div className="flex items-center gap-1.5"><MapPin className="h-3 w-3 shrink-0" /><span className="truncate">{order.client_address_city} - {order.client_address_state}</span></div>
                                 </div>
                                 <div className="flex items-center gap-1 mt-3 pt-2 border-t border-border">
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-7 w-7 text-muted-foreground hover:text-success"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      window.open(`https://wa.me/${order.client_phone.replace(/\D/g, "")}`, "_blank");
-                                    }}
-                                  >
+                                  <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-emerald-500" onClick={(e) => { e.stopPropagation(); window.open(`https://wa.me/${order.client_phone.replace(/\D/g, "")}`, "_blank"); }}>
                                     <MessageSquare className="h-3.5 w-3.5" />
                                   </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-7 w-7 text-muted-foreground hover:text-primary"
-                                    onClick={(e) => { e.stopPropagation(); setSelectedOrder(order); }}
-                                  >
+                                  <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-primary" onClick={(e) => { e.stopPropagation(); setSelectedOrder(order); }}>
                                     <Eye className="h-3.5 w-3.5" />
                                   </Button>
                                   {order.logistics_type === "logzz" && !order.logzz_order_id && (
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      className="h-7 w-7 text-muted-foreground hover:text-primary"
-                                      title="Enviar para Logzz"
-                                      onClick={async (e) => {
-                                        e.stopPropagation();
-                                        toast.loading("Enviando para Logzz...", { id: `logzz-${order.id}` });
-                                        try {
-                                          const { data, error } = await supabase.functions.invoke("checkout-api", {
-                                            body: { action: "send_to_logzz", order_id: order.id, user_id: user?.id },
-                                          });
-                                          if (error) throw error;
-                                          if (data?.success) {
-                                            toast.success(`Pedido enviado para Logzz! ID: ${data.logzz_order_id || "OK"}`, { id: `logzz-${order.id}` });
-                                            refetch();
-                                          } else {
-                                            toast.error(`Erro Logzz: ${data?.logzz_status || "falha"} — ${(data?.logzz_response || data?.error || "").slice(0, 100)}`, { id: `logzz-${order.id}` });
-                                          }
-                                        } catch (err: any) {
-                                          toast.error(`Erro: ${err.message}`, { id: `logzz-${order.id}` });
-                                        }
-                                      }}
-                                    >
+                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-primary" title="Enviar para Logzz" onClick={async (e) => {
+                                      e.stopPropagation();
+                                      toast.loading("Enviando para Logzz...", { id: `logzz-${order.id}` });
+                                      try {
+                                        const { data, error } = await supabase.functions.invoke("checkout-api", { body: { action: "send_to_logzz", order_id: order.id, user_id: user?.id } });
+                                        if (error) throw error;
+                                        if (data?.success) { toast.success(`Pedido enviado! ID: ${data.logzz_order_id || "OK"}`, { id: `logzz-${order.id}` }); refetch(); }
+                                        else toast.error(`Erro Logzz: ${(data?.logzz_response || data?.error || "falha").slice(0, 100)}`, { id: `logzz-${order.id}` });
+                                      } catch (err: any) { toast.error(`Erro: ${err.message}`, { id: `logzz-${order.id}` }); }
+                                    }}>
                                       <Truck className="h-3.5 w-3.5" />
                                     </Button>
                                   )}
-                                  <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground ml-auto">
-                                    <MoreHorizontal className="h-3.5 w-3.5" />
-                                  </Button>
+                                  {/* ─── Dropdown "..." ─── */}
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground ml-auto" onClick={(e) => e.stopPropagation()}>
+                                        <MoreHorizontal className="h-3.5 w-3.5" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end" className="w-48">
+                                      <DropdownMenuItem onClick={() => setSelectedOrder(order)}>👁️ Ver Detalhes</DropdownMenuItem>
+                                      <DropdownMenuItem onClick={() => openEdit(order)}>✏️ Editar Pedido</DropdownMenuItem>
+                                      <DropdownMenuSeparator />
+                                      <DropdownMenuItem onClick={() => setCancelTarget(order)} className="text-amber-500 focus:text-amber-500">❌ Cancelar Pedido</DropdownMenuItem>
+                                      <DropdownMenuItem onClick={() => setDeleteTarget(order)} className="text-destructive focus:text-destructive">🗑️ Apagar Pedido</DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
                                 </div>
                               </div>
                             )}
@@ -387,182 +375,271 @@ const Pedidos = () => {
         </DragDropContext>
       )}
 
-      {/* Order Detail Modal */}
+      {/* ─── Order Detail Modal ─── */}
       <Dialog open={!!selectedOrder} onOpenChange={(o) => { if (!o) setSelectedOrder(null); }}>
-        <DialogContent className="sm:max-w-[640px] bg-card border-border max-h-[85vh] overflow-y-auto">
-          {selectedOrder && (
-            <>
-              <DialogHeader>
-                <DialogTitle className="text-foreground flex items-center gap-2">
-                  Pedido #{selectedOrder.order_number || selectedOrder.id.slice(0, 8)}
-                  <Badge className={`${statusMeta(selectedOrder.status).color} text-white border-0`}>
-                    {selectedOrder.status}
-                  </Badge>
-                </DialogTitle>
-              </DialogHeader>
-              <Tabs defaultValue="info" className="mt-2">
-                <TabsList className="bg-secondary border border-border w-full">
-                  <TabsTrigger value="info" className="flex-1 data-[state=active]:bg-primary/15 data-[state=active]:text-primary">Informações</TabsTrigger>
-                  <TabsTrigger value="logistics" className="flex-1 data-[state=active]:bg-primary/15 data-[state=active]:text-primary">Logística</TabsTrigger>
-                  <TabsTrigger value="timeline" className="flex-1 data-[state=active]:bg-primary/15 data-[state=active]:text-primary">Timeline</TabsTrigger>
-                </TabsList>
+        <DialogContent className="sm:max-w-[700px] bg-card border-border max-h-[85vh] overflow-y-auto">
+          {selectedOrder && (() => {
+            const o = selectedOrder;
+            const shippingVal = Number(o.shipping_value || 0);
+            const offerPrice = detailOffer ? Number(detailOffer.price) : null;
+            const bumpsTotal = detailBumps.reduce((s, b) => s + Number(b.current_price || b.price || 0), 0);
+            const isLogzz = o.logistics_type !== "coinzz";
+            return (
+              <>
+                <DialogHeader>
+                  <DialogTitle className="text-foreground flex items-center gap-2 flex-wrap">
+                    Pedido #{o.order_number || o.id.slice(0, 8)} <CopyBtn value={o.order_number || o.id.slice(0, 8)} />
+                    <PlatformBadge type={o.logistics_type} />
+                    <Badge className={`${statusMeta(o.status).color} text-white border-0`}>{o.status}</Badge>
+                  </DialogTitle>
+                </DialogHeader>
+                <Tabs defaultValue="info" className="mt-2">
+                  <TabsList className="bg-secondary border border-border w-full">
+                    <TabsTrigger value="info" className="flex-1 data-[state=active]:bg-primary/15 data-[state=active]:text-primary">Informações</TabsTrigger>
+                    <TabsTrigger value="logistics" className="flex-1 data-[state=active]:bg-primary/15 data-[state=active]:text-primary">Logística</TabsTrigger>
+                    <TabsTrigger value="timeline" className="flex-1 data-[state=active]:bg-primary/15 data-[state=active]:text-primary">Timeline</TabsTrigger>
+                  </TabsList>
 
-                <TabsContent value="info" className="space-y-4 mt-4">
-                  {/* Client */}
-                  <div className="rounded-lg border border-border bg-secondary/50 p-4">
-                    <h4 className="text-xs font-bold uppercase text-muted-foreground mb-3">Cliente</h4>
-                    <div className="grid grid-cols-2 gap-3 text-sm">
-                      <div><span className="text-muted-foreground">Nome:</span> <span className="text-foreground font-medium">{selectedOrder.client_name}</span></div>
-                      <div className="flex items-center gap-1">
-                        <span className="text-muted-foreground">Tel:</span>
-                        <a href={`https://wa.me/${selectedOrder.client_phone.replace(/\D/g, "")}`} target="_blank" rel="noreferrer" className="text-success hover:underline font-medium">
-                          {selectedOrder.client_phone}
-                        </a>
+                  {/* ── INFO TAB ── */}
+                  <TabsContent value="info" className="space-y-4 mt-4">
+                    {/* Cliente */}
+                    <div className="rounded-lg border border-border bg-secondary/50 p-4">
+                      <h4 className="text-xs font-bold uppercase text-muted-foreground mb-3">👤 Cliente</h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-sm">
+                        <div className="flex items-center gap-1.5"><span className="text-muted-foreground">Nome:</span><span className="text-foreground font-medium">{o.client_name}</span><CopyBtn value={o.client_name} label="Nome" /></div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-muted-foreground">Tel:</span>
+                          <a href={`https://wa.me/${o.client_phone.replace(/\D/g, "")}`} target="_blank" rel="noreferrer" className="text-emerald-400 hover:underline font-medium">{o.client_phone}</a>
+                          <CopyBtn value={o.client_phone} label="Telefone" />
+                        </div>
+                        {o.client_email && <div className="flex items-center gap-1.5"><span className="text-muted-foreground">Email:</span><span className="text-foreground">{o.client_email}</span><CopyBtn value={o.client_email} label="Email" /></div>}
+                        {o.client_document && <div className="flex items-center gap-1.5"><span className="text-muted-foreground">CPF/CNPJ:</span><span className="text-foreground">{o.client_document}</span><CopyBtn value={o.client_document} label="Documento" /></div>}
                       </div>
-                      {selectedOrder.client_email && <div><span className="text-muted-foreground">Email:</span> <span className="text-foreground">{selectedOrder.client_email}</span></div>}
-                      {selectedOrder.client_document && <div><span className="text-muted-foreground">Doc:</span> <span className="text-foreground">{selectedOrder.client_document}</span></div>}
                     </div>
-                  </div>
-                  {/* Address */}
-                  <div className="rounded-lg border border-border bg-secondary/50 p-4">
-                    <h4 className="text-xs font-bold uppercase text-muted-foreground mb-3">Endereço</h4>
-                    <p className="text-sm text-foreground">
-                      {selectedOrder.client_address}, {selectedOrder.client_address_number}
-                      {selectedOrder.client_address_comp ? ` - ${selectedOrder.client_address_comp}` : ""}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {selectedOrder.client_address_district} — {selectedOrder.client_address_city}/{selectedOrder.client_address_state} — CEP {selectedOrder.client_zip_code}
-                    </p>
-                  </div>
-                  {/* Financial */}
-                  <div className="rounded-lg border border-border bg-secondary/50 p-4">
-                    <h4 className="text-xs font-bold uppercase text-muted-foreground mb-3">Financeiro</h4>
-                    <div className="grid grid-cols-2 gap-3 text-sm">
-                      <div><span className="text-muted-foreground">Valor:</span> <span className="text-primary font-bold text-lg">R$ {Number(selectedOrder.order_final_price).toFixed(2)}</span></div>
-                      <div><span className="text-muted-foreground">Frete:</span> <span className="text-foreground">R$ {Number(selectedOrder.shipping_value || 0).toFixed(2)}</span></div>
-                      {selectedOrder.payment_method && <div><span className="text-muted-foreground">Pagamento:</span> <span className="text-foreground uppercase">{selectedOrder.payment_method}</span></div>}
-                      <div><span className="text-muted-foreground">Qtd:</span> <span className="text-foreground">{selectedOrder.order_quantity || 1}</span></div>
-                    </div>
-                  </div>
-                </TabsContent>
 
-                <TabsContent value="logistics" className="space-y-4 mt-4">
-                  <div className="rounded-lg border border-border bg-secondary/50 p-4">
-                    <h4 className="text-xs font-bold uppercase text-muted-foreground mb-3">Logística</h4>
-                    <div className="grid grid-cols-2 gap-3 text-sm">
-                      <div><span className="text-muted-foreground">Provider:</span> <span className="text-foreground uppercase font-medium">{selectedOrder.logistics_type || "—"}</span></div>
-                      {selectedOrder.delivery_date && <div><span className="text-muted-foreground">Entrega:</span> <span className="text-foreground">{new Date(selectedOrder.delivery_date).toLocaleDateString("pt-BR")}</span></div>}
-                      {selectedOrder.delivery_type_name && <div><span className="text-muted-foreground">Tipo:</span> <span className="text-foreground">{selectedOrder.delivery_type_name}</span></div>}
-                      {selectedOrder.tracking_code && <div><span className="text-muted-foreground">Rastreio:</span> <span className="text-primary font-mono">{selectedOrder.tracking_code}</span></div>}
-                      {selectedOrder.delivery_man && <div><span className="text-muted-foreground">Entregador:</span> <span className="text-foreground">{selectedOrder.delivery_man}</span></div>}
-                      {selectedOrder.logistic_operator && <div><span className="text-muted-foreground">Operador:</span> <span className="text-foreground">{selectedOrder.logistic_operator}</span></div>}
-                      {selectedOrder.logzz_order_id && (
-                        <div className="col-span-2">
-                          <span className="text-muted-foreground">Pedido Logzz:</span>{" "}
-                          <a
-                            href={`https://app.logzz.com.br/meu-pedido/${selectedOrder.logzz_order_id}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-primary hover:underline font-mono font-medium inline-flex items-center gap-1"
-                          >
-                            #{selectedOrder.logzz_order_id}
-                            <ExternalLink className="h-3 w-3" />
-                          </a>
+                    {/* Endereço */}
+                    <div className="rounded-lg border border-border bg-secondary/50 p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="text-xs font-bold uppercase text-muted-foreground">📍 Endereço</h4>
+                        <CopyBtn value={fullAddress(o)} label="Endereço completo" />
+                      </div>
+                      <p className="text-sm text-foreground">{o.client_address}, {o.client_address_number}{o.client_address_comp ? ` - ${o.client_address_comp}` : ""}</p>
+                      <p className="text-sm text-muted-foreground">{o.client_address_district} — {o.client_address_city}/{o.client_address_state} — CEP {o.client_zip_code}</p>
+                    </div>
+
+                    {/* Data de Agendamento */}
+                    {o.delivery_date && (
+                      <div className="rounded-lg border-2 border-amber-500/50 bg-amber-500/5 p-4">
+                        <h4 className="text-xs font-bold uppercase text-muted-foreground mb-2">📅 Agendamento de Entrega</h4>
+                        <p className="text-2xl font-bold text-foreground">
+                          {new Date(o.delivery_date + "T12:00:00").toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long", year: "numeric" })}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Produtos / Oferta */}
+                    <div className="rounded-lg border border-border bg-secondary/50 p-4">
+                      <h4 className="text-xs font-bold uppercase text-muted-foreground mb-3">📦 Produtos do Pedido</h4>
+                      {detailOffer ? (
+                        <div className="space-y-2">
+                          <div className="flex justify-between text-sm">
+                            <span className="text-foreground font-medium">{detailOffer.name}</span>
+                            <span className="text-foreground">x{o.order_quantity || 1} — R$ {Number(detailOffer.price).toFixed(2)}</span>
+                          </div>
+                          {detailBumps.length > 0 && (
+                            <div className="mt-3 space-y-2">
+                              <p className="text-xs font-bold uppercase text-emerald-400">Order Bumps ({detailBumps.length})</p>
+                              {detailBumps.map((b) => (
+                                <div key={b.id} className="flex justify-between text-sm border border-emerald-500/30 rounded-md p-2 bg-emerald-500/5">
+                                  <div>
+                                    <span className="text-foreground font-medium">{b.name}</span>
+                                    {b.label_bump && <Badge className="ml-2 bg-emerald-500/20 text-emerald-400 text-[10px] border-0">{b.label_bump}</Badge>}
+                                  </div>
+                                  <span className="text-foreground">R$ {Number(b.current_price || b.price || 0).toFixed(2)}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">Qtd: {o.order_quantity || 1}</p>
+                      )}
+                    </div>
+
+                    {/* Financeiro */}
+                    <div className="rounded-lg border border-border bg-secondary/50 p-4">
+                      <h4 className="text-xs font-bold uppercase text-muted-foreground mb-3">💰 Financeiro</h4>
+                      <div className="space-y-2 text-sm">
+                        {offerPrice !== null && <div className="flex justify-between"><span className="text-muted-foreground">Produto principal</span><span className="text-foreground">R$ {offerPrice.toFixed(2)}</span></div>}
+                        {bumpsTotal > 0 && <div className="flex justify-between"><span className="text-muted-foreground">Order Bumps ({detailBumps.length})</span><span className="text-foreground">R$ {bumpsTotal.toFixed(2)}</span></div>}
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Frete</span>
+                          {shippingVal === 0 ? <Badge className="bg-emerald-500 text-white border-0 text-xs">🟢 FRETE GRÁTIS!</Badge> : <span className="text-foreground">R$ {shippingVal.toFixed(2)}</span>}
+                        </div>
+                        <div className="flex justify-between border-t border-border pt-2 mt-2">
+                          <span className="font-bold text-foreground text-base">Total do Pedido</span>
+                          <span className="font-bold text-primary text-xl">R$ {Number(o.order_final_price).toFixed(2)}</span>
+                        </div>
+                        <div className="mt-3 p-2.5 rounded-md bg-muted/50 border border-border">
+                          {isLogzz
+                            ? <span className="text-sm font-semibold text-amber-400">💵 PAGAMENTO NA ENTREGA</span>
+                            : <span className="text-sm font-semibold text-purple-400">💳 PAGAMENTO ONLINE — ENTREGA VIA CORREIOS</span>}
+                        </div>
+                      </div>
+                    </div>
+                  </TabsContent>
+
+                  {/* ── LOGISTICS TAB ── */}
+                  <TabsContent value="logistics" className="space-y-4 mt-4">
+                    <div className="rounded-lg border border-border bg-secondary/50 p-4">
+                      <div className="flex items-center gap-2 mb-3">
+                        <h4 className="text-xs font-bold uppercase text-muted-foreground">🚚 Logística</h4>
+                        <PlatformBadge type={o.logistics_type} />
+                      </div>
+                      <div className="grid grid-cols-2 gap-3 text-sm">
+                        {o.delivery_date && <div><span className="text-muted-foreground">Entrega:</span> <span className="text-foreground">{new Date(o.delivery_date).toLocaleDateString("pt-BR")}</span></div>}
+                        {o.delivery_type_name && <div><span className="text-muted-foreground">Tipo:</span> <span className="text-foreground">{o.delivery_type_name}</span></div>}
+                        {o.tracking_code && <div className="flex items-center gap-1.5"><span className="text-muted-foreground">Rastreio:</span><span className="text-primary font-mono">{o.tracking_code}</span><CopyBtn value={o.tracking_code} label="Rastreio" /></div>}
+                        {o.delivery_man && <div><span className="text-muted-foreground">Entregador:</span> <span className="text-foreground">{o.delivery_man}</span></div>}
+                        {o.logistic_operator && <div><span className="text-muted-foreground">Operador:</span> <span className="text-foreground">{o.logistic_operator}</span></div>}
+                        {o.logzz_order_id && (
+                          <div className="col-span-2 flex items-center gap-1.5">
+                            <span className="text-muted-foreground">Pedido Logzz:</span>
+                            <a href={`https://app.logzz.com.br/meu-pedido/${o.logzz_order_id}`} target="_blank" rel="noopener noreferrer" className="text-emerald-400 hover:underline font-mono font-medium inline-flex items-center gap-1">#{o.logzz_order_id}<ExternalLink className="h-3 w-3" /></a>
+                            <CopyBtn value={o.logzz_order_id} label="ID Logzz" />
+                          </div>
+                        )}
+                        {o.coinzz_order_hash && (
+                          <div className="col-span-2 flex items-center gap-1.5">
+                            <span className="text-muted-foreground">Pedido Coinzz:</span>
+                            <a href={`https://app.coinzz.com.br/pedido/${o.coinzz_order_hash}`} target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:underline font-mono font-medium inline-flex items-center gap-1">#{o.coinzz_order_hash}<ExternalLink className="h-3 w-3" /></a>
+                            <CopyBtn value={o.coinzz_order_hash} label="Hash Coinzz" />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    {/* Labels */}
+                    <div className="flex gap-3">
+                      {o.label_a4_url && <Button variant="outline" size="sm" className="border-border" onClick={() => window.open(o.label_a4_url!, "_blank")}><Printer className="h-4 w-4 mr-1.5" /> Etiqueta A4</Button>}
+                      {o.label_thermal_url && <Button variant="outline" size="sm" className="border-border" onClick={() => window.open(o.label_thermal_url!, "_blank")}><Printer className="h-4 w-4 mr-1.5" /> Etiqueta Térmica</Button>}
+                      {!o.label_a4_url && !o.label_thermal_url && <p className="text-sm text-muted-foreground">Nenhuma etiqueta disponível.</p>}
+                    </div>
+                  </TabsContent>
+
+                  {/* ── TIMELINE TAB ── */}
+                  <TabsContent value="timeline" className="mt-4">
+                    <div className="space-y-3">
+                      {/* Fixed creation event */}
+                      <div className="flex items-start gap-3">
+                        <div className="mt-1 h-3 w-3 rounded-full bg-primary shrink-0" />
+                        <div>
+                          <p className="text-sm font-medium text-foreground">Pedido criado</p>
+                          <p className="text-xs text-muted-foreground">{o.created_at ? new Date(o.created_at).toLocaleString("pt-BR") : "—"}</p>
+                        </div>
+                      </div>
+                      {/* Real timeline entries */}
+                      {detailTimeline.map((ev) => (
+                        <div key={ev.id} className="flex items-start gap-3">
+                          <div className="mt-1 h-3 w-3 rounded-full bg-muted-foreground shrink-0" />
+                          <div>
+                            <p className="text-sm text-foreground">
+                              {ev.from_status && <Badge variant="outline" className="text-[10px] mr-1 border-border">{ev.from_status}</Badge>}
+                              <span className="text-muted-foreground mx-1">→</span>
+                              <Badge className={`${statusMeta(ev.to_status).color} text-white border-0 text-[10px]`}>{ev.to_status}</Badge>
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              {ev.created_at ? new Date(ev.created_at).toLocaleString("pt-BR") : "—"} • <span className="capitalize">{ev.source?.replace(/_/g, " ")}</span>
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                      {detailTimeline.length === 0 && (
+                        <p className="text-sm text-muted-foreground text-center py-4">Nenhuma movimentação registrada ainda.</p>
+                      )}
+                      {o.status_description && (
+                        <div className="rounded-lg border border-border bg-secondary/50 p-3 mt-3">
+                          <p className="text-xs text-muted-foreground mb-1">Observação</p>
+                          <p className="text-sm text-foreground">{o.status_description}</p>
                         </div>
                       )}
                     </div>
-                  </div>
-                  {/* Labels */}
-                  <div className="flex gap-3">
-                    {selectedOrder.label_a4_url && (
-                      <Button variant="outline" size="sm" className="border-border" onClick={() => window.open(selectedOrder.label_a4_url!, "_blank")}>
-                        <Printer className="h-4 w-4 mr-1.5" /> Etiqueta A4
-                      </Button>
-                    )}
-                    {selectedOrder.label_thermal_url && (
-                      <Button variant="outline" size="sm" className="border-border" onClick={() => window.open(selectedOrder.label_thermal_url!, "_blank")}>
-                        <Printer className="h-4 w-4 mr-1.5" /> Etiqueta Térmica
-                      </Button>
-                    )}
-                    {!selectedOrder.label_a4_url && !selectedOrder.label_thermal_url && (
-                      <p className="text-sm text-muted-foreground">Nenhuma etiqueta disponível.</p>
-                    )}
-                  </div>
-                </TabsContent>
-
-                <TabsContent value="timeline" className="mt-4">
-                  <div className="space-y-4">
-                    <div className="flex items-start gap-3">
-                      <div className="mt-0.5 h-3 w-3 rounded-full bg-primary shrink-0" />
-                      <div>
-                        <p className="text-sm font-medium text-foreground">Pedido criado — {selectedOrder.status}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {selectedOrder.created_at ? new Date(selectedOrder.created_at).toLocaleString("pt-BR") : "—"}
-                        </p>
-                      </div>
-                    </div>
-                    {selectedOrder.updated_at && selectedOrder.updated_at !== selectedOrder.created_at && (
-                      <div className="flex items-start gap-3">
-                        <div className="mt-0.5 h-3 w-3 rounded-full bg-muted-foreground shrink-0" />
-                        <div>
-                          <p className="text-sm font-medium text-foreground">Última atualização</p>
-                          <p className="text-xs text-muted-foreground">{new Date(selectedOrder.updated_at).toLocaleString("pt-BR")}</p>
-                        </div>
-                      </div>
-                    )}
-                    {selectedOrder.status_description && (
-                      <div className="rounded-lg border border-border bg-secondary/50 p-3 mt-4">
-                        <p className="text-xs text-muted-foreground mb-1">Observação</p>
-                        <p className="text-sm text-foreground">{selectedOrder.status_description}</p>
-                      </div>
-                    )}
-                  </div>
-                </TabsContent>
-              </Tabs>
-            </>
-          )}
+                  </TabsContent>
+                </Tabs>
+              </>
+            );
+          })()}
         </DialogContent>
       </Dialog>
 
-      {/* Filters Drawer */}
+      {/* ─── Edit Modal ─── */}
+      <Dialog open={!!editOrder} onOpenChange={(o) => { if (!o) setEditOrder(null); }}>
+        <DialogContent className="sm:max-w-[520px] bg-card border-border">
+          <DialogHeader><DialogTitle className="text-foreground">✏️ Editar Pedido #{editOrder?.order_number || editOrder?.id?.slice(0, 8)}</DialogTitle></DialogHeader>
+          <div className="grid grid-cols-2 gap-3 mt-2">
+            <div><Label className="text-xs text-muted-foreground">Nome</Label><Input value={editForm.client_name} onChange={(e) => setEditForm(f => ({ ...f, client_name: e.target.value }))} className="bg-input border-border mt-1" /></div>
+            <div><Label className="text-xs text-muted-foreground">Telefone</Label><Input value={editForm.client_phone} onChange={(e) => setEditForm(f => ({ ...f, client_phone: e.target.value }))} className="bg-input border-border mt-1" /></div>
+            <div className="col-span-2"><Label className="text-xs text-muted-foreground">Rua</Label><Input value={editForm.client_address} onChange={(e) => setEditForm(f => ({ ...f, client_address: e.target.value }))} className="bg-input border-border mt-1" /></div>
+            <div><Label className="text-xs text-muted-foreground">Número</Label><Input value={editForm.client_address_number} onChange={(e) => setEditForm(f => ({ ...f, client_address_number: e.target.value }))} className="bg-input border-border mt-1" /></div>
+            <div><Label className="text-xs text-muted-foreground">Complemento</Label><Input value={editForm.client_address_comp} onChange={(e) => setEditForm(f => ({ ...f, client_address_comp: e.target.value }))} className="bg-input border-border mt-1" /></div>
+            <div><Label className="text-xs text-muted-foreground">Bairro</Label><Input value={editForm.client_address_district} onChange={(e) => setEditForm(f => ({ ...f, client_address_district: e.target.value }))} className="bg-input border-border mt-1" /></div>
+            <div><Label className="text-xs text-muted-foreground">Cidade</Label><Input value={editForm.client_address_city} onChange={(e) => setEditForm(f => ({ ...f, client_address_city: e.target.value }))} className="bg-input border-border mt-1" /></div>
+            <div><Label className="text-xs text-muted-foreground">UF</Label><Input value={editForm.client_address_state} onChange={(e) => setEditForm(f => ({ ...f, client_address_state: e.target.value }))} maxLength={2} className="bg-input border-border mt-1" /></div>
+            <div><Label className="text-xs text-muted-foreground">CEP</Label><Input value={editForm.client_zip_code} onChange={(e) => setEditForm(f => ({ ...f, client_zip_code: e.target.value }))} className="bg-input border-border mt-1" /></div>
+            <div className="col-span-2"><Label className="text-xs text-muted-foreground">Data de Entrega</Label><Input type="date" value={editForm.delivery_date} onChange={(e) => setEditForm(f => ({ ...f, delivery_date: e.target.value }))} className="bg-input border-border mt-1" /></div>
+          </div>
+          <DialogFooter className="mt-4">
+            <Button variant="outline" onClick={() => setEditOrder(null)} className="border-border">Cancelar</Button>
+            <Button onClick={() => editMutation.mutate()} disabled={editMutation.isPending} className="gradient-primary text-primary-foreground">{editMutation.isPending ? "Salvando..." : "Salvar"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ─── Cancel AlertDialog ─── */}
+      <AlertDialog open={!!cancelTarget} onOpenChange={(o) => { if (!o) setCancelTarget(null); }}>
+        <AlertDialogContent className="bg-card border-border">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-foreground">❌ Cancelar Pedido?</AlertDialogTitle>
+            <AlertDialogDescription>O pedido #{cancelTarget?.order_number || cancelTarget?.id?.slice(0, 8)} será movido para <span className="font-bold text-red-400">Frustrado</span>. Esta ação pode ser revertida movendo o card manualmente.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="border-border">Voltar</AlertDialogCancel>
+            <AlertDialogAction onClick={() => cancelTarget && cancelMutation.mutate(cancelTarget)} className="bg-red-600 hover:bg-red-700 text-white">Confirmar Cancelamento</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* ─── Delete AlertDialog ─── */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(o) => { if (!o) setDeleteTarget(null); }}>
+        <AlertDialogContent className="bg-card border-border">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-foreground">🗑️ Apagar Pedido Permanentemente?</AlertDialogTitle>
+            <AlertDialogDescription>O pedido #{deleteTarget?.order_number || deleteTarget?.id?.slice(0, 8)} de <span className="font-bold">{deleteTarget?.client_name}</span> será removido do banco de dados. <span className="text-red-400 font-bold">Esta ação é irreversível.</span></AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="border-border">Voltar</AlertDialogCancel>
+            <AlertDialogAction onClick={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)} className="bg-red-600 hover:bg-red-700 text-white">Apagar Definitivamente</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* ─── Filters Drawer ─── */}
       <Sheet open={filtersOpen} onOpenChange={setFiltersOpen}>
         <SheetContent className="bg-card border-border w-[340px]">
-          <SheetHeader>
-            <SheetTitle className="text-foreground">Filtros Avançados</SheetTitle>
-          </SheetHeader>
+          <SheetHeader><SheetTitle className="text-foreground">Filtros Avançados</SheetTitle></SheetHeader>
           <div className="space-y-5 mt-6">
-            <div>
-              <Label className="text-xs text-muted-foreground">Data início</Label>
-              <Input type="date" value={filterDateFrom} onChange={(e) => setFilterDateFrom(e.target.value)} className="bg-input border-border mt-1" />
-            </div>
-            <div>
-              <Label className="text-xs text-muted-foreground">Data fim</Label>
-              <Input type="date" value={filterDateTo} onChange={(e) => setFilterDateTo(e.target.value)} className="bg-input border-border mt-1" />
-            </div>
+            <div><Label className="text-xs text-muted-foreground">Data início</Label><Input type="date" value={filterDateFrom} onChange={(e) => setFilterDateFrom(e.target.value)} className="bg-input border-border mt-1" /></div>
+            <div><Label className="text-xs text-muted-foreground">Data fim</Label><Input type="date" value={filterDateTo} onChange={(e) => setFilterDateTo(e.target.value)} className="bg-input border-border mt-1" /></div>
             <div>
               <Label className="text-xs text-muted-foreground">Provider logístico</Label>
               <Select value={filterProvider} onValueChange={setFilterProvider}>
                 <SelectTrigger className="bg-input border-border mt-1"><SelectValue placeholder="Todos" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  <SelectItem value="logzz">Logzz</SelectItem>
-                  <SelectItem value="coinzz">Coinzz</SelectItem>
-                </SelectContent>
+                <SelectContent><SelectItem value="all">Todos</SelectItem><SelectItem value="logzz">Logzz</SelectItem><SelectItem value="coinzz">Coinzz</SelectItem></SelectContent>
               </Select>
             </div>
-            <div>
-              <Label className="text-xs text-muted-foreground">Cidade</Label>
-              <Input value={filterCity} onChange={(e) => setFilterCity(e.target.value)} placeholder="Ex: São Paulo" className="bg-input border-border mt-1" />
-            </div>
+            <div><Label className="text-xs text-muted-foreground">Cidade</Label><Input value={filterCity} onChange={(e) => setFilterCity(e.target.value)} placeholder="Ex: São Paulo" className="bg-input border-border mt-1" /></div>
             <div className="flex gap-2 pt-4">
-              <Button variant="outline" className="flex-1 border-border" onClick={() => {
-                setFilterDateFrom(""); setFilterDateTo(""); setFilterProvider(""); setFilterCity("");
-              }}>
-                Limpar
-              </Button>
-              <Button className="flex-1 gradient-primary text-primary-foreground" onClick={() => setFiltersOpen(false)}>
-                Aplicar
-              </Button>
+              <Button variant="outline" className="flex-1 border-border" onClick={() => { setFilterDateFrom(""); setFilterDateTo(""); setFilterProvider(""); setFilterCity(""); }}>Limpar</Button>
+              <Button className="flex-1 gradient-primary text-primary-foreground" onClick={() => setFiltersOpen(false)}>Aplicar</Button>
             </div>
           </div>
         </SheetContent>
