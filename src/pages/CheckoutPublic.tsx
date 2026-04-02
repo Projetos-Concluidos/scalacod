@@ -900,7 +900,7 @@ const CheckoutPublic = () => {
       {checkout.custom_css && <style>{checkout.custom_css}</style>}
 
       {/* Secure header */}
-      <header className="bg-white border-b border-gray-100 sticky top-0 z-50 shadow-sm">
+      <header className="checkout-header bg-white border-b border-gray-100 sticky top-0 z-50 shadow-sm">
         <div className="max-w-5xl mx-auto px-4 py-2.5 flex items-center justify-between">
           <div className="flex items-center gap-1.5">
             <ShieldCheck className="h-4 w-4 text-emerald-500" />
