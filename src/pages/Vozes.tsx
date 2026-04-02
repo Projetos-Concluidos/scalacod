@@ -501,7 +501,10 @@ const Vozes = () => {
               <option value="male">Masculino</option>
               <option value="female">Feminino</option>
             </select>
-            {libLoading && <Loader2 className="h-4 w-4 text-primary animate-spin" />}
+           {libLoading && <Loader2 className="h-4 w-4 text-primary animate-spin" />}
+            {ttsProvider === "openai" && (
+              <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">OpenAI TTS — vozes multilíngue</span>
+            )}
           </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {filteredLibrary.map(voice => {
