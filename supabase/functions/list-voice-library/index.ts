@@ -40,7 +40,8 @@ serve(async (req) => {
       }
     }
 
-    const elevenLabsKey = configMap["integration_elevenlabs_api_key"] || Deno.env.get("ELEVENLABS_API_KEY") || "";
+    const hasElevenLabsConfig = configs?.some(c => c.key === "integration_elevenlabs_api_key");
+    const elevenLabsKey = configMap["integration_elevenlabs_api_key"] || (!hasElevenLabsConfig ? (Deno.env.get("ELEVENLABS_API_KEY") || "") : "");
     const openaiKey = configMap["integration_openai_api_key"] || "";
 
     if (elevenLabsKey) {

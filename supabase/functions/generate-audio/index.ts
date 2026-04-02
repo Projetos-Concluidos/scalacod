@@ -62,8 +62,9 @@ serve(async (req) => {
       }
     }
 
-    // Also check Deno env as fallback for ElevenLabs
-    const elevenLabsKey = configMap["integration_elevenlabs_api_key"] || Deno.env.get("ELEVENLABS_API_KEY") || "";
+    // If system_config has an explicit entry (even empty), it takes precedence over env
+    const hasElevenLabsConfig = configs?.some(c => c.key === "integration_elevenlabs_api_key");
+    const elevenLabsKey = configMap["integration_elevenlabs_api_key"] || (!hasElevenLabsConfig ? (Deno.env.get("ELEVENLABS_API_KEY") || "") : "");
     const openaiKey = configMap["integration_openai_api_key"] || "";
 
     let audioBuffer: ArrayBuffer;

@@ -43,8 +43,9 @@ serve(async (req) => {
       }
     }
 
-    // Fallback to env secret
-    if (!apiKey) {
+    // Fallback to env secret only if no system_config entry exists
+    const hasConfig = configs?.some(c => c.key === "integration_elevenlabs_api_key");
+    if (!apiKey && !hasConfig) {
       apiKey = Deno.env.get("ELEVENLABS_API_KEY") || "";
     }
 
