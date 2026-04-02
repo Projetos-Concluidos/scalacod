@@ -1713,7 +1713,7 @@ export type Database = {
           {
             foreignKeyName: "voice_tokens_user_id_fkey"
             columns: ["user_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
