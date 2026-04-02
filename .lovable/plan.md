@@ -1,3 +1,5 @@
+
+
 ## Plano: Páginas Públicas + Footer Premium
 
 ### Problema
@@ -12,18 +14,16 @@
 
 | Pagina | Rota | Conteudo |
 |---|---|---|
-| Funcionalidades | `/funcionalidades` | Grid de 8 features com icones, titulos e descricoes (Checkout COD, Automacao WhatsApp, Flow Builder, Dashboard & Pixel, Logistica Integrada, Leads & CRM, Remarketing, Webhooks & API) — inspirado no print do concorrente |
-| Planos | `/planos` | 2 cards (Iniciante R$297 e Escala R$497) + card Empresarial + secao "Qual escolher?" — usando dados do CMS pricing |
-| FAQ | `/faq` | Perguntas frequentes em accordion, consumindo dados do CMS faqs |
-| Central de Ajuda | `/ajuda` | Hub de suporte com categorias (Primeiros Passos, Checkouts, Pedidos, WhatsApp, etc) com conteudo do Suporte.tsx adaptado para pagina publica |
-| Status | `/status` | Pagina simples mostrando status dos servicos (API, WhatsApp, Checkout, Logzz) — todos "Operacional" com indicadores verdes |
-| Termos | `/termos` | Termos de Uso e Politica de Privacidade em texto corrido |
+| Funcionalidades | `/funcionalidades` | Grid de 8 features com icones, titulos e descricoes (Checkout COD, Automacao WhatsApp, Flow Builder, Dashboard & Pixel, Logistica Integrada, Leads & CRM, Remarketing, Webhooks & API) |
+| Planos | `/planos` | 2 cards (Iniciante R$297 e Escala R$497) + card Empresarial + secao "Qual escolher?" |
+| FAQ | `/faq` | Perguntas frequentes em accordion, consumindo dados do CMS |
+| Central de Ajuda | `/ajuda` | Hub de suporte com categorias (Primeiros Passos, Checkouts, Pedidos, WhatsApp, etc) |
+| Status | `/status` | Status dos servicos (API, WhatsApp, Checkout, Logzz) com indicadores |
+| Termos | `/termos` | Termos de Uso e Politica de Privacidade |
 
-Todas as paginas publicas terao: navbar com logo + links + CTA, e o novo footer premium.
+Todas com navbar + footer premium reutilizaveis, tema dark BLACK COD.
 
-#### 2. Redesenhar o Footer (premium, elegante)
-
-Layout inspirado no print do concorrente:
+#### 2. Redesenhar o Footer (premium)
 
 ```text
 ┌─────────────────────────────────────────────────────────────┐
@@ -40,29 +40,27 @@ Layout inspirado no print do concorrente:
 └─────────────────────────────────────────────────────────────┘
 ```
 
-4 colunas: Produto (Funcionalidades, Planos, FAQ), Acesso (Login, Criar conta), Suporte (Central de Ajuda, Status, Termos), Contato (email, WhatsApp).
+4 colunas com links reais, visual elegante dark com acentos emerald.
 
-#### 3. Atualizar Navbar da Home
+#### 3. Atualizar Navbar + Rotas
 
-Links "Recursos", "Planos", "FAQ" apontarao para as novas rotas `/funcionalidades`, `/planos`, `/faq` (com scroll suave quando na mesma pagina, ou navegacao direta).
-
-#### 4. Registrar rotas no App.tsx
-
-Adicionar as 6 novas rotas publicas (sem AuthGuard).
+- Links "Recursos", "Planos", "FAQ" apontam para as novas rotas
+- 6 rotas publicas adicionadas ao App.tsx (sem AuthGuard)
 
 ### Arquivos
 
 | Arquivo | Acao |
 |---|---|
-| `src/pages/Funcionalidades.tsx` | **Criar** — grid de features premium |
-| `src/pages/Planos.tsx` | **Criar** — cards de pricing |
-| `src/pages/Faq.tsx` | **Criar** — accordion de FAQs |
-| `src/pages/Ajuda.tsx` | **Criar** — central de ajuda publica |
-| `src/pages/Status.tsx` | **Criar** — status dos servicos |
-| `src/pages/Termos.tsx` | **Criar** — termos e privacidade |
-| `src/components/PublicFooter.tsx` | **Criar** — footer premium reutilizavel |
-| `src/components/PublicNavbar.tsx` | **Criar** — navbar reutilizavel para paginas publicas |
-| `src/pages/Home.tsx` | Substituir footer inline pelo PublicFooter, atualizar links navbar |
-| `src/App.tsx` | Adicionar 6 rotas publicas |
+| `src/pages/Funcionalidades.tsx` | Criar |
+| `src/pages/Planos.tsx` | Criar |
+| `src/pages/Faq.tsx` | Criar |
+| `src/pages/Ajuda.tsx` | Criar |
+| `src/pages/StatusPage.tsx` | Criar |
+| `src/pages/Termos.tsx` | Criar |
+| `src/components/PublicFooter.tsx` | Criar — footer premium reutilizavel |
+| `src/components/PublicNavbar.tsx` | Criar — navbar reutilizavel |
+| `src/pages/Home.tsx` | Usar PublicFooter + PublicNavbar |
+| `src/App.tsx` | Adicionar 6 rotas |
 
-Nenhuma migracao de banco necessaria — tudo frontend.
+Nenhuma migracao de banco necessaria.
+
