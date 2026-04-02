@@ -409,9 +409,11 @@ const Vozes = () => {
             description="Clone sua primeira voz ou explore a biblioteca e favorite as que mais gostar"
             action={
               <div className="flex items-center gap-3">
-                <button onClick={() => { resetClone(); setCloneOpen(true); }} className="gradient-primary flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-primary-foreground">
-                  <Upload className="h-4 w-4" /> Clonar Voz
-                </button>
+                {ttsProvider === "elevenlabs" && (
+                  <button onClick={() => { resetClone(); setCloneOpen(true); }} className="gradient-primary flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-primary-foreground">
+                    <Upload className="h-4 w-4" /> Clonar Voz
+                  </button>
+                )}
                 <button onClick={() => setTab("library")} className="flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm text-foreground hover:bg-muted">
                   <Globe className="h-4 w-4" /> Explorar Biblioteca
                 </button>
