@@ -409,14 +409,14 @@ const Fluxos = () => {
               <div className="space-y-2">
                 {loading ? (
                   Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-20 rounded-xl" />)
-                ) : flows.length === 0 ? (
+                ) : filteredFlows.length === 0 ? (
                   <div className="text-center py-12">
                     <GitBranch className="h-12 w-12 mx-auto text-muted-foreground/30 mb-3" />
-                    <p className="text-sm text-muted-foreground">Nenhum fluxo criado ainda</p>
+                    <p className="text-sm text-muted-foreground">{flowFilter !== "all" ? `Nenhum fluxo ${flowFilter === "cod" ? "Logzz" : "Coinzz"} encontrado` : "Nenhum fluxo criado ainda"}</p>
                     <button onClick={() => setBuilderOpen(true)} className="mt-3 text-sm text-primary hover:underline">Criar primeiro fluxo</button>
                   </div>
                 ) : (
-                  flows.map((flow) => (
+                  filteredFlows.map((flow) => (
                     <div key={flow.id} className="flex items-center justify-between rounded-xl border border-border bg-background/50 px-4 py-4 transition-colors hover:bg-muted/30">
                       <div className="flex items-center gap-3">
                         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted">
