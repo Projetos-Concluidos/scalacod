@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { GitBranch, Zap, Folder, Plus, MessageCircle, Tag, ChevronDown, ChevronRight, Pencil, SlidersHorizontal, Sparkles, MoreHorizontal, XCircle, Star, CheckCircle, Loader2, Power, PowerOff, Trash2, History, AlertTriangle, Clock, LayoutTemplate, X } from "lucide-react";
+import { GitBranch, Zap, Folder, Plus, MessageCircle, Tag, ChevronDown, ChevronRight, Pencil, SlidersHorizontal, Sparkles, MoreHorizontal, XCircle, Star, CheckCircle, Loader2, Power, PowerOff, Trash2, History, AlertTriangle, Clock, LayoutTemplate, X, Download, Upload, Copy } from "lucide-react";
 import PageHeader from "@/components/PageHeader";
 import StatCard from "@/components/StatCard";
 import NinjaBadge from "@/components/NinjaBadge";
@@ -32,6 +32,8 @@ const Fluxos = () => {
   const [galleryTemplates, setGalleryTemplates] = useState<any[]>([]);
   const [galleryLoading, setGalleryLoading] = useState(false);
   const [creatingTemplate, setCreatingTemplate] = useState<number | null>(null);
+  const [importOpen, setImportOpen] = useState(false);
+  const [importCode, setImportCode] = useState("");
 
   const openGallery = async () => {
     setGalleryOpen(true);
@@ -242,6 +244,54 @@ const Fluxos = () => {
     fetchFlows();
   };
 
+  const exportFlow = (flow: Flow) => {
+    const exportData = {
+      _ninjacod: true,
+      v: 1,
+      name: flow.name,
+      description: flow.description || "",
+      provider: flow.is_official ? "official" : "evolution",
+      nodes: flow.nodes || [],
+      edges: flow.edges || [],
+    };
+    const code = btoa(unescape(encodeURIComponent(JSON.stringify(exportData))));
+    navigator.clipboard.writeText(code);
+    toast.success("Código do fluxo copiado para a área de transferência!");
+  };
+
+  const handleImport = async (providerOverride?: "evolution" | "official") => {
+    if (!user || !importCode.trim()) return;
+    try {
+      const jsonStr = decodeURIComponent(escape(atob(importCode.trim())));
+      const parsed = JSON.parse(jsonStr);
+      if (!parsed._ninjacod || !parsed.nodes) {
+        toast.error("Código inválido. Use um código exportado válido.");
+        return;
+      }
+      const isOfficial = providerOverride ? providerOverride === "official" : parsed.provider === "official";
+      const { error } = await supabase.from("flows").insert({
+        user_id: user.id,
+        name: parsed.name || "Fluxo importado",
+        description: parsed.description || null,
+        flow_type: "cod",
+        is_official: isOfficial,
+        nodes: parsed.nodes,
+        edges: parsed.edges || [],
+        node_count: parsed.nodes?.length || 0,
+        message_count: parsed.nodes?.filter((n: any) => n.type === "message" || n.data?.type === "message").length || 0,
+        is_active: true,
+        trigger_event: parsed.nodes?.find((n: any) => n.type === "trigger")?.data?.keyword || "pedido_criado",
+      });
+      if (error) { toast.error(error.message); return; }
+      toast.success(`Fluxo "${parsed.name}" importado com sucesso!`);
+      setImportOpen(false);
+      setImportCode("");
+      fetchFlows();
+    } catch {
+      toast.error("Código inválido. Verifique e tente novamente.");
+    }
+  };
+
   const getFlowIcon = (flow: Flow) => {
     if (flow.trigger_event === "pedido_cancelado") return <XCircle className="h-5 w-5 text-destructive" />;
     if (flow.trigger_event === "pedido_entregue") return <Star className="h-5 w-5 text-warning" />;
@@ -273,10 +323,11 @@ const Fluxos = () => {
                   <SlidersHorizontal className="h-4 w-4" /> Mais
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                <DropdownMenuItem>Exportar fluxos</DropdownMenuItem>
-                <DropdownMenuItem>Importar fluxo</DropdownMenuItem>
-              </DropdownMenuContent>
+                <DropdownMenuContent>
+                  <DropdownMenuItem onClick={() => setImportOpen(true)}>
+                    <Upload className="h-4 w-4 mr-2" /> Importar fluxo
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
             </DropdownMenu>
             <button onClick={() => { setEditingFlow(null); setBuilderOpen(true); }} className="gradient-primary flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold text-primary-foreground hover:opacity-90">
               <Plus className="h-4 w-4" /> Novo Fluxo
@@ -387,6 +438,9 @@ const Fluxos = () => {
                             <button className="text-muted-foreground hover:text-foreground"><MoreHorizontal className="h-4 w-4" /></button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => exportFlow(flow)}>
+                              <Download className="h-4 w-4 mr-2" /> Exportar
+                            </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => toggleFlowActive(flow)}>
                               {flow.is_active ? <><PowerOff className="h-4 w-4 mr-2" /> Desativar</> : <><Power className="h-4 w-4 mr-2" /> Ativar</>}
                             </DropdownMenuItem>
@@ -570,6 +624,55 @@ const Fluxos = () => {
                   })}
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Import Modal */}
+      {importOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-card border border-border rounded-2xl w-full max-w-lg shadow-2xl">
+            <div className="flex items-center justify-between p-5 border-b border-border">
+              <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
+                <Upload className="h-5 w-5 text-primary" /> Importar Fluxo
+              </h2>
+              <button onClick={() => { setImportOpen(false); setImportCode(""); }} className="p-2 rounded-lg hover:bg-muted text-muted-foreground"><X className="h-5 w-5" /></button>
+            </div>
+            <div className="p-5 space-y-4">
+              <p className="text-xs text-muted-foreground">Cole o código Base64 exportado de outro fluxo:</p>
+              <textarea
+                value={importCode}
+                onChange={(e) => setImportCode(e.target.value)}
+                placeholder="Cole o código aqui..."
+                className="w-full min-h-[120px] rounded-lg border border-border bg-background px-3 py-2 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-primary/30"
+              />
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-foreground">Escolha o provedor:</p>
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    onClick={() => handleImport()}
+                    disabled={!importCode.trim()}
+                    className="py-2.5 px-3 rounded-lg border border-border text-xs font-medium hover:bg-muted disabled:opacity-50 transition-colors"
+                  >
+                    Manter original
+                  </button>
+                  <button
+                    onClick={() => handleImport("evolution")}
+                    disabled={!importCode.trim()}
+                    className="py-2.5 px-3 rounded-lg border border-primary/30 bg-primary/5 text-xs font-medium text-primary hover:bg-primary/10 disabled:opacity-50 transition-colors"
+                  >
+                    Evolution
+                  </button>
+                  <button
+                    onClick={() => handleImport("official")}
+                    disabled={!importCode.trim()}
+                    className="py-2.5 px-3 rounded-lg border border-primary/30 bg-primary/5 text-xs font-medium text-primary hover:bg-primary/10 disabled:opacity-50 transition-colors"
+                  >
+                    API Oficial
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
