@@ -458,7 +458,7 @@ const Pedidos = () => {
                                         const { data, error } = await supabase.functions.invoke("checkout-api", { body: { action: "send_to_logzz", order_id: order.id, user_id: user?.id } });
                                         if (error) throw error;
                                         if (data?.success) { toast.success(`Pedido enviado! ID: ${data.logzz_order_id || "OK"}`, { id: `logzz-${order.id}` }); refetch(); }
-                                        else toast.error(`Erro Logzz: ${(data?.logzz_response || data?.error || "falha").slice(0, 100)}`, { id: `logzz-${order.id}` });
+                                        else toast.error(`Erro Logzz: ${(data?.logzz_error || data?.logzz_response || data?.error || "falha").slice(0, 100)}`, { id: `logzz-${order.id}` });
                                       } catch (err: any) { toast.error(`Erro: ${err.message}`, { id: `logzz-${order.id}` }); }
                                     }}>
                                       <Truck className="h-3.5 w-3.5" />
@@ -658,7 +658,7 @@ const Pedidos = () => {
                                     refetch();
                                     supabase.from("orders").select("*").eq("id", o.id).single().then(({ data: refreshed }) => { if (refreshed) setSelectedOrder(refreshed as Order); });
                                   } else {
-                                    toast.error(`Erro: ${(data?.logzz_response || "falha").slice(0, 150)}`, { id: `logzz-retry-${o.id}` });
+                                    toast.error(`Erro: ${(data?.logzz_error || data?.logzz_response || "falha").slice(0, 150)}`, { id: `logzz-retry-${o.id}` });
                                     supabase.from("order_status_history").select("*").eq("order_id", o.id).order("created_at", { ascending: true }).then(({ data: tl }) => setDetailTimeline(tl || []));
                                   }
                                 } catch (err: any) { toast.error(`Erro: ${err.message}`, { id: `logzz-retry-${o.id}` }); }
