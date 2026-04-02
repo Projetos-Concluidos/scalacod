@@ -493,8 +493,8 @@ const Pedidos = () => {
                                       <Truck className="h-3.5 w-3.5" />
                                     </Button>
                                   )}
-                                  {/* Botão Enviar para Coinzz */}
-                                  {order.logistics_type === "coinzz" && !order.coinzz_order_hash && (
+                                  {/* Botão Enviar para Coinzz — sempre visível para pedidos coinzz */}
+                                  {order.logistics_type === "coinzz" && (
                                     <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-purple-500" title="Enviar para Coinzz" onClick={async (e) => {
                                       e.stopPropagation();
                                       toast.loading("Enviando para Coinzz...", { id: `coinzz-${order.id}` });
