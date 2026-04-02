@@ -815,7 +815,7 @@ const CheckoutPublic = () => {
             <div className="flex-1 min-w-0">
               <p className="text-sm font-bold text-gray-900 leading-tight">{product?.name}</p>
               <div className="flex items-center gap-2 mt-2">
-                <span className="inline-flex items-center justify-center h-8 min-w-[2rem] px-2 rounded-lg bg-emerald-500 text-white text-lg font-black">
+                <span className="inline-flex items-center justify-center h-6 min-w-[1.5rem] px-1.5 rounded-md bg-emerald-500 text-white text-sm font-bold">
                   {quantity}x
                 </span>
                 <span className="text-xs text-gray-500">{quantity === 1 ? "unidade" : "unidades"}</span>
