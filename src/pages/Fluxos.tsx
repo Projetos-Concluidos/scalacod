@@ -628,6 +628,55 @@ const Fluxos = () => {
           </div>
         </div>
       )}
+
+      {/* Import Modal */}
+      {importOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-card border border-border rounded-2xl w-full max-w-lg shadow-2xl">
+            <div className="flex items-center justify-between p-5 border-b border-border">
+              <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
+                <Upload className="h-5 w-5 text-primary" /> Importar Fluxo
+              </h2>
+              <button onClick={() => { setImportOpen(false); setImportCode(""); }} className="p-2 rounded-lg hover:bg-muted text-muted-foreground"><X className="h-5 w-5" /></button>
+            </div>
+            <div className="p-5 space-y-4">
+              <p className="text-xs text-muted-foreground">Cole o código Base64 exportado de outro fluxo:</p>
+              <textarea
+                value={importCode}
+                onChange={(e) => setImportCode(e.target.value)}
+                placeholder="Cole o código aqui..."
+                className="w-full min-h-[120px] rounded-lg border border-border bg-background px-3 py-2 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-primary/30"
+              />
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-foreground">Escolha o provedor:</p>
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    onClick={() => handleImport()}
+                    disabled={!importCode.trim()}
+                    className="py-2.5 px-3 rounded-lg border border-border text-xs font-medium hover:bg-muted disabled:opacity-50 transition-colors"
+                  >
+                    Manter original
+                  </button>
+                  <button
+                    onClick={() => handleImport("evolution")}
+                    disabled={!importCode.trim()}
+                    className="py-2.5 px-3 rounded-lg border border-primary/30 bg-primary/5 text-xs font-medium text-primary hover:bg-primary/10 disabled:opacity-50 transition-colors"
+                  >
+                    Evolution
+                  </button>
+                  <button
+                    onClick={() => handleImport("official")}
+                    disabled={!importCode.trim()}
+                    className="py-2.5 px-3 rounded-lg border border-primary/30 bg-primary/5 text-xs font-medium text-primary hover:bg-primary/10 disabled:opacity-50 transition-colors"
+                  >
+                    API Oficial
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
