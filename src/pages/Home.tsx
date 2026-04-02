@@ -95,8 +95,8 @@ const testimonials = [
 ];
 
 const faqs = [
-  { q: "O que é o checkout híbrido Logzz + Coinzz?", a: "Quando o cliente digita o CEP no checkout, a ScalaNinja verifica automaticamente se a Logzz atende aquela região. Se sim, o pedido é COD. Se não, redireciona para Coinzz + Correios. Tudo invisível para o cliente." },
-  { q: "Preciso ter conta na Logzz e Coinzz separadamente?", a: "Sim. A ScalaNinja integra com suas contas existentes via tokens de API. Você só configura uma vez e tudo funciona automaticamente." },
+  { q: "O que é o checkout híbrido Logzz + Coinzz?", a: "Quando o cliente digita o CEP no checkout, o ScalaCOD verifica automaticamente se a Logzz atende aquela região. Se sim, o pedido é COD. Se não, redireciona para Coinzz + Correios. Tudo invisível para o cliente." },
+  { q: "Preciso ter conta na Logzz e Coinzz separadamente?", a: "Sim. O ScalaCOD integra com suas contas existentes via tokens de API. Você só configura uma vez e tudo funciona automaticamente." },
   { q: "Como funciona a automação de WhatsApp?", a: "Você cria fluxos no builder visual. Quando um pedido muda de status, o WhatsApp dispara automaticamente a mensagem certa para o cliente." },
   { q: "Posso usar para vender como afiliado?", a: "Sim. Importe as ofertas direto da Logzz, crie seu checkout em minutos e comece a vender." },
   { q: "Os 7 dias de trial são realmente grátis?", a: "Sim. Nenhum cartão necessário. Teste todas as funcionalidades. Após o período, assine ou cancele — sem cobrança automática." },
