@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import {
   Search, SlidersHorizontal, RefreshCw, Phone, Eye, MoreHorizontal,
   Package, CalendarDays, MapPin, DollarSign, Printer, Truck, Clock,
-  Download, X, ExternalLink, MessageSquare, Copy, Edit, Trash2, XCircle,
+  Download, X, ExternalLink, MessageSquare, Copy, Edit, Trash2, XCircle, AlertTriangle,
   ChevronDown, ChevronUp,
 } from "lucide-react";
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
