@@ -629,11 +629,43 @@ const Pedidos = () => {
                             <CopyBtn value={o.logzz_order_id} label="ID Logzz" />
                           </div>
                         ) : o.logistics_type === "logzz" && o.status !== "Cancelado" ? (
-                          <div className="col-span-2">
+                          <div className="col-span-2 space-y-2">
                             <div className="flex items-center gap-2 rounded-md border border-warning/30 bg-warning/10 px-3 py-2">
                               <AlertTriangle className="h-4 w-4 text-warning shrink-0" />
-                              <span className="text-xs text-warning font-medium">Logzz: Sincronização pendente — pedido ainda não foi aceito pela Logzz</span>
+                              <div className="flex-1">
+                                <span className="text-xs text-warning font-medium block">Logzz: Sincronização pendente</span>
+                                {(() => {
+                                  const errEntry = detailTimeline.find((ev: any) => ev.to_status === "logzz_error");
+                                  if (errEntry?.raw_payload) {
+                                    const errMsg = (errEntry.raw_payload as any)?.logzz_error || (errEntry.raw_payload as any)?.logzz_body?.substring(0, 200);
+                                    if (errMsg) return <span className="text-[10px] text-warning/80 block mt-0.5">Erro: {errMsg}</span>;
+                                  }
+                                  return null;
+                                })()}
+                              </div>
                             </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="border-warning/30 text-warning hover:bg-warning/10 w-full"
+                              onClick={async () => {
+                                toast.loading("Reenviando para Logzz...", { id: `logzz-retry-${o.id}` });
+                                try {
+                                  const { data, error } = await supabase.functions.invoke("logzz-create-order", { body: { order_id: o.id, user_id: user?.id } });
+                                  if (error) throw error;
+                                  if (data?.success) {
+                                    toast.success(`Pedido sincronizado! ID: ${data.logzz_order_id || "OK"}`, { id: `logzz-retry-${o.id}` });
+                                    refetch();
+                                    supabase.from("orders").select("*").eq("id", o.id).single().then(({ data: refreshed }) => { if (refreshed) setSelectedOrder(refreshed as Order); });
+                                  } else {
+                                    toast.error(`Erro: ${(data?.logzz_response || "falha").slice(0, 150)}`, { id: `logzz-retry-${o.id}` });
+                                    supabase.from("order_status_history").select("*").eq("order_id", o.id).order("created_at", { ascending: true }).then(({ data: tl }) => setDetailTimeline(tl || []));
+                                  }
+                                } catch (err: any) { toast.error(`Erro: ${err.message}`, { id: `logzz-retry-${o.id}` }); }
+                              }}
+                            >
+                              <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Reenviar para Logzz
+                            </Button>
                           </div>
                         ) : null}
                         {o.coinzz_order_hash && (

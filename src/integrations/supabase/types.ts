@@ -935,6 +935,7 @@ export type Database = {
           id: string
           label_a4_url: string | null
           label_thermal_url: string | null
+          local_operation_code: string | null
           logistic_operator: string | null
           logistics_type: string | null
           logzz_order_id: string | null
@@ -985,6 +986,7 @@ export type Database = {
           id?: string
           label_a4_url?: string | null
           label_thermal_url?: string | null
+          local_operation_code?: string | null
           logistic_operator?: string | null
           logistics_type?: string | null
           logzz_order_id?: string | null
@@ -1035,6 +1037,7 @@ export type Database = {
           id?: string
           label_a4_url?: string | null
           label_thermal_url?: string | null
+          local_operation_code?: string | null
           logistic_operator?: string | null
           logistics_type?: string | null
           logzz_order_id?: string | null
