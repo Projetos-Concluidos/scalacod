@@ -70,6 +70,12 @@ const App = () => (
               <Route path="/c/:slug" element={<CheckoutPublic />} />
               <Route path="/" element={<HomePub />} />
               <Route path="/home" element={<HomePub />} />
+              <Route path="/funcionalidades" element={<Funcionalidades />} />
+              <Route path="/planos" element={<PlanosPage />} />
+              <Route path="/faq" element={<FaqPage />} />
+              <Route path="/ajuda" element={<AjudaPage />} />
+              <Route path="/status" element={<StatusPage />} />
+              <Route path="/termos" element={<TermosPage />} />
               <Route element={<AuthGuard><AppLayout /></AuthGuard>}>
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/checkouts" element={<Checkouts />} />

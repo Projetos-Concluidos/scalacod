@@ -119,8 +119,9 @@ export default function Home() {
         </div>
         {menuOpen && (
           <div className="border-t border-white/10 bg-gray-950 px-4 pb-4 md:hidden">
-            <a href="#features" className="block py-2 text-sm text-gray-400" onClick={() => setMenuOpen(false)}>Recursos</a>
-            <a href="#pricing" className="block py-2 text-sm text-gray-400" onClick={() => setMenuOpen(false)}>Planos</a>
+            <Link to="/funcionalidades" className="block py-2 text-sm text-gray-400" onClick={() => setMenuOpen(false)}>Recursos</Link>
+            <Link to="/planos" className="block py-2 text-sm text-gray-400" onClick={() => setMenuOpen(false)}>Planos</Link>
+            <Link to="/faq" className="block py-2 text-sm text-gray-400" onClick={() => setMenuOpen(false)}>FAQ</Link>
             <Link to="/login" className="block py-2 text-sm text-gray-400" onClick={() => setMenuOpen(false)}>Login</Link>
             <button onClick={() => { navigate("/register"); setMenuOpen(false); }} className="mt-2 w-full rounded-full bg-emerald-500 px-6 py-2 text-sm font-bold text-black">
               {s.navbar.cta_text}
