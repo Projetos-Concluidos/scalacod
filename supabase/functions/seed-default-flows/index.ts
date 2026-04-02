@@ -459,23 +459,39 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Default mode: seed all templates for new users
-    const { data: existing } = await supabase
+    // Default mode: seed all templates for new users (check COD and Coinzz separately)
+    const { data: existingCod } = await supabase
       .from("flows")
       .select("id")
       .eq("user_id", user.id)
       .eq("is_official", true)
+      .eq("flow_type", "cod")
       .limit(1);
 
-    if (existing && existing.length > 0) {
+    const { data: existingCoinzz } = await supabase
+      .from("flows")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("is_official", true)
+      .eq("flow_type", "coinzz")
+      .limit(1);
+
+    const toInsert: any[] = [];
+    if (!existingCod || existingCod.length === 0) {
+      toInsert.push(...FLOW_TEMPLATES.map((t) => ({ ...t, user_id: user.id })));
+    }
+    if (!existingCoinzz || existingCoinzz.length === 0) {
+      toInsert.push(...COINZZ_FLOW_TEMPLATES.map((t) => ({ ...t, user_id: user.id })));
+    }
+
+    if (toInsert.length === 0) {
       return new Response(
         JSON.stringify({ success: true, message: "Fluxos padrão já existem" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const flowsToInsert = ALL_TEMPLATES.map((t) => ({ ...t, user_id: user.id }));
-    const { error: insertError } = await supabase.from("flows").insert(flowsToInsert);
+    const { error: insertError } = await supabase.from("flows").insert(toInsert);
 
     if (insertError) {
       console.error("Error seeding flows:", insertError);
