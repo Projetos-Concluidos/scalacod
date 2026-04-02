@@ -205,6 +205,7 @@ Deno.serve(async (req) => {
     }
 
     // 6. Build payload (exact Logzz format)
+    // Payload aligned with ScalaCOD pattern: only delivery_date, no type_code/operation fields
     const logzzPayload: Record<string, unknown> = {
       external_id: order.id,
       full_name: order.client_name,
@@ -218,18 +219,9 @@ Deno.serve(async (req) => {
       house_number: order.client_address_number || "",
       complement: order.client_address_comp || "",
       delivery_date: finalDeliveryDate,
-      delivery_type_code: finalTypeCode,
       offer: offerHash,
       affiliate_email: order.affiliate_email || "",
     };
-
-    // Include local_operation_code if available
-    if (localOperationCode) {
-      logzzPayload.local_operation_code = localOperationCode;
-    }
-    if (localOperationName) {
-      logzzPayload.local_operation_name = localOperationName;
-    }
 
     // 7. Fetch order bumps — FIX 3: filter out bumps with null/empty hash
     if (order.offer_id) {
