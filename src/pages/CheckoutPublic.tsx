@@ -47,6 +47,11 @@ const validateCpf = (cpf: string) => {
   return rest === parseInt(digits[10]);
 };
 
+const extractQty = (name: string): number => {
+  const match = name.match(/kit\s*(\d+)/i) || name.match(/^(\d+)\s/);
+  return parseInt(match?.[1] || "1", 10);
+};
+
 const generateOrderNumber = () => {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
   let result = "";
@@ -627,6 +632,8 @@ const CheckoutPublic = () => {
     );
   }
 
+  const quantity = extractQty(checkout.name);
+
   // ── STEP 4: CONFIRMATION PAGE ──
   if (step === 4) {
     return (
@@ -653,7 +660,7 @@ const CheckoutPublic = () => {
               )}
               <div className="flex-1">
                 <p className="text-sm font-semibold text-gray-900">{product?.name}</p>
-                <p className="text-xs text-gray-500">1 unidade</p>
+                <p className="text-xs text-gray-500">{quantity} {quantity === 1 ? "unidade" : "unidades"}</p>
               </div>
               <p className="text-sm font-bold text-emerald-600">R$ {Number(offer?.price || 0).toFixed(2)}</p>
             </div>
@@ -791,23 +798,34 @@ const CheckoutPublic = () => {
   }
 
   // ── MAIN CHECKOUT (Steps 1-3) ──
+
   const OrderSummary = ({ className = "" }: { className?: string }) => (
-    <div className={className}>
+    <div className={`checkout-summary ${className}`}>
       <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm sticky top-6">
         <h3 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">🎁 Resumo do pedido</h3>
 
         {/* Product */}
         {offer && (
-          <div className="flex items-start gap-3 mb-4 pb-4 border-b border-gray-100">
+          <div className="flex items-start gap-4 mb-4 pb-4 border-b border-gray-100">
             {product?.main_image_url ? (
-              <img src={product.main_image_url} alt={product.name} className="h-16 w-16 rounded-xl object-cover" />
+              <img src={product.main_image_url} alt={product.name} className="h-20 w-20 rounded-xl object-cover flex-shrink-0" />
             ) : (
-              <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-gray-100"><Package className="h-6 w-6 text-gray-400" /></div>
+              <div className="flex h-20 w-20 items-center justify-center rounded-xl bg-gray-100 flex-shrink-0"><Package className="h-8 w-8 text-gray-400" /></div>
             )}
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-gray-900 truncate">{product?.name}</p>
-              <p className="text-xs text-gray-500 mt-0.5">1 unidade(s)</p>
-              <p className="text-base font-bold text-emerald-600 mt-1">R$ {Number(offer.price).toFixed(2)}</p>
+              <p className="text-sm font-bold text-gray-900 leading-tight">{product?.name}</p>
+              <div className="flex items-center gap-2 mt-2">
+                <span className="inline-flex items-center justify-center h-8 min-w-[2rem] px-2 rounded-lg bg-emerald-500 text-white text-lg font-black">
+                  {quantity}x
+                </span>
+                <span className="text-xs text-gray-500">{quantity === 1 ? "unidade" : "unidades"}</span>
+              </div>
+              <div className="mt-2 flex items-baseline gap-2">
+                {offer.original_price && offer.original_price > offer.price && (
+                  <span className="text-xs text-gray-400 line-through">R$ {Number(offer.original_price).toFixed(2)}</span>
+                )}
+                <span className="text-lg font-black text-emerald-600">R$ {Number(offer.price).toFixed(2)}</span>
+              </div>
             </div>
           </div>
         )}
@@ -823,12 +841,23 @@ const CheckoutPublic = () => {
         {/* Totals */}
         <div className="space-y-2 text-sm pt-3 border-t border-gray-100 mt-3">
           <div className="flex justify-between"><span className="text-gray-500">Subtotal</span><span className="text-gray-900">R$ {Number(offer?.price || 0).toFixed(2)}</span></div>
-          <div className="flex justify-between"><span className="text-gray-500">Frete</span><span className="text-gray-900">Grátis</span></div>
+          {bumpsTotal > 0 && (
+            <div className="flex justify-between"><span className="text-gray-500">Itens adicionais</span><span className="text-gray-900">R$ {bumpsTotal.toFixed(2)}</span></div>
+          )}
+          <div className="flex justify-between">
+            <span className="text-gray-500">Frete</span>
+            <span className="inline-flex items-center gap-1 text-emerald-600 font-medium">
+              <Truck className="h-3 w-3" /> Grátis
+            </span>
+          </div>
           {mpFeeAmount > 0 && (
             <div className="flex justify-between"><span className="text-gray-500">Taxa de processamento</span><span className="text-gray-900">R$ {mpFeeAmount.toFixed(2)}</span></div>
           )}
-          <div className="h-px bg-gray-100" />
-          <div className="flex justify-between font-bold text-base"><span className="text-gray-900">Total</span><span className="text-emerald-600">R$ {totalPrice.toFixed(2)}</span></div>
+          <div className="h-px bg-gray-200" />
+          <div className="flex justify-between items-center font-bold text-lg pt-1">
+            <span className="text-gray-900">Total</span>
+            <span className="text-emerald-600">R$ {totalPrice.toFixed(2)}</span>
+          </div>
         </div>
 
         {/* Provider badge */}
@@ -839,7 +868,7 @@ const CheckoutPublic = () => {
         )}
 
         {/* Trust */}
-        <div className="mt-4 space-y-2 pt-3 border-t border-gray-100">
+        <div className="checkout-trust-badges mt-4 space-y-2 pt-3 border-t border-gray-100">
           <div className="flex items-center gap-2 text-xs text-gray-500"><Lock className="h-3.5 w-3.5 text-emerald-400" /> Proteção SSL 256-bit</div>
           <div className="flex items-center gap-2 text-xs text-gray-500"><Truck className="h-3.5 w-3.5 text-emerald-400" /> Entrega Garantida</div>
           <div className="flex items-center gap-2 text-xs text-gray-500"><CreditCard className="h-3.5 w-3.5 text-emerald-400" /> Pague na Entrega</div>
@@ -872,7 +901,7 @@ const CheckoutPublic = () => {
       {checkout.custom_css && <style>{checkout.custom_css}</style>}
 
       {/* Secure header */}
-      <header className="bg-white border-b border-gray-100 sticky top-0 z-50 shadow-sm">
+      <header className="checkout-header bg-white border-b border-gray-100 sticky top-0 z-50 shadow-sm">
         <div className="max-w-5xl mx-auto px-4 py-2.5 flex items-center justify-between">
           <div className="flex items-center gap-1.5">
             <ShieldCheck className="h-4 w-4 text-emerald-500" />
@@ -918,9 +947,79 @@ const CheckoutPublic = () => {
           </div>
         </div>
 
+        {/* EXPRESS CHECKOUT — single step */}
+        {checkout.type === "express" ? (
+          <div className="flex flex-col lg:flex-row gap-6">
+            <div className="checkout-form flex-1">
+              <motion.div variants={stepVariants} initial="initial" animate="animate">
+                <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 text-white text-xs font-bold">⚡</div>
+                    <h2 className="text-sm font-bold text-gray-900">Checkout Rápido</h2>
+                  </div>
+                  <div className="space-y-3">
+                    <div>
+                      <Label className="text-xs text-gray-600">Nome completo *</Label>
+                      <Input value={form.name} onChange={(e) => updateField("name", e.target.value)} placeholder="Seu nome completo" className="mt-1 border-gray-200 bg-white focus:border-emerald-500 focus:ring-emerald-500" />
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <Label className="text-xs text-gray-600">Telefone / WhatsApp *</Label>
+                        <Input value={form.phone} onChange={(e) => updateField("phone", maskPhone(e.target.value))} placeholder="(00) 00000-0000" className="mt-1 border-gray-200 bg-white focus:border-emerald-500 focus:ring-emerald-500" />
+                      </div>
+                      <div>
+                        <Label className="text-xs text-gray-600">CPF *</Label>
+                        <Input value={form.cpf} onChange={(e) => updateField("cpf", maskCpf(e.target.value))} placeholder="000.000.000-00" className="mt-1 border-gray-200 bg-white focus:border-emerald-500 focus:ring-emerald-500" />
+                      </div>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-gray-600">CEP *</Label>
+                      <div className="mt-1 flex gap-2">
+                        <Input value={form.cep} onChange={(e) => updateField("cep", maskCep(e.target.value))} onBlur={lookupCep} placeholder="00000-000" className="flex-1 border-gray-200 bg-white focus:border-emerald-500 focus:ring-emerald-500" />
+                        <button onClick={lookupCep} disabled={cepLoading} className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50">
+                          {cepLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Buscar"}
+                        </button>
+                      </div>
+                    </div>
+                    {form.street && (
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <Label className="text-xs text-gray-600">Rua</Label>
+                          <Input value={form.street} onChange={(e) => updateField("street", e.target.value)} className="mt-1 border-gray-200 bg-white" />
+                        </div>
+                        <div>
+                          <Label className="text-xs text-gray-600">Número *</Label>
+                          <Input value={form.number} onChange={(e) => updateField("number", e.target.value)} className="mt-1 border-gray-200 bg-white" />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <button
+                    onClick={async () => {
+                      if (!step1Valid) { toast.error("Preencha nome, telefone e CPF válido"); return; }
+                      if (!step2Valid) { toast.error("Preencha o CEP e número"); return; }
+                      setSubmitting(true);
+                      track("order_submitted");
+                      const oid = await createOrder();
+                      if (oid) setStep(4);
+                      setSubmitting(false);
+                    }}
+                    disabled={submitting || !step1Valid || !step2Valid}
+                    className={`checkout-btn-primary mt-5 w-full rounded-2xl py-4 text-base font-bold text-white transition-all flex items-center justify-center gap-2 ${
+                      step1Valid && step2Valid ? "bg-emerald-500 hover:bg-emerald-600 shadow-lg shadow-emerald-500/20 active:scale-[0.98]" : "bg-gray-300 cursor-not-allowed"
+                    }`}
+                  >
+                    {submitting ? <><Loader2 className="h-5 w-5 animate-spin" /> Processando...</> : <><Lock className="h-5 w-5" /> Confirmar Pedido → R$ {totalPrice.toFixed(2)}</>}
+                  </button>
+                </div>
+              </motion.div>
+            </div>
+            <OrderSummary className="hidden lg:block w-[340px] flex-shrink-0" />
+          </div>
+        ) : (
         <div className="flex flex-col lg:flex-row gap-6">
           {/* LEFT: Form Column */}
-          <div className="flex-1 space-y-4">
+          <div className="checkout-form flex-1 space-y-4">
 
             {/* ── STEP 1: Suas Informações ── */}
             <AnimatePresence mode="wait">
@@ -934,7 +1033,7 @@ const CheckoutPublic = () => {
               </motion.div>
             ) : (
               <motion.div key="step1-form" variants={stepVariants} initial="initial" animate="animate" exit="exit">
-                <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+                <div className="checkout-step rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
                   <div className="flex items-center gap-2 mb-4">
                     <div className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 text-white text-xs font-bold">1</div>
                     <h2 className="text-sm font-bold text-gray-900">Suas Informações</h2>
@@ -1066,7 +1165,7 @@ const CheckoutPublic = () => {
                   <button
                     onClick={() => goToStep(2)}
                     disabled={!step1Valid}
-                    className={`mt-5 w-full rounded-2xl py-3.5 text-sm font-bold text-white transition-all flex items-center justify-center gap-2 ${step1Valid ? "bg-emerald-500 hover:bg-emerald-600 shadow-lg shadow-emerald-500/20 active:scale-[0.98]" : "bg-gray-300 cursor-not-allowed"}`}
+                    className={`checkout-btn-primary mt-5 w-full rounded-2xl py-3.5 text-sm font-bold text-white transition-all flex items-center justify-center gap-2 ${step1Valid ? "bg-emerald-500 hover:bg-emerald-600 shadow-lg shadow-emerald-500/20 active:scale-[0.98]" : "bg-gray-300 cursor-not-allowed"}`}
                   >
                     <Lock className="h-4 w-4" /> Continuar com segurança →
                   </button>
@@ -1399,6 +1498,7 @@ const CheckoutPublic = () => {
           {/* RIGHT: Order Summary (desktop) */}
           <OrderSummary className="hidden lg:block w-[340px] flex-shrink-0" />
         </div>
+        )}  {/* end express ternary */}
 
         {/* Mobile: Collapsible summary */}
         <div className="lg:hidden mt-4">
