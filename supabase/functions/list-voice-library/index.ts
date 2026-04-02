@@ -45,7 +45,6 @@ serve(async (req) => {
     const hasElevenLabsConfig = configs?.some(c => c.key === "integration_elevenlabs_api_key");
     const elevenLabsKey = configMap["integration_elevenlabs_api_key"] || (!hasElevenLabsConfig ? (Deno.env.get("ELEVENLABS_API_KEY") || "") : "");
     const openaiKey = configMap["integration_openai_api_key"] || "";
-    console.log("TTS Provider Debug:", { hasElevenLabsConfig, elevenLabsKey: elevenLabsKey ? "SET" : "EMPTY", openaiKey: openaiKey ? "SET" : "EMPTY", configKeys: Object.keys(configMap), rawConfigs: configs?.map(c => ({ key: c.key, valType: typeof c.value, valTruthy: !!c.value })) });
 
     if (elevenLabsKey) {
       // ElevenLabs library
