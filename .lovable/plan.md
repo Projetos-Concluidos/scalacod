@@ -1,50 +1,86 @@
+## Plano: Detalhamento Completo de Pedidos + Ações no Kanban
 
+### Visão Geral
 
-## Plano: Fix Plano "FREE" + Melhorar Sistema de Tokens Admin
+Reescrever o modal de detalhes do pedido e o card do kanban em `src/pages/Pedidos.tsx` para incluir todas as informações solicitadas, com funcionalidades de copiar, editar, cancelar e apagar.
 
-### Problema 1: Plano mostra "FREE" mesmo com PRO ativo
+### Alterações (arquivo único: `src/pages/Pedidos.tsx`)
 
-**Causa raiz**: A tabela exibe `profiles.plan` (campo texto, default "free") em vez de buscar o nome real da tabela `plans` via `plan_id`. A function `admin_update_user_plan` atualiza `plan_id` mas não atualiza o campo `plan` texto.
+#### 1. Badge de Plataforma no Kanban Card
 
-**Fix (2 partes)**:
+- Badge **LOGZZ** (verde esmeralda `bg-emerald-500`) ou **COINZZ** (roxo `bg-purple-500`) baseado em `logistics_type`
+- Visível no topo de cada card ao lado do número do pedido
 
-1. **`admin_update_user_plan` (migração)** — Atualizar a function para também setar `profiles.plan` com o slug do plano selecionado
-2. **`AdminAssinantes.tsx`** — Buscar planos e fazer join client-side para mostrar o nome real do plano vinculado ao `plan_id`, não o campo `plan` texto
+#### 2. Menu de Ações no "..." do Kanban Card
 
-### Problema 2: Sistema de tokens limitado
+O botão `MoreHorizontal` ganha um `DropdownMenu` com:
+- 👁️ Ver Detalhes → abre modal
+- ✏️ Editar Pedido → abre modal de edição (nome, telefone, endereço)
+- ❌ Cancelar Pedido → muda status para "Frustrado" + confirmação
+- 🗑️ Apagar Pedido → deleta do banco + confirmação
 
-**Melhorias no modal de tokens**:
+#### 3. Tab "Informações" — Detalhes Completos
 
-1. **Adicionar e Remover** — Toggle entre "Creditar" e "Debitar" tokens
-2. **Tipo de operação** — Dropdown: Bônus, Correção, Estorno, Compra manual
-3. **Histórico completo** — Ao abrir o modal, mostrar lista de todas as operações feitas para aquele tenant (via `admin_action_logs` filtrado por `action = 'add_tokens'` e novo `'remove_tokens'`)
+**Seção CLIENTE** (com ícone 📋 copiar ao lado de cada dado):
+- Nome, Telefone (link WhatsApp), Email, CPF/CNPJ
 
-### Alterações
+**Seção ENDEREÇO** (com botão copiar endereço completo):
+- Rua, número, complemento, bairro, cidade/UF, CEP
 
-#### 1. Migração SQL — Fix `admin_update_user_plan` + nova function `admin_remove_tokens`
+**Seção OFERTA / PRODUTOS** (NOVA):
+- Buscar oferta via `offer_id` → nome, preço, quantidade
+- Buscar order bumps via `order_bumps` table filtrado por `offer_id`
+- Exibir cada bump: nome, preço, qtd
+- Subtotal do pedido discriminado
 
-```sql
--- Atualizar admin_update_user_plan para setar profiles.plan com o slug
-CREATE OR REPLACE FUNCTION public.admin_update_user_plan(...)
-  -- Adiciona: busca slug do plano e seta em profiles.plan
+**Seção FINANCEIRO** (melhorada):
+- Valor do produto principal
+- Valor dos order bumps (se houver)
+- Frete: valor ou badge "🟢 FRETE GRÁTIS!" se R$0
+- Total do pedido (destaque grande)
+- Pagamento: "💵 PAGAMENTO NA ENTREGA" (logzz) ou "💳 PAGAMENTO ONLINE — ENTREGA VIA CORREIOS" (coinzz)
 
--- Nova function admin_remove_tokens
-CREATE OR REPLACE FUNCTION public.admin_remove_tokens(p_user_id, p_amount, p_reason)
-  -- Subtrai tokens do balance (com check >= 0)
-  -- Registra em admin_action_logs com action='remove_tokens'
-```
+**Seção AGENDAMENTO** (NOVA — destaque):
+- Data de entrega em fonte grande e visível
+- Badge colorido com a data
 
-#### 2. `src/pages/admin/AdminAssinantes.tsx`
+#### 4. Tab "Logística" — Links Externos
 
-- **Coluna Plano**: Criar mapa `planId→planName` a partir de `plans[]` já carregado. Exibir `planMap[t.plan_id] || t.plan || "free"` em vez de `t.plan || "free"`
-- **Modal de Tokens redesenhado**:
-  - Tabs: "Creditar" | "Debitar"
-  - Campo quantidade + motivo (já existem)
-  - Dropdown tipo: Bônus / Correção / Estorno / Compra manual
-  - Seção "Histórico" abaixo: lista operações do `admin_action_logs` filtradas por `target_user_id` e actions `add_tokens`/`remove_tokens`, mostrando data, quantidade, motivo, tipo (crédito/débito)
-  - Saldo atual visível no topo do modal
+- Badge plataforma (LOGZZ verde / COINZZ roxo)
+- **Logzz**: link `https://app.logzz.com.br/meu-pedido/{logzz_order_id}` (já existe)
+- **Coinzz**: link `https://app.coinzz.com.br/pedido/{coinzz_order_hash}` (NOVO)
+- Rastreio, entregador, operador logístico, etiquetas
+
+#### 5. Tab "Timeline" — Histórico Real
+
+- Query `order_status_history` filtrado por `order_id`
+- Exibir cada transição: de → para, data/hora, fonte (kanban_drag, logzz_webhook, etc.)
+- Se não houver histórico, mostrar pelo menos criação + última atualização
+
+#### 6. Funcionalidade de Copiar
+
+- Componente inline `CopyButton`: ícone `Copy` (lucide) sutil ao lado do texto
+- Ao clicar: `navigator.clipboard.writeText(valor)` + toast "Copiado!"
+- Aplicado em: nome, telefone, email, documento, endereço completo, número do pedido
+
+#### 7. Editar Pedido (modal simples)
+
+- Dialog com form para editar: nome, telefone, endereço, data de entrega
+- Salva via `supabase.from("orders").update(...)` 
+
+#### 8. Cancelar / Apagar
+
+- **Cancelar**: `AlertDialog` de confirmação → muda status para "Frustrado" + registra em `order_status_history`
+- **Apagar**: `AlertDialog` de confirmação → deleta o pedido do banco
+
+### Dados Necessários (queries adicionais no modal)
+
+Ao abrir o modal, buscar:
+1. `offers` (via `offer_id`) → nome e preço da oferta
+2. `order_bumps` (via `offer_id`) → bumps vinculados
+3. `order_status_history` (via `order_id`) → timeline completa
 
 ### Escopo
-- 1 migração (fix function + nova function)
-- 1 arquivo editado: `AdminAssinantes.tsx`
-
+- 1 arquivo: `src/pages/Pedidos.tsx`
+- Sem migrações, sem edge functions novas
+- Todas as tabelas e colunas já existem no banco
