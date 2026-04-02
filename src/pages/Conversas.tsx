@@ -2,12 +2,12 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import {
   MessageSquare, Search, SlidersHorizontal, RefreshCw, Tag, Send, Paperclip,
   Smile, Mic, Info, Phone, Mail, FileText, X, Plus, Check, CheckCheck,
-  Image as ImageIcon, File, ChevronDown, Layout
+  Image as ImageIcon, File, ChevronDown, Layout, FlaskConical, Zap
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { format, isToday, isYesterday, isSameDay } from "date-fns";
+import { format, isToday, isYesterday, isSameDay, subDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -18,6 +18,7 @@ import type { Tables } from "@/integrations/supabase/types";
 import EmojiStickerPicker from "@/components/chat/EmojiStickerPicker";
 import { useNotificationSound } from "@/hooks/useNotificationSound";
 import { useQuery } from "@tanstack/react-query";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 type Conversation = Tables<"conversations">;
 type Message = Tables<"messages">;
@@ -46,13 +47,6 @@ const labelColors = [
   "bg-accent/20 text-accent border-accent/30",
 ];
 
-const statusFilters = [
-  { value: "all", label: "Todas" },
-  { value: "open", label: "Abertas" },
-  { value: "closed", label: "Fechadas" },
-  { value: "waiting", label: "Aguardando" },
-];
-
 const Conversas = () => {
   const { user } = useAuth();
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -61,9 +55,7 @@ const Conversas = () => {
   const [loading, setLoading] = useState(true);
   const [msgLoading, setMsgLoading] = useState(false);
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
   const [showFilters, setShowFilters] = useState(false);
-  const [showUnreadOnly, setShowUnreadOnly] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
   const [newMessage, setNewMessage] = useState("");
   const [sending, setSending] = useState(false);
@@ -81,6 +73,36 @@ const Conversas = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { play: playNotification, requestPermission } = useNotificationSound();
 
+  // Advanced filters
+  const [readFilter, setReadFilter] = useState<"all" | "unread" | "read">("all");
+  const [windowFilter, setWindowFilter] = useState<"all" | "open" | "expired">("all");
+  const [mediaFilter, setMediaFilter] = useState<"all" | "media" | "text">("all");
+  const [dateFilter, setDateFilter] = useState<"all" | "today" | "7d" | "30d">("all");
+
+  // Test modal
+  const [testModalOpen, setTestModalOpen] = useState(false);
+  const [testMode, setTestMode] = useState<"message" | "flow">("message");
+  const [testPhone, setTestPhone] = useState("");
+  const [testMessage, setTestMessage] = useState("");
+  const [testFlowId, setTestFlowId] = useState("");
+  const [testSending, setTestSending] = useState(false);
+
+  const activeFilterCount = useMemo(() => {
+    let c = 0;
+    if (readFilter !== "all") c++;
+    if (windowFilter !== "all") c++;
+    if (mediaFilter !== "all") c++;
+    if (dateFilter !== "all") c++;
+    return c;
+  }, [readFilter, windowFilter, mediaFilter, dateFilter]);
+
+  const clearAllFilters = () => {
+    setReadFilter("all");
+    setWindowFilter("all");
+    setMediaFilter("all");
+    setDateFilter("all");
+  };
+
   // Fetch approved templates (flows with is_official + approved flow_templates)
   const { data: approvedFlows } = useQuery({
     queryKey: ["approved-templates", user?.id],
@@ -91,10 +113,25 @@ const Conversas = () => {
         .select("*, flow_templates(*)")
         .eq("user_id", user.id)
         .eq("is_official", true);
-      // Filter flows that have at least one approved template
       return (data || []).filter((f: any) =>
         f.flow_templates?.some((t: any) => t.status === "APPROVED" || t.status === "approved")
       );
+    },
+    enabled: !!user,
+  });
+
+  // Fetch all user flows for test modal
+  const { data: userFlows } = useQuery({
+    queryKey: ["user-flows-test", user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+      const { data } = await supabase
+        .from("flows")
+        .select("id, name, is_active, message_count")
+        .eq("user_id", user.id)
+        .eq("is_active", true)
+        .order("name");
+      return data || [];
     },
     enabled: !!user,
   });
@@ -165,11 +202,9 @@ const Conversas = () => {
           setMessages(prev => [...prev, msg]);
           setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
         }
-        // Play notification sound for inbound messages
         if (msg.direction === "inbound") {
           playNotification();
         }
-        // Update conversation list
         setConversations(prev => prev.map(c =>
           c.id === msg.conversation_id
             ? { ...c, last_message: msg.content, last_message_at: msg.timestamp, unread_count: selectedConv?.id === c.id ? 0 : (c.unread_count || 0) + 1 }
@@ -197,7 +232,6 @@ const Conversas = () => {
     setShowInfo(true);
     fetchMessages(conv.id);
     fetchContactInfo(conv);
-    // Mark as read
     if (conv.unread_count && conv.unread_count > 0) {
       await supabase.from("conversations").update({ unread_count: 0 }).eq("id", conv.id);
       setConversations(prev => prev.map(c => c.id === conv.id ? { ...c, unread_count: 0 } : c));
@@ -210,7 +244,6 @@ const Conversas = () => {
     const content = newMessage.trim();
     setNewMessage("");
 
-    // Optimistic add
     const optimistic: Message = {
       id: crypto.randomUUID(),
       conversation_id: selectedConv.id,
@@ -232,11 +265,7 @@ const Conversas = () => {
       });
 
       if (error) throw new Error(error.message || "Erro ao enviar");
-
-      // Remove optimistic — real message comes via realtime subscription
       setMessages(prev => prev.filter(m => m.id !== optimistic.id));
-
-      // Update conversation list optimistically
       setConversations(prev =>
         prev.map(c =>
           c.id === selectedConv.id
@@ -245,7 +274,6 @@ const Conversas = () => {
         )
       );
     } catch (err: any) {
-      // Revert optimistic update
       setMessages(prev => prev.filter(m => m.id !== optimistic.id));
       toast.error(err.message || "Falha ao enviar mensagem");
     }
@@ -261,7 +289,6 @@ const Conversas = () => {
       : file.type.startsWith("video/") ? "video"
       : "document";
 
-    // Upload to a temporary public URL (using data URL for now)
     const reader = new FileReader();
     reader.onload = async () => {
       const dataUrl = reader.result as string;
@@ -281,7 +308,6 @@ const Conversas = () => {
       setMessages(prev => [...prev, optimistic]);
 
       try {
-        // For real usage, upload to storage first and get a public URL
         toast.info(`Enviando ${type}: ${file.name}...`);
         const { error } = await supabase.functions.invoke("send-whatsapp-message", {
           body: { conversationId: selectedConv.id, content: file.name, type, mediaUrl: dataUrl },
@@ -297,7 +323,6 @@ const Conversas = () => {
     reader.readAsDataURL(file);
   };
 
-  // Extract variable count from template components
   const getTemplateVarCount = (flow: any): number => {
     const tmpl = flow.flow_templates?.find((t: any) => t.status === "APPROVED" || t.status === "approved") || flow.flow_templates?.[0];
     if (!tmpl?.components) return 0;
@@ -311,7 +336,6 @@ const Conversas = () => {
   const selectTemplateFlow = (flow: any) => {
     const varCount = getTemplateVarCount(flow);
     if (varCount === 0) {
-      // No variables, send directly
       sendTemplateMessage(flow, []);
     } else {
       setSelectedTemplateFlow(flow);
@@ -336,9 +360,7 @@ const Conversas = () => {
       });
 
       if (error) throw new Error(error.message || "Erro ao enviar template");
-
       toast.success(`Template "${flow.name}" enviado!`);
-
       setConversations(prev =>
         prev.map(c =>
           c.id === selectedConv.id
@@ -370,6 +392,44 @@ const Conversas = () => {
     }
   };
 
+  // Test modal: send test message
+  const sendTestMessage = async () => {
+    if (!testPhone.trim() || !testMessage.trim() || !user || testSending) return;
+    setTestSending(true);
+    try {
+      const { error } = await supabase.functions.invoke("send-whatsapp-message", {
+        body: { phone: testPhone.replace(/\D/g, ""), content: testMessage.trim(), userId: user.id },
+      });
+      if (error) throw new Error(error.message);
+      toast.success("Mensagem de teste enviada!");
+      setTestPhone("");
+      setTestMessage("");
+      setTestModalOpen(false);
+    } catch (err: any) {
+      toast.error(err.message || "Falha ao enviar mensagem de teste");
+    }
+    setTestSending(false);
+  };
+
+  // Test modal: trigger flow
+  const triggerTestFlow = async () => {
+    if (!testPhone.trim() || !testFlowId || !user || testSending) return;
+    setTestSending(true);
+    try {
+      const { error } = await supabase.functions.invoke("execute-flow", {
+        body: { flowId: testFlowId, phone: testPhone.replace(/\D/g, ""), userId: user.id },
+      });
+      if (error) throw new Error(error.message);
+      toast.success("Fluxo disparado com sucesso!");
+      setTestPhone("");
+      setTestFlowId("");
+      setTestModalOpen(false);
+    } catch (err: any) {
+      toast.error(err.message || "Falha ao disparar fluxo");
+    }
+    setTestSending(false);
+  };
+
   const addLabel = async (convId: string, label: string) => {
     const conv = conversations.find(c => c.id === convId);
     if (!conv) return;
@@ -393,8 +453,49 @@ const Conversas = () => {
 
   const filtered = useMemo(() => {
     let result = conversations;
-    if (statusFilter !== "all") result = result.filter(c => c.status === statusFilter);
-    if (showUnreadOnly) result = result.filter(c => (c.unread_count || 0) > 0);
+
+    // Read filter
+    if (readFilter === "unread") result = result.filter(c => (c.unread_count || 0) > 0);
+    if (readFilter === "read") result = result.filter(c => (c.unread_count || 0) === 0);
+
+    // Window filter (24h rule)
+    if (windowFilter === "open") {
+      const cutoff = subDays(new Date(), 1);
+      result = result.filter(c => c.last_message_at && new Date(c.last_message_at) > cutoff);
+    }
+    if (windowFilter === "expired") {
+      const cutoff = subDays(new Date(), 1);
+      result = result.filter(c => !c.last_message_at || new Date(c.last_message_at) <= cutoff);
+    }
+
+    // Media filter
+    if (mediaFilter === "media") {
+      result = result.filter(c => {
+        const msg = (c.last_message || "").toLowerCase();
+        return msg.includes("[image]") || msg.includes("[audio]") || msg.includes("[video]") || msg.includes("[document]") || msg.includes("[sticker]");
+      });
+    }
+    if (mediaFilter === "text") {
+      result = result.filter(c => {
+        const msg = (c.last_message || "").toLowerCase();
+        return !msg.includes("[image]") && !msg.includes("[audio]") && !msg.includes("[video]") && !msg.includes("[document]") && !msg.includes("[sticker]");
+      });
+    }
+
+    // Date filter
+    if (dateFilter === "today") {
+      result = result.filter(c => c.last_message_at && isToday(new Date(c.last_message_at)));
+    }
+    if (dateFilter === "7d") {
+      const cutoff = subDays(new Date(), 7);
+      result = result.filter(c => c.last_message_at && new Date(c.last_message_at) >= cutoff);
+    }
+    if (dateFilter === "30d") {
+      const cutoff = subDays(new Date(), 30);
+      result = result.filter(c => c.last_message_at && new Date(c.last_message_at) >= cutoff);
+    }
+
+    // Search
     if (search) {
       const s = search.toLowerCase();
       result = result.filter(c =>
@@ -404,7 +505,7 @@ const Conversas = () => {
       );
     }
     return result;
-  }, [conversations, statusFilter, showUnreadOnly, search]);
+  }, [conversations, readFilter, windowFilter, mediaFilter, dateFilter, search]);
 
   // Group messages by date
   const groupedMessages = useMemo(() => {
@@ -458,6 +559,20 @@ const Conversas = () => {
     );
   };
 
+  const FilterChip = ({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) => (
+    <button
+      onClick={onClick}
+      className={cn(
+        "rounded-md px-2.5 py-1 text-[11px] font-medium transition-colors whitespace-nowrap",
+        active
+          ? "bg-primary text-primary-foreground"
+          : "text-muted-foreground hover:bg-muted bg-muted/50"
+      )}
+    >
+      {children}
+    </button>
+  );
+
   return (
     <div className="flex h-[calc(100vh-80px)] overflow-hidden -m-6">
       {/* COLUMN 1: Conversation List */}
@@ -466,6 +581,13 @@ const Conversas = () => {
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-lg font-bold text-foreground">Conversas</h2>
             <div className="flex items-center gap-1">
+              <button
+                onClick={() => { setTestModalOpen(true); setTestMode("message"); }}
+                className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                title="Enviar teste"
+              >
+                <FlaskConical className="h-4 w-4" />
+              </button>
               <button onClick={fetchConversations} className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted">
                 <RefreshCw className="h-4 w-4" />
               </button>
@@ -484,34 +606,68 @@ const Conversas = () => {
             </div>
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className={cn("flex h-9 w-9 items-center justify-center rounded-lg border border-border hover:bg-muted", showFilters ? "text-primary bg-primary/10 border-primary/30" : "text-muted-foreground")}
+              className={cn("relative flex h-9 w-9 items-center justify-center rounded-lg border border-border hover:bg-muted", showFilters ? "text-primary bg-primary/10 border-primary/30" : "text-muted-foreground")}
             >
               <SlidersHorizontal className="h-4 w-4" />
+              {activeFilterCount > 0 && (
+                <span className="absolute -top-1 -right-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-primary text-[9px] font-bold text-primary-foreground px-1">
+                  {activeFilterCount}
+                </span>
+              )}
             </button>
           </div>
 
           {showFilters && (
-            <div className="mt-3 space-y-2">
-              <div className="flex flex-wrap gap-1">
-                {statusFilters.map(f => (
-                  <button
-                    key={f.value}
-                    onClick={() => setStatusFilter(f.value)}
-                    className={cn(
-                      "rounded-md px-2.5 py-1 text-xs font-medium transition-colors",
-                      statusFilter === f.value
-                        ? "bg-primary text-primary-foreground"
-                        : "text-muted-foreground hover:bg-muted"
-                    )}
-                  >
-                    {f.label}
+            <div className="mt-3 space-y-3 bg-muted/30 rounded-lg p-3 border border-border/50">
+              <div className="flex items-center justify-between">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Filtros Avançados</p>
+                {activeFilterCount > 0 && (
+                  <button onClick={clearAllFilters} className="text-[10px] text-destructive hover:text-destructive/80 font-medium flex items-center gap-1">
+                    <X className="h-3 w-3" /> Limpar todos
                   </button>
-                ))}
+                )}
               </div>
-              <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
-                <input type="checkbox" checked={showUnreadOnly} onChange={e => setShowUnreadOnly(e.target.checked)} className="rounded border-border" />
-                Apenas não lidas
-              </label>
+
+              {/* Group 1: Read status */}
+              <div>
+                <p className="text-[10px] text-muted-foreground mb-1.5 font-medium">Leitura</p>
+                <div className="flex flex-wrap gap-1">
+                  <FilterChip active={readFilter === "all"} onClick={() => setReadFilter("all")}>Todas</FilterChip>
+                  <FilterChip active={readFilter === "unread"} onClick={() => setReadFilter("unread")}>Não lidas</FilterChip>
+                  <FilterChip active={readFilter === "read"} onClick={() => setReadFilter("read")}>Lidas</FilterChip>
+                </div>
+              </div>
+
+              {/* Group 2: WhatsApp window */}
+              <div>
+                <p className="text-[10px] text-muted-foreground mb-1.5 font-medium">Janela WhatsApp</p>
+                <div className="flex flex-wrap gap-1">
+                  <FilterChip active={windowFilter === "all"} onClick={() => setWindowFilter("all")}>Todos</FilterChip>
+                  <FilterChip active={windowFilter === "open"} onClick={() => setWindowFilter("open")}>Pode responder</FilterChip>
+                  <FilterChip active={windowFilter === "expired"} onClick={() => setWindowFilter("expired")}>Janela expirada</FilterChip>
+                </div>
+              </div>
+
+              {/* Group 3: Content type */}
+              <div>
+                <p className="text-[10px] text-muted-foreground mb-1.5 font-medium">Tipo de conteúdo</p>
+                <div className="flex flex-wrap gap-1">
+                  <FilterChip active={mediaFilter === "all"} onClick={() => setMediaFilter("all")}>Todos</FilterChip>
+                  <FilterChip active={mediaFilter === "media"} onClick={() => setMediaFilter("media")}>Com mídia</FilterChip>
+                  <FilterChip active={mediaFilter === "text"} onClick={() => setMediaFilter("text")}>Só texto</FilterChip>
+                </div>
+              </div>
+
+              {/* Group 4: Period */}
+              <div>
+                <p className="text-[10px] text-muted-foreground mb-1.5 font-medium">Período</p>
+                <div className="flex flex-wrap gap-1">
+                  <FilterChip active={dateFilter === "all"} onClick={() => setDateFilter("all")}>Qualquer data</FilterChip>
+                  <FilterChip active={dateFilter === "today"} onClick={() => setDateFilter("today")}>Hoje</FilterChip>
+                  <FilterChip active={dateFilter === "7d"} onClick={() => setDateFilter("7d")}>7 dias</FilterChip>
+                  <FilterChip active={dateFilter === "30d"} onClick={() => setDateFilter("30d")}>30 dias</FilterChip>
+                </div>
+              </div>
             </div>
           )}
 
@@ -930,7 +1086,6 @@ const Conversas = () => {
             const bodyComp = (tmpl?.components as any[])?.find((c: any) => c.type === "BODY");
             const bodyText = bodyComp?.text || "";
 
-            // Build preview with filled variables
             let preview = bodyText;
             templateVars.forEach((v, i) => {
               preview = preview.replace(`{{${i + 1}}}`, v || `{{${i + 1}}}`);
@@ -944,13 +1099,11 @@ const Conversas = () => {
                   <p className="text-xs text-muted-foreground">{tmpl?.template_name} • {tmpl?.language || "pt_BR"}</p>
                 </div>
 
-                {/* Preview */}
                 <div className="rounded-lg border border-border bg-muted/30 p-3">
                   <p className="text-xs font-semibold text-muted-foreground mb-1.5 uppercase tracking-wider">Pré-visualização</p>
                   <p className="text-sm text-foreground whitespace-pre-wrap">{preview}</p>
                 </div>
 
-                {/* Variable inputs */}
                 <div className="space-y-2.5">
                   <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Variáveis</p>
                   {templateVars.map((val, idx) => (
@@ -992,6 +1145,117 @@ const Conversas = () => {
               </div>
             );
           })()}
+        </DialogContent>
+      </Dialog>
+
+      {/* Test Modal */}
+      <Dialog open={testModalOpen} onOpenChange={setTestModalOpen}>
+        <DialogContent className="bg-card border-border max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-foreground flex items-center gap-2">
+              <FlaskConical className="h-5 w-5 text-primary" />
+              Enviar Teste
+            </DialogTitle>
+          </DialogHeader>
+
+          {/* Tabs */}
+          <div className="flex rounded-lg bg-muted p-1 gap-1">
+            <button
+              onClick={() => setTestMode("message")}
+              className={cn(
+                "flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+                testMode === "message"
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <Send className="h-3.5 w-3.5 inline mr-1.5" />
+              Mensagem Avulsa
+            </button>
+            <button
+              onClick={() => setTestMode("flow")}
+              className={cn(
+                "flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+                testMode === "flow"
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <Zap className="h-3.5 w-3.5 inline mr-1.5" />
+              Disparar Fluxo
+            </button>
+          </div>
+
+          <div className="space-y-4 mt-2">
+            {/* Phone (shared) */}
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Número (com DDD)</label>
+              <input
+                value={testPhone}
+                onChange={e => setTestPhone(e.target.value)}
+                placeholder="5511999999999"
+                className="h-10 w-full rounded-lg border border-border bg-input px-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
+              />
+            </div>
+
+            {testMode === "message" ? (
+              <>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Mensagem</label>
+                  <textarea
+                    value={testMessage}
+                    onChange={e => setTestMessage(e.target.value)}
+                    placeholder="Digite a mensagem de teste..."
+                    rows={3}
+                    className="w-full resize-none rounded-lg border border-border bg-input px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
+                  />
+                </div>
+                <Button
+                  className="w-full bg-primary text-primary-foreground"
+                  disabled={!testPhone.trim() || !testMessage.trim() || testSending}
+                  onClick={sendTestMessage}
+                >
+                  {testSending ? "Enviando..." : "Enviar Mensagem"}
+                  {!testSending && <Send className="h-4 w-4 ml-1.5" />}
+                </Button>
+              </>
+            ) : (
+              <>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Escolha um fluxo</label>
+                  <Select value={testFlowId} onValueChange={setTestFlowId}>
+                    <SelectTrigger className="w-full bg-input border-border text-foreground">
+                      <SelectValue placeholder="Selecione um fluxo..." />
+                    </SelectTrigger>
+                    <SelectContent className="bg-card border-border">
+                      {userFlows && userFlows.length > 0 ? (
+                        userFlows.map(flow => (
+                          <SelectItem key={flow.id} value={flow.id}>
+                            <span className="flex items-center gap-2">
+                              {flow.name}
+                              <span className="text-muted-foreground text-[10px]">
+                                {flow.message_count || 0} msgs
+                              </span>
+                            </span>
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <SelectItem value="none" disabled>Nenhum fluxo ativo</SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button
+                  className="w-full bg-primary text-primary-foreground"
+                  disabled={!testPhone.trim() || !testFlowId || testSending}
+                  onClick={triggerTestFlow}
+                >
+                  {testSending ? "Disparando..." : "Disparar Fluxo"}
+                  {!testSending && <Zap className="h-4 w-4 ml-1.5" />}
+                </Button>
+              </>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </div>
