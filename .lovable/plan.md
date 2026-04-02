@@ -1,98 +1,52 @@
 
 
-## Plano: Coinzz Webhook + Kanban Cards + Detalhes Financeiros
+## Plano: Status de Pagamento MercadoPago + Botao Coinzz no Card
 
 ### Problema
 
-1. **Webhook `coinzz-webhook` nao entende o payload real da Coinzz** — espera `body.order_hash` / `body.status`, mas a Coinzz envia `{ client: {...}, order: {"order.order_number": "...", "order.order_status": "..."}, utms: {...} }`
-2. **Kanban cards nao mostram dados diferenciados** por plataforma (data agendamento so Logzz, forma pagamento so Coinzz, nome do produto, etc.)
-3. **Detalhes financeiros incompletos** — nao mostra forma de pagamento, parcelas, taxa gateway
-4. **Falta botao "Enviar para Coinzz"** no card/detalhe para retry manual
-5. **Falta link do pedido Coinzz** similar ao link Logzz
-6. **Nao salva `shipping_status` separado do `order_status`** (Coinzz envia ambos)
+1. **Falta status de pagamento do MercadoPago** no detalhe do pedido — o webhook `mp-payment-webhook` salva `status_description` com o texto "MP: approved - accredited" mas nao existe coluna dedicada nem exibicao visual da jornada de pagamento
+2. **Botao "Enviar para Coinzz"** existe ao lado do olho no card (linhas 497-509) mas o usuario relata que nao aparece — provavelmente porque a condicao `!order.coinzz_order_hash` ja e true (pedido ja tem hash) ou `logistics_type !== "coinzz"`
+3. **Financeiro nao mostra status de pagamento** para pedidos online (PIX, cartao, boleto) — so mostra "PAGAMENTO ONLINE" generico
 
 ### Implementacao
 
-#### 1. Reescrever `supabase/functions/coinzz-webhook/index.ts`
+#### 1. Migracao SQL — nova coluna `mp_payment_status`
 
-Parsear o payload real da Coinzz com chaves dotadas:
+Adicionar coluna para armazenar o status do pagamento MercadoPago separadamente:
+- `mp_payment_status` (text) — ex: "approved", "pending", "rejected", "cancelled", "refunded"
+- `mp_payment_status_detail` (text) — ex: "accredited", "pending_waiting_payment", "cc_rejected_other_reason"
 
-```typescript
-// Coinzz envia: { client: { "client.client_name": "..." }, order: { "order.order_status": "..." }, utms: {...} }
-const clientData = body.client || {};
-const orderData = body.order || {};
-const utmsData = body.utms || {};
+#### 2. Atualizar `mp-payment-webhook` para salvar status detalhado
 
-const orderNumber = orderData["order.order_number"];
-const orderStatus = orderData["order.order_status"];
-const shippingStatus = orderData["order.shipping_status"];
-const trackingCode = orderData["order.tracking_code"];
-const courierName = orderData["order.courier_name"];
-```
+Alem de `status_description`, salvar:
+- `mp_payment_status` = payment.status
+- `mp_payment_status_detail` = payment.status_detail
+- `total_installments` = payment.installments
+- `gateway_fee` = payment.fee_details[0].amount (se existir)
+- Inserir `order_status_history` com source "mp-payment-webhook"
 
-Buscar pedido por `order_number` (nao por `coinzz_order_hash` que pode nao existir ainda):
-- Primeiro tenta `coinzz_order_hash`
-- Fallback para `order_number` + `user_id`
+#### 3. UI — Secao Financeiro aprimorada
 
-Mapear `order_status` E `shipping_status` separadamente para o status do Kanban:
-- Status de pagamento: "Aprovado" -> "Confirmado", "Cancelado" -> "Cancelado", etc.
-- Status de envio: "Enviado" -> "Em Transito", "Recebido" -> "Entregue", etc.
+No detalhe do pedido, mostrar:
+- **Badge de status do pagamento** com cores: verde (approved), amarelo (pending/in_process), vermelho (rejected/cancelled), azul (refunded)
+- **Status detail** traduzido: "accredited" → "Pagamento acreditado", "pending_waiting_payment" → "Aguardando pagamento", etc.
+- Metodo (PIX/Cartao/Boleto) ja exibido
+- Parcelas e taxa gateway ja exibidos (quando existem)
 
-Salvar dados adicionais no pedido: `tracking_code`, `delivery_man`, `payment_method`, UTMs.
+#### 4. Botao Coinzz no card — garantir visibilidade
 
-#### 2. Migracao SQL
-
-Adicionar colunas para dados financeiros e status separados:
-- `coinzz_payment_status` (text) — status de pagamento da Coinzz
-- `coinzz_shipping_status` (text) — status de envio da Coinzz  
-- `total_installments` (integer) — parcelas
-- `gateway_fee` (numeric) — taxa do gateway
-
-#### 3. Redesenhar Kanban Cards em `src/pages/Pedidos.tsx`
-
-Card mostrara:
-- **Nº pedido** com link (Logzz ou Coinzz)
-- **Nome cliente** em MAIUSCULO
-- **Nome do produto** (do checkout name)
-- **Valor do pedido**
-- **Data agendamento** — SO para Logzz
-- **Forma de pagamento** — SO para Coinzz (PIX, Cartao, Boleto)
-- **Cidade/Estado**
-- **Data/hora do pedido**
-
-Buscar nome do checkout para exibir no card (join com checkouts via `checkout_id`).
-
-#### 4. Botao "Enviar para Coinzz" no Kanban + Detalhe
-
-Similar ao botao "Enviar para Logzz" existente:
-- Aparece quando `logistics_type === "coinzz"` E `!coinzz_order_hash`
-- Chama `checkout-api` com `action: "create_coinzz_order"`
-- Icone de truck roxo no card
-
-#### 5. Detalhes Financeiros aprimorados
-
-Na aba "Informacoes" > secao "Financeiro":
-- Forma de pagamento (PIX / Cartao / Boleto / Saldo MP / Na Entrega)
-- Se parcelado, mostrar quantidade de parcelas
-- Taxa do gateway (se existir)
-- Status de pagamento da Coinzz (badge)
-- Status de envio da Coinzz (badge)
-
-#### 6. Link do pedido Coinzz
-
-Na aba "Logistica", exibir link clicavel `https://app.coinzz.com.br/pedido/{hash}` (ja existe parcialmente, garantir que funciona).
+O botao ja existe no codigo (linha 497), verificar a condicao. Adicionar tambem um botao para pedidos que JA tem hash (para reenvio/retry). Atualmente so aparece quando `!coinzz_order_hash` — ajustar para mostrar tambem quando o usuario precisa reenviar.
 
 ### Arquivos
 
 | Arquivo | Acao |
 |---|---|
-| `supabase/functions/coinzz-webhook/index.ts` | **Reescrever** — parsear payload real |
-| `src/pages/Pedidos.tsx` | **Editar** — cards, financeiro, botao Coinzz |
-| Migracao SQL | Adicionar colunas `coinzz_payment_status`, `coinzz_shipping_status`, `total_installments`, `gateway_fee` |
+| Migracao SQL | Adicionar `mp_payment_status`, `mp_payment_status_detail` em `orders` |
+| `supabase/functions/mp-payment-webhook/index.ts` | Salvar status detalhado + history |
+| `src/pages/Pedidos.tsx` | Badge de status pagamento no Financeiro + ajustar botao Coinzz |
 
 ### Seguranca
-- Logzz permanece 100% intacta — nenhum codigo Logzz sera tocado
-- Webhook continua com rate limiting (200/min)
-- Validacao do `store` query param mantida
-- Status history registrado para todas as mudancas
+- Logzz intacta
+- Coinzz intacta
+- Apenas adiciona informacao visual e colunas opcionais
 
