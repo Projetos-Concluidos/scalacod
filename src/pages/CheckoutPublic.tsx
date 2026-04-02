@@ -1033,7 +1033,7 @@ const CheckoutPublic = () => {
               </motion.div>
             ) : (
               <motion.div key="step1-form" variants={stepVariants} initial="initial" animate="animate" exit="exit">
-                <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+                <div className="checkout-step rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
                   <div className="flex items-center gap-2 mb-4">
                     <div className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 text-white text-xs font-bold">1</div>
                     <h2 className="text-sm font-bold text-gray-900">Suas Informações</h2>
