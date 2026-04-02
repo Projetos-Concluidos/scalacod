@@ -453,6 +453,8 @@ const CheckoutPublic = () => {
             status: "Aguardando",
             logistics_type: provider || "logzz",
             delivery_date: provider === "logzz" && selectedDate ? selectedDate.date : null,
+            delivery_type_code: provider === "logzz" && selectedDate ? selectedDate.type_code || null : null,
+            delivery_type_name: provider === "logzz" && selectedDate ? selectedDate.type || null : null,
             payment_method: provider === "logzz" ? "afterpay" : paymentMethod,
             utm_source: utm.utm_source || null,
             utm_medium: utm.utm_medium || null,

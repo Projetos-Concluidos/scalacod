@@ -157,6 +157,7 @@ Deno.serve(async (req) => {
       house_number: order.client_address_number || "",
       complement: order.client_address_comp || "",
       delivery_date: order.delivery_date || "",
+      delivery_type_code: order.delivery_type_code || "",
       offer: offerHash,
       affiliate_email: order.affiliate_email || "",
     };
