@@ -248,7 +248,7 @@ const Pedidos = () => {
 
   const fullAddress = (o: Order) => `${o.client_address}, ${o.client_address_number}${o.client_address_comp ? ` - ${o.client_address_comp}` : ""}, ${o.client_address_district}, ${o.client_address_city}/${o.client_address_state} — CEP ${o.client_zip_code}`;
 
-    const hasAdvancedFilters = !!filterDateFrom || !!filterDateTo || (!!filterProvider && filterProvider !== "all") || !!filterCity;
+    const hasAdvancedFilters = !!filterDateFrom || !!filterDateTo || (!!filterProvider && filterProvider !== "all") || !!filterCity || !!filterPayment;
 
     return (
     <div className="flex flex-col h-full">
