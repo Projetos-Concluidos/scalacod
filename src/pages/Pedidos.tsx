@@ -6,6 +6,7 @@ import {
   Search, SlidersHorizontal, RefreshCw, Phone, Eye, MoreHorizontal,
   Package, CalendarDays, MapPin, DollarSign, Printer, Truck, Clock,
   Download, X, ExternalLink, MessageSquare, Copy, Edit, Trash2, XCircle,
+  ChevronDown, ChevronUp,
 } from "lucide-react";
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
 import PageHeader from "@/components/PageHeader";
@@ -16,7 +17,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
@@ -245,7 +246,9 @@ const Pedidos = () => {
 
   const fullAddress = (o: Order) => `${o.client_address}, ${o.client_address_number}${o.client_address_comp ? ` - ${o.client_address_comp}` : ""}, ${o.client_address_district}, ${o.client_address_city}/${o.client_address_state} — CEP ${o.client_zip_code}`;
 
-  return (
+    const hasAdvancedFilters = !!filterDateFrom || !!filterDateTo || (!!filterProvider && filterProvider !== "all") || !!filterCity;
+
+    return (
     <div className="flex flex-col h-full">
       <PageHeader
         title="Quadro de Pedidos"
@@ -253,20 +256,110 @@ const Pedidos = () => {
         actions={
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={exportCSV} className="border-border text-muted-foreground"><Download className="h-4 w-4 mr-1.5" /> Exportar</Button>
-            <Button variant="outline" size="sm" onClick={() => setFiltersOpen(true)} className="border-border text-muted-foreground"><SlidersHorizontal className="h-4 w-4 mr-1.5" /> Filtros</Button>
             <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground" onClick={() => refetch()}><RefreshCw className="h-4 w-4" /></Button>
           </div>
         }
       />
 
-      {/* Search */}
-      <div className="relative mb-4 max-w-lg">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar pedidos, clientes ou IDs..." className="h-10 w-full rounded-lg border border-border bg-input pl-9 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30" />
+      {/* Search + Filtros Avançados button */}
+      <div className="flex items-center gap-3 mb-3">
+        <div className="relative flex-1 max-w-lg">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar pedidos, clientes ou IDs..." className="h-10 w-full rounded-lg border border-border bg-input pl-9 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30" />
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setFiltersOpen(!filtersOpen)}
+          className={`border-border text-muted-foreground relative ${hasAdvancedFilters ? "border-primary/50" : ""}`}
+        >
+          <SlidersHorizontal className="h-4 w-4 mr-1.5" />
+          Filtros Avançados
+          {hasAdvancedFilters && <span className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-primary" />}
+          {filtersOpen ? <ChevronUp className="h-3.5 w-3.5 ml-1.5" /> : <ChevronDown className="h-3.5 w-3.5 ml-1.5" />}
+        </Button>
       </div>
 
-      {/* Status chips */}
+      {/* Inline Advanced Filters Panel */}
+      <Collapsible open={filtersOpen} onOpenChange={setFiltersOpen}>
+        <CollapsibleContent>
+          <div className="mb-3 rounded-lg border border-border bg-card p-4">
+            <div className="flex flex-wrap items-end gap-4">
+              {/* Plataforma */}
+              <div>
+                <span className="text-xs font-medium text-muted-foreground mb-1.5 block">Plataforma</span>
+                <div className="flex gap-1.5">
+                  {[
+                    { value: "", label: "Todos" },
+                    { value: "logzz", label: "Logzz" },
+                    { value: "coinzz", label: "Coinzz" },
+                    { value: "cod", label: "COD" },
+                  ].map((p) => (
+                    <button
+                      key={p.value}
+                      onClick={() => setFilterProvider(filterProvider === p.value ? "" : p.value)}
+                      className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors border ${
+                        (filterProvider === p.value || (p.value === "" && !filterProvider))
+                          ? "border-primary bg-primary/15 text-primary"
+                          : "border-border bg-secondary text-muted-foreground hover:bg-muted"
+                      }`}
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Data De */}
+              <div>
+                <span className="text-xs font-medium text-muted-foreground mb-1.5 block">Data início</span>
+                <Input type="date" value={filterDateFrom} onChange={(e) => setFilterDateFrom(e.target.value)} className="bg-input border-border h-9 w-[150px] text-xs" />
+              </div>
+
+              <span className="text-xs text-muted-foreground pb-2">até</span>
+
+              {/* Data Até */}
+              <div>
+                <span className="text-xs font-medium text-muted-foreground mb-1.5 block">Data fim</span>
+                <Input type="date" value={filterDateTo} onChange={(e) => setFilterDateTo(e.target.value)} className="bg-input border-border h-9 w-[150px] text-xs" />
+              </div>
+
+              {/* Cidade */}
+              <div>
+                <span className="text-xs font-medium text-muted-foreground mb-1.5 block">Cidade</span>
+                <Input value={filterCity} onChange={(e) => setFilterCity(e.target.value)} placeholder="Ex: São Paulo" className="bg-input border-border h-9 w-[160px] text-xs" />
+              </div>
+
+              {/* Limpar */}
+              {hasAdvancedFilters && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => { setFilterDateFrom(""); setFilterDateTo(""); setFilterProvider(""); setFilterCity(""); }}
+                  className="text-destructive hover:text-destructive h-9"
+                >
+                  <X className="h-3.5 w-3.5 mr-1" /> Limpar
+                </Button>
+              )}
+            </div>
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
+
+      {/* Status summary bar (clickable) */}
       <div className="mb-4 flex flex-wrap gap-2">
+        {/* "Todos" chip */}
+        <button
+          onClick={() => setActiveFilter(null)}
+          className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors border ${
+            activeFilter === null
+              ? "border-primary bg-primary/15 text-primary"
+              : "border-border bg-card text-muted-foreground hover:bg-secondary"
+          }`}
+        >
+          Todos
+          <span className="ml-0.5 font-bold">{orders.length}</span>
+        </button>
         {STATUSES.map((s) => (
           <button key={s.key} onClick={() => setActiveFilter(activeFilter === s.key ? null : s.key)} className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors border ${activeFilter === s.key ? "border-primary bg-primary/15 text-primary" : "border-border bg-card text-muted-foreground hover:bg-secondary"}`}>
             <span className={`h-2 w-2 rounded-full ${s.color}`} />
@@ -622,28 +715,6 @@ const Pedidos = () => {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* ─── Filters Drawer ─── */}
-      <Sheet open={filtersOpen} onOpenChange={setFiltersOpen}>
-        <SheetContent className="bg-card border-border w-[340px]">
-          <SheetHeader><SheetTitle className="text-foreground">Filtros Avançados</SheetTitle></SheetHeader>
-          <div className="space-y-5 mt-6">
-            <div><Label className="text-xs text-muted-foreground">Data início</Label><Input type="date" value={filterDateFrom} onChange={(e) => setFilterDateFrom(e.target.value)} className="bg-input border-border mt-1" /></div>
-            <div><Label className="text-xs text-muted-foreground">Data fim</Label><Input type="date" value={filterDateTo} onChange={(e) => setFilterDateTo(e.target.value)} className="bg-input border-border mt-1" /></div>
-            <div>
-              <Label className="text-xs text-muted-foreground">Provider logístico</Label>
-              <Select value={filterProvider} onValueChange={setFilterProvider}>
-                <SelectTrigger className="bg-input border-border mt-1"><SelectValue placeholder="Todos" /></SelectTrigger>
-                <SelectContent><SelectItem value="all">Todos</SelectItem><SelectItem value="logzz">Logzz</SelectItem><SelectItem value="coinzz">Coinzz</SelectItem></SelectContent>
-              </Select>
-            </div>
-            <div><Label className="text-xs text-muted-foreground">Cidade</Label><Input value={filterCity} onChange={(e) => setFilterCity(e.target.value)} placeholder="Ex: São Paulo" className="bg-input border-border mt-1" /></div>
-            <div className="flex gap-2 pt-4">
-              <Button variant="outline" className="flex-1 border-border" onClick={() => { setFilterDateFrom(""); setFilterDateTo(""); setFilterProvider(""); setFilterCity(""); }}>Limpar</Button>
-              <Button className="flex-1 gradient-primary text-primary-foreground" onClick={() => setFiltersOpen(false)}>Aplicar</Button>
-            </div>
-          </div>
-        </SheetContent>
-      </Sheet>
     </div>
   );
 };
