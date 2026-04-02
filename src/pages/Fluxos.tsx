@@ -323,10 +323,11 @@ const Fluxos = () => {
                   <SlidersHorizontal className="h-4 w-4" /> Mais
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                <DropdownMenuItem>Exportar fluxos</DropdownMenuItem>
-                <DropdownMenuItem>Importar fluxo</DropdownMenuItem>
-              </DropdownMenuContent>
+                <DropdownMenuContent>
+                  <DropdownMenuItem onClick={() => setImportOpen(true)}>
+                    <Upload className="h-4 w-4 mr-2" /> Importar fluxo
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
             </DropdownMenu>
             <button onClick={() => { setEditingFlow(null); setBuilderOpen(true); }} className="gradient-primary flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold text-primary-foreground hover:opacity-90">
               <Plus className="h-4 w-4" /> Novo Fluxo
