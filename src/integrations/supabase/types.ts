@@ -929,12 +929,15 @@ export type Database = {
           client_phone: string
           client_zip_code: string
           coinzz_order_hash: string | null
+          coinzz_payment_status: string | null
+          coinzz_shipping_status: string | null
           created_at: string | null
           delivery_date: string | null
           delivery_man: string | null
           delivery_type_code: string | null
           delivery_type_name: string | null
           first_order: boolean | null
+          gateway_fee: number | null
           id: string
           label_a4_url: string | null
           label_thermal_url: string | null
@@ -952,6 +955,7 @@ export type Database = {
           shipping_value: number | null
           status: string
           status_description: string | null
+          total_installments: number | null
           tracking_code: string | null
           updated_at: string | null
           user_id: string
@@ -980,12 +984,15 @@ export type Database = {
           client_phone: string
           client_zip_code: string
           coinzz_order_hash?: string | null
+          coinzz_payment_status?: string | null
+          coinzz_shipping_status?: string | null
           created_at?: string | null
           delivery_date?: string | null
           delivery_man?: string | null
           delivery_type_code?: string | null
           delivery_type_name?: string | null
           first_order?: boolean | null
+          gateway_fee?: number | null
           id?: string
           label_a4_url?: string | null
           label_thermal_url?: string | null
@@ -1003,6 +1010,7 @@ export type Database = {
           shipping_value?: number | null
           status?: string
           status_description?: string | null
+          total_installments?: number | null
           tracking_code?: string | null
           updated_at?: string | null
           user_id: string
@@ -1031,12 +1039,15 @@ export type Database = {
           client_phone?: string
           client_zip_code?: string
           coinzz_order_hash?: string | null
+          coinzz_payment_status?: string | null
+          coinzz_shipping_status?: string | null
           created_at?: string | null
           delivery_date?: string | null
           delivery_man?: string | null
           delivery_type_code?: string | null
           delivery_type_name?: string | null
           first_order?: boolean | null
+          gateway_fee?: number | null
           id?: string
           label_a4_url?: string | null
           label_thermal_url?: string | null
@@ -1054,6 +1065,7 @@ export type Database = {
           shipping_value?: number | null
           status?: string
           status_description?: string | null
+          total_installments?: number | null
           tracking_code?: string | null
           updated_at?: string | null
           user_id?: string
