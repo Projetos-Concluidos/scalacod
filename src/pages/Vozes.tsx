@@ -705,7 +705,16 @@ const Vozes = () => {
       {/* Biblioteca */}
       {tab === "library" && (
         <>
-          <div className="flex items-center gap-3 mb-6">
+          <div className="flex flex-wrap items-center gap-3 mb-6">
+            <div className="relative flex-1 min-w-[200px] max-w-sm">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                value={libFilter.search}
+                onChange={e => setLibFilter(f => ({ ...f, search: e.target.value }))}
+                placeholder="Buscar voz por nome..."
+                className="pl-9"
+              />
+            </div>
             <select value={libFilter.lang} onChange={e => setLibFilter(f => ({ ...f, lang: e.target.value }))} className="rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground">
               <option value="">Todos idiomas</option>
               <option value="pt">Português</option>
@@ -716,7 +725,16 @@ const Vozes = () => {
               <option value="male">Masculino</option>
               <option value="female">Feminino</option>
             </select>
-           {libLoading && <Loader2 className="h-4 w-4 text-primary animate-spin" />}
+            <select value={libFilter.useCase} onChange={e => setLibFilter(f => ({ ...f, useCase: e.target.value }))} className="rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground">
+              <option value="">Todas categorias</option>
+              <option value="narration">Narração</option>
+              <option value="conversational">Conversacional</option>
+              <option value="formal">Formal</option>
+              <option value="storytelling">Storytelling</option>
+              <option value="sweet">Suave</option>
+              <option value="versatile">Versátil</option>
+            </select>
+            {libLoading && <Loader2 className="h-4 w-4 text-primary animate-spin" />}
             {ttsProvider === "openai" && (
               <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">OpenAI TTS — vozes multilíngue</span>
             )}
@@ -728,21 +746,33 @@ const Vozes = () => {
                 <div key={voice.id} className="ninja-card">
                   <div className="flex items-center justify-between mb-2">
                     <h3 className="text-sm font-bold text-foreground">{voice.name}</h3>
-                    <button onClick={() => handleFavorite(voice)} className={`transition-colors ${isFav ? "text-destructive" : "text-muted-foreground hover:text-destructive"}`}>
+                    <button
+                      onClick={() => handleFavorite(voice)}
+                      className={`transition-colors ${isFav ? "text-destructive" : "text-muted-foreground hover:text-destructive"}`}
+                      title={isFav ? "Desfavoritar" : "Favoritar"}
+                    >
                       <Heart className={`h-4 w-4 ${isFav ? "fill-current" : ""}`} />
                     </button>
                   </div>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground mb-3">
+                  {voice.description && (
+                    <p className="text-xs text-muted-foreground mb-2 line-clamp-2">{voice.description}</p>
+                  )}
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground mb-3 flex-wrap">
                     <span className="bg-muted px-2 py-0.5 rounded">
                       {voice.language === "pt" ? "🇧🇷 PT" : voice.language === "en" ? "🇺🇸 EN" : voice.language || "—"}
                     </span>
                     <span>{voice.gender === "male" ? "Masculino" : voice.gender === "female" ? "Feminino" : voice.gender || ""}</span>
-                    {voice.useCase && <span>• {voice.useCase}</span>}
+                    {voice.useCase && <span className="bg-muted px-2 py-0.5 rounded">• {voice.useCase}</span>}
                   </div>
-                  <button onClick={() => handlePlay(voice.previewUrl, voice.id)} className="flex items-center gap-2 w-full rounded-lg border border-border px-3 py-2 text-xs text-foreground hover:bg-muted transition-colors">
-                    {playingId === voice.id ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
-                    Preview
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => handlePlay(voice.previewUrl, voice.id)} className="flex items-center gap-2 flex-1 rounded-lg border border-border px-3 py-2 text-xs text-foreground hover:bg-muted transition-colors">
+                      {playingId === voice.id ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
+                      Preview
+                    </button>
+                    {isFav && (
+                      <span className="text-[10px] text-primary font-medium bg-primary/10 px-2 py-1 rounded">Favoritada ✓</span>
+                    )}
+                  </div>
                 </div>
               );
             })}
