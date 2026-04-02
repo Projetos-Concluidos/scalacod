@@ -71,9 +71,17 @@ serve(async (req) => {
 
     if (!ttsRes.ok) {
       const errData = await ttsRes.json().catch(() => ({}));
+      const rawMsg = errData.detail?.message || errData.detail || "";
+      // Translate ElevenLabs subscription errors to user-friendly Portuguese
+      let userMsg = "Erro ao gerar áudio no ElevenLabs";
+      if (typeof rawMsg === "string" && rawMsg.toLowerCase().includes("free users")) {
+        userMsg = "A chave ElevenLabs está no plano gratuito e não permite usar vozes da biblioteca. Peça ao administrador para fazer upgrade no ElevenLabs ou use uma voz clonada.";
+      } else if (rawMsg) {
+        userMsg = String(rawMsg);
+      }
       return new Response(
-        JSON.stringify({ error: errData.detail?.message || "Erro ao gerar áudio no ElevenLabs" }),
-        { status: ttsRes.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ error: userMsg }),
+        { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
