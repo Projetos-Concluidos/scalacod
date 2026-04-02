@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import PageHeader from "@/components/PageHeader";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -8,8 +8,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Ban, Coins, Edit, Unlock, Search } from "lucide-react";
+import { Ban, Coins, Edit, Unlock, Search, Plus, Minus, History } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface Tenant {
   id: string;
@@ -29,6 +31,13 @@ interface Plan {
   slug: string;
 }
 
+interface TokenLog {
+  id: string;
+  action: string;
+  metadata: Record<string, unknown> | null;
+  created_at: string | null;
+}
+
 const AdminAssinantes = () => {
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [plans, setPlans] = useState<Plan[]>([]);
@@ -40,10 +49,20 @@ const AdminAssinantes = () => {
   const [tokenModal, setTokenModal] = useState<{ open: boolean; tenant: Tenant | null }>({ open: false, tenant: null });
   const [tokenAmount, setTokenAmount] = useState("");
   const [tokenReason, setTokenReason] = useState("");
+  const [tokenOperation, setTokenOperation] = useState<"credit" | "debit">("credit");
+  const [tokenType, setTokenType] = useState("bonus");
+  const [tokenLogs, setTokenLogs] = useState<TokenLog[]>([]);
+  const [loadingLogs, setLoadingLogs] = useState(false);
 
   // Plan modal
   const [planModal, setPlanModal] = useState<{ open: boolean; tenant: Tenant | null }>({ open: false, tenant: null });
   const [selectedPlanId, setSelectedPlanId] = useState("");
+
+  const planMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    plans.forEach((p) => { map[p.id] = p.name; });
+    return map;
+  }, [plans]);
 
   const fetchTenants = async () => {
     const { data } = await supabase
@@ -59,27 +78,60 @@ const AdminAssinantes = () => {
     setPlans(data || []);
   };
 
+  const fetchTokenLogs = async (userId: string) => {
+    setLoadingLogs(true);
+    const { data } = await supabase
+      .from("admin_action_logs")
+      .select("id, action, metadata, created_at")
+      .eq("target_user_id", userId)
+      .in("action", ["add_tokens", "remove_tokens"])
+      .order("created_at", { ascending: false })
+      .limit(50);
+    setTokenLogs((data as TokenLog[]) || []);
+    setLoadingLogs(false);
+  };
+
   useEffect(() => {
     fetchTenants();
     fetchPlans();
   }, []);
 
-  const handleAddTokens = async () => {
+  const openTokenModal = (tenant: Tenant) => {
+    setTokenModal({ open: true, tenant });
+    setTokenAmount("");
+    setTokenReason("");
+    setTokenOperation("credit");
+    setTokenType("bonus");
+    fetchTokenLogs(tenant.id);
+  };
+
+  const handleTokenSubmit = async () => {
     if (!tokenModal.tenant || !tokenAmount) return;
-    const { error } = await supabase.rpc("admin_add_tokens", {
-      p_user_id: tokenModal.tenant.id,
-      p_amount: parseInt(tokenAmount),
-      p_reason: tokenReason || "Admin credit",
-    });
-    if (error) {
-      toast.error(error.message);
+    const amount = parseInt(tokenAmount);
+    if (isNaN(amount) || amount <= 0) { toast.error("Quantidade inválida"); return; }
+
+    const reason = `[${tokenType}] ${tokenReason || "Sem motivo"}`;
+
+    if (tokenOperation === "credit") {
+      const { error } = await supabase.rpc("admin_add_tokens", {
+        p_user_id: tokenModal.tenant.id,
+        p_amount: amount,
+        p_reason: reason,
+      });
+      if (error) { toast.error(error.message); return; }
+      toast.success(`+${amount} tokens creditados para ${tokenModal.tenant.name}`);
     } else {
-      toast.success(`${tokenAmount} tokens creditados para ${tokenModal.tenant.name}`);
-      setTokenModal({ open: false, tenant: null });
-      setTokenAmount("");
-      setTokenReason("");
-      fetchTenants();
+      const { error } = await supabase.rpc("admin_remove_tokens", {
+        p_user_id: tokenModal.tenant.id,
+        p_amount: amount,
+        p_reason: reason,
+      });
+      if (error) { toast.error(error.message); return; }
+      toast.success(`-${amount} tokens debitados de ${tokenModal.tenant.name}`);
     }
+
+    setTokenModal({ open: false, tenant: null });
+    fetchTenants();
   };
 
   const handleUpdatePlan = async () => {
@@ -116,6 +168,11 @@ const AdminAssinantes = () => {
     if (s === "trial") return "secondary";
     if (s === "cancelled") return "destructive";
     return "outline";
+  };
+
+  const getPlanDisplay = (t: Tenant) => {
+    if (t.plan_id && planMap[t.plan_id]) return planMap[t.plan_id];
+    return t.plan || "free";
   };
 
   const filtered = tenants.filter((t) => {
@@ -185,7 +242,7 @@ const AdminAssinantes = () => {
                   <TableCell className="font-medium">{t.name}</TableCell>
                   <TableCell className="text-sm">{t.email}</TableCell>
                   <TableCell className="text-sm text-muted-foreground">{t.store_name || "—"}</TableCell>
-                  <TableCell className="capitalize">{t.plan || "free"}</TableCell>
+                  <TableCell className="capitalize">{getPlanDisplay(t)}</TableCell>
                   <TableCell>
                     <Badge variant={statusColor(t.subscription_status)}>
                       {t.subscription_status || "inactive"}
@@ -206,8 +263,8 @@ const AdminAssinantes = () => {
                       <Button
                         size="icon"
                         variant="ghost"
-                        title="Adicionar tokens"
-                        onClick={() => setTokenModal({ open: true, tenant: t })}
+                        title="Gerenciar tokens"
+                        onClick={() => openTokenModal(t)}
                       >
                         <Coins className="h-4 w-4" />
                       </Button>
@@ -231,24 +288,126 @@ const AdminAssinantes = () => {
 
       {/* Token Modal */}
       <Dialog open={tokenModal.open} onOpenChange={(v) => setTokenModal({ open: v, tenant: v ? tokenModal.tenant : null })}>
-        <DialogContent>
+        <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Adicionar Tokens</DialogTitle>
+            <DialogTitle>Gerenciar Tokens</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 py-2">
-            <p className="text-sm text-muted-foreground">Assinante: <strong>{tokenModal.tenant?.name}</strong> ({tokenModal.tenant?.email})</p>
-            <div className="space-y-2">
-              <Label>Quantidade de tokens</Label>
-              <Input type="number" value={tokenAmount} onChange={(e) => setTokenAmount(e.target.value)} placeholder="1000" />
+          <div className="space-y-4">
+            <div className="flex items-center justify-between rounded-lg border p-3 bg-muted/50">
+              <div>
+                <p className="text-sm font-medium">{tokenModal.tenant?.name}</p>
+                <p className="text-xs text-muted-foreground">{tokenModal.tenant?.email}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-xs text-muted-foreground">Saldo atual</p>
+                <p className="text-lg font-bold">{tokenModal.tenant?.token_balance || 0}</p>
+              </div>
             </div>
+
+            <Tabs value={tokenOperation} onValueChange={(v) => setTokenOperation(v as "credit" | "debit")}>
+              <TabsList className="w-full">
+                <TabsTrigger value="credit" className="flex-1 gap-1">
+                  <Plus className="h-3 w-3" /> Creditar
+                </TabsTrigger>
+                <TabsTrigger value="debit" className="flex-1 gap-1">
+                  <Minus className="h-3 w-3" /> Debitar
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="credit" className="space-y-3 mt-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs">Quantidade</Label>
+                    <Input type="number" min="1" value={tokenAmount} onChange={(e) => setTokenAmount(e.target.value)} placeholder="1000" />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Tipo</Label>
+                    <Select value={tokenType} onValueChange={setTokenType}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="bonus">Bônus</SelectItem>
+                        <SelectItem value="correcao">Correção</SelectItem>
+                        <SelectItem value="compra_manual">Compra manual</SelectItem>
+                        <SelectItem value="estorno">Estorno</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Motivo</Label>
+                  <Input value={tokenReason} onChange={(e) => setTokenReason(e.target.value)} placeholder="Bônus promocional" />
+                </div>
+              </TabsContent>
+
+              <TabsContent value="debit" className="space-y-3 mt-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs">Quantidade</Label>
+                    <Input type="number" min="1" value={tokenAmount} onChange={(e) => setTokenAmount(e.target.value)} placeholder="500" />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Tipo</Label>
+                    <Select value={tokenType} onValueChange={setTokenType}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="correcao">Correção</SelectItem>
+                        <SelectItem value="estorno">Estorno</SelectItem>
+                        <SelectItem value="ajuste">Ajuste</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Motivo</Label>
+                  <Input value={tokenReason} onChange={(e) => setTokenReason(e.target.value)} placeholder="Correção de saldo" />
+                </div>
+              </TabsContent>
+            </Tabs>
+
+            {/* Histórico */}
             <div className="space-y-2">
-              <Label>Motivo</Label>
-              <Input value={tokenReason} onChange={(e) => setTokenReason(e.target.value)} placeholder="Bônus promocional" />
+              <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                <History className="h-3 w-3" /> Histórico de operações
+              </div>
+              <ScrollArea className="h-36 rounded-md border">
+                {loadingLogs ? (
+                  <p className="text-xs text-muted-foreground p-3">Carregando...</p>
+                ) : tokenLogs.length === 0 ? (
+                  <p className="text-xs text-muted-foreground p-3">Nenhuma operação registrada</p>
+                ) : (
+                  <div className="divide-y">
+                    {tokenLogs.map((log) => {
+                      const isCredit = log.action === "add_tokens";
+                      const amount = (log.metadata as Record<string, unknown>)?.amount as number;
+                      const reason = (log.metadata as Record<string, unknown>)?.reason as string;
+                      return (
+                        <div key={log.id} className="flex items-center justify-between px-3 py-2 text-xs">
+                          <div>
+                            <span className={isCredit ? "text-emerald-600 font-medium" : "text-destructive font-medium"}>
+                              {isCredit ? "+" : "−"}{amount || "?"}
+                            </span>
+                            <span className="ml-2 text-muted-foreground">{reason || "—"}</span>
+                          </div>
+                          <span className="text-muted-foreground whitespace-nowrap">
+                            {log.created_at ? new Date(log.created_at).toLocaleDateString("pt-BR") : "—"}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </ScrollArea>
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setTokenModal({ open: false, tenant: null })}>Cancelar</Button>
-            <Button onClick={handleAddTokens} disabled={!tokenAmount}>Confirmar Crédito</Button>
+            <Button
+              onClick={handleTokenSubmit}
+              disabled={!tokenAmount}
+              variant={tokenOperation === "debit" ? "destructive" : "default"}
+            >
+              {tokenOperation === "credit" ? "Confirmar Crédito" : "Confirmar Débito"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
