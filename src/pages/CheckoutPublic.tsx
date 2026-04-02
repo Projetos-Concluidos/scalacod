@@ -796,23 +796,35 @@ const CheckoutPublic = () => {
   }
 
   // ── MAIN CHECKOUT (Steps 1-3) ──
+  const quantity = extractQty(checkout.name);
+
   const OrderSummary = ({ className = "" }: { className?: string }) => (
-    <div className={className}>
+    <div className={`checkout-summary ${className}`}>
       <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm sticky top-6">
         <h3 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">🎁 Resumo do pedido</h3>
 
         {/* Product */}
         {offer && (
-          <div className="flex items-start gap-3 mb-4 pb-4 border-b border-gray-100">
+          <div className="flex items-start gap-4 mb-4 pb-4 border-b border-gray-100">
             {product?.main_image_url ? (
-              <img src={product.main_image_url} alt={product.name} className="h-16 w-16 rounded-xl object-cover" />
+              <img src={product.main_image_url} alt={product.name} className="h-20 w-20 rounded-xl object-cover flex-shrink-0" />
             ) : (
-              <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-gray-100"><Package className="h-6 w-6 text-gray-400" /></div>
+              <div className="flex h-20 w-20 items-center justify-center rounded-xl bg-gray-100 flex-shrink-0"><Package className="h-8 w-8 text-gray-400" /></div>
             )}
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-gray-900 truncate">{product?.name}</p>
-              <p className="text-xs text-gray-500 mt-0.5">1 unidade(s)</p>
-              <p className="text-base font-bold text-emerald-600 mt-1">R$ {Number(offer.price).toFixed(2)}</p>
+              <p className="text-sm font-bold text-gray-900 leading-tight">{product?.name}</p>
+              <div className="flex items-center gap-2 mt-2">
+                <span className="inline-flex items-center justify-center h-8 min-w-[2rem] px-2 rounded-lg bg-emerald-500 text-white text-lg font-black">
+                  {quantity}x
+                </span>
+                <span className="text-xs text-gray-500">{quantity === 1 ? "unidade" : "unidades"}</span>
+              </div>
+              <div className="mt-2 flex items-baseline gap-2">
+                {offer.original_price && offer.original_price > offer.price && (
+                  <span className="text-xs text-gray-400 line-through">R$ {Number(offer.original_price).toFixed(2)}</span>
+                )}
+                <span className="text-lg font-black text-emerald-600">R$ {Number(offer.price).toFixed(2)}</span>
+              </div>
             </div>
           </div>
         )}
@@ -828,12 +840,23 @@ const CheckoutPublic = () => {
         {/* Totals */}
         <div className="space-y-2 text-sm pt-3 border-t border-gray-100 mt-3">
           <div className="flex justify-between"><span className="text-gray-500">Subtotal</span><span className="text-gray-900">R$ {Number(offer?.price || 0).toFixed(2)}</span></div>
-          <div className="flex justify-between"><span className="text-gray-500">Frete</span><span className="text-gray-900">Grátis</span></div>
+          {bumpsTotal > 0 && (
+            <div className="flex justify-between"><span className="text-gray-500">Itens adicionais</span><span className="text-gray-900">R$ {bumpsTotal.toFixed(2)}</span></div>
+          )}
+          <div className="flex justify-between">
+            <span className="text-gray-500">Frete</span>
+            <span className="inline-flex items-center gap-1 text-emerald-600 font-medium">
+              <Truck className="h-3 w-3" /> Grátis
+            </span>
+          </div>
           {mpFeeAmount > 0 && (
             <div className="flex justify-between"><span className="text-gray-500">Taxa de processamento</span><span className="text-gray-900">R$ {mpFeeAmount.toFixed(2)}</span></div>
           )}
-          <div className="h-px bg-gray-100" />
-          <div className="flex justify-between font-bold text-base"><span className="text-gray-900">Total</span><span className="text-emerald-600">R$ {totalPrice.toFixed(2)}</span></div>
+          <div className="h-px bg-gray-200" />
+          <div className="flex justify-between items-center font-bold text-lg pt-1">
+            <span className="text-gray-900">Total</span>
+            <span className="text-emerald-600">R$ {totalPrice.toFixed(2)}</span>
+          </div>
         </div>
 
         {/* Provider badge */}
@@ -844,7 +867,7 @@ const CheckoutPublic = () => {
         )}
 
         {/* Trust */}
-        <div className="mt-4 space-y-2 pt-3 border-t border-gray-100">
+        <div className="checkout-trust-badges mt-4 space-y-2 pt-3 border-t border-gray-100">
           <div className="flex items-center gap-2 text-xs text-gray-500"><Lock className="h-3.5 w-3.5 text-emerald-400" /> Proteção SSL 256-bit</div>
           <div className="flex items-center gap-2 text-xs text-gray-500"><Truck className="h-3.5 w-3.5 text-emerald-400" /> Entrega Garantida</div>
           <div className="flex items-center gap-2 text-xs text-gray-500"><CreditCard className="h-3.5 w-3.5 text-emerald-400" /> Pague na Entrega</div>
