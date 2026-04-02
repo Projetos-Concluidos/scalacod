@@ -138,7 +138,7 @@ Deno.serve(async (req) => {
         console.log("[CEP] Parsed dates_available:", datesAvailable.length, "keys:", Object.keys(data || {}).join(","));
 
         if (datesAvailable.length > 0) {
-          const dates = datesAvailable.map((d: any) => ({
+          const dates = datesAvailable.slice(0, 5).map((d: any) => ({
             date: d.date, type: d.type_name || d.type || "Padrão", type_code: d.type_code || "", price: d.price || 0,
             local_operation_code: d.local_operation_code || "", local_operation_name: d.local_operation_name || "",
           }));
@@ -256,6 +256,18 @@ Deno.serve(async (req) => {
             });
             if (leadErr) console.log("[create_order] Lead insert error:", leadErr.message);
             else console.log("[create_order] Lead created with revenue:", orderValue);
+          }
+        }
+
+        // Increment conversion_count on checkout
+        if (order_data.checkout_id) {
+          try {
+            await supabase.from("checkouts").update({
+              updated_at: new Date().toISOString(),
+            }).eq("id", order_data.checkout_id);
+            console.log("[create_order] Checkout conversion tracked:", order_data.checkout_id);
+          } catch (convErr: any) {
+            console.warn("[create_order] Conversion count error:", convErr.message);
           }
         }
 
