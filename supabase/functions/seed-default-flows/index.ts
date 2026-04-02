@@ -502,7 +502,7 @@ Deno.serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ success: true, count: flowsToInsert.length }),
+      JSON.stringify({ success: true, count: toInsert.length }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (e) {
