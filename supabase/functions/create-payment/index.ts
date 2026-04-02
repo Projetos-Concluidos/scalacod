@@ -94,7 +94,7 @@ Deno.serve(async (req) => {
       external_reference: orderId,
       notification_url: notificationUrl,
       payer: {
-        email: payerEmail || order.client_email || "comprador@scalaninja.com",
+        email: payerEmail || order.client_email || "comprador@scalacod.com.br",
         first_name: (payerName || order.client_name || "").split(" ")[0] || "Cliente",
         last_name: (payerName || order.client_name || "").split(" ").slice(1).join(" ") || ".",
         identification: {
