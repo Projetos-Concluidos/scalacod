@@ -139,7 +139,7 @@ Deno.serve(async (req) => {
 
         if (datesAvailable.length > 0) {
           const dates = datesAvailable.map((d: any) => ({
-            date: d.date, type: d.type || "Padrão", price: d.price || 0,
+            date: d.date, type: d.type_name || d.type || "Padrão", type_code: d.type_code || "", price: d.price || 0,
           }));
           const addr = await fetchViaCep(cleanCep);
           console.log("[CEP] Provider escolhido: logzz, datas:", dates.length);
@@ -198,6 +198,8 @@ Deno.serve(async (req) => {
           status: order_data.status || "Aguardando",
           logistics_type: order_data.logistics_type || "logzz",
           delivery_date: order_data.delivery_date || null,
+          delivery_type_code: order_data.delivery_type_code || null,
+          delivery_type_name: order_data.delivery_type_name || null,
           payment_method: order_data.payment_method || null,
           utm_source: order_data.utm_source || null,
           utm_medium: order_data.utm_medium || null,

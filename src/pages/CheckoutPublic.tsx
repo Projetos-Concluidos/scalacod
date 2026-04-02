@@ -28,7 +28,7 @@ interface CheckoutData {
 }
 interface OfferData { id: string; name: string; price: number; original_price: number | null; product_id: string; hash: string | null; }
 interface ProductData { id: string; name: string; main_image_url: string | null; }
-interface DeliveryDate { date: string; type: string; price: number; }
+interface DeliveryDate { date: string; type: string; type_code?: string; price: number; }
 interface OrderBump { id: string; name: string; description: string | null; price: number | null; current_price: number | null; }
 
 const maskCpf = (v: string) => v.replace(/\D/g, "").slice(0, 11).replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d{1,2})$/, "$1-$2");
@@ -453,6 +453,8 @@ const CheckoutPublic = () => {
             status: "Aguardando",
             logistics_type: provider || "logzz",
             delivery_date: provider === "logzz" && selectedDate ? selectedDate.date : null,
+            delivery_type_code: provider === "logzz" && selectedDate ? selectedDate.type_code || null : null,
+            delivery_type_name: provider === "logzz" && selectedDate ? selectedDate.type || null : null,
             payment_method: provider === "logzz" ? "afterpay" : paymentMethod,
             utm_source: utm.utm_source || null,
             utm_medium: utm.utm_medium || null,
