@@ -373,7 +373,7 @@ Deno.serve(async (req) => {
           },
           body: JSON.stringify({
             transaction_amount: order_data.amount,
-            description: order_data.description || "Pedido ScalaNinja",
+            description: order_data.description || "Pedido ScalaCOD",
             payment_method_id: "pix",
             payer: {
               email: "comprador@checkout.com",
