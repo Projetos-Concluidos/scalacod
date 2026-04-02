@@ -652,22 +652,97 @@ const Pedidos = () => {
                             : (
                               <div className="space-y-1.5">
                                 <span className="text-sm font-semibold text-purple-400">💳 PAGAMENTO ONLINE — ENTREGA VIA CORREIOS</span>
+
+                                {/* Status de pagamento MercadoPago */}
+                                {o.mp_payment_status && (() => {
+                                  const mpStatusLabels: Record<string, string> = {
+                                    approved: "Pagamento Aprovado",
+                                    pending: "Pagamento Pendente",
+                                    authorized: "Pagamento Autorizado",
+                                    in_process: "Em Processamento",
+                                    in_mediation: "Em Mediação",
+                                    rejected: "Pagamento Rejeitado",
+                                    cancelled: "Pagamento Cancelado",
+                                    refunded: "Reembolsado",
+                                    charged_back: "Chargeback",
+                                  };
+                                  const mpStatusColors: Record<string, string> = {
+                                    approved: "bg-green-500/15 text-green-400 border-green-500/30",
+                                    pending: "bg-yellow-500/15 text-yellow-400 border-yellow-500/30",
+                                    authorized: "bg-blue-500/15 text-blue-400 border-blue-500/30",
+                                    in_process: "bg-yellow-500/15 text-yellow-400 border-yellow-500/30",
+                                    in_mediation: "bg-orange-500/15 text-orange-400 border-orange-500/30",
+                                    rejected: "bg-red-500/15 text-red-400 border-red-500/30",
+                                    cancelled: "bg-red-500/15 text-red-400 border-red-500/30",
+                                    refunded: "bg-blue-500/15 text-blue-400 border-blue-500/30",
+                                    charged_back: "bg-red-500/15 text-red-400 border-red-500/30",
+                                  };
+                                  const mpDetailLabels: Record<string, string> = {
+                                    accredited: "Pagamento acreditado",
+                                    pending_contingency: "Pendente — contingência",
+                                    pending_review_manual: "Pendente — revisão manual",
+                                    pending_waiting_payment: "Aguardando pagamento",
+                                    pending_waiting_for_remedy: "Aguardando correção",
+                                    pending_waiting_transfer: "Aguardando transferência",
+                                    cc_rejected_bad_filled_card_number: "Número do cartão incorreto",
+                                    cc_rejected_bad_filled_date: "Data do cartão incorreta",
+                                    cc_rejected_bad_filled_other: "Dados do cartão incorretos",
+                                    cc_rejected_bad_filled_security_code: "CVV incorreto",
+                                    cc_rejected_blacklist: "Cartão na lista negra",
+                                    cc_rejected_call_for_authorize: "Autorização necessária",
+                                    cc_rejected_card_disabled: "Cartão desativado",
+                                    cc_rejected_card_error: "Erro no cartão",
+                                    cc_rejected_duplicated_payment: "Pagamento duplicado",
+                                    cc_rejected_high_risk: "Risco elevado — rejeitado",
+                                    cc_rejected_insufficient_amount: "Saldo insuficiente",
+                                    cc_rejected_invalid_installments: "Parcelas inválidas",
+                                    cc_rejected_max_attempts: "Tentativas excedidas",
+                                    cc_rejected_other_reason: "Rejeitado pelo banco",
+                                    partially_refunded: "Reembolso parcial",
+                                    bank_rejected: "Rejeitado pelo banco",
+                                  };
+                                  const colorClass = mpStatusColors[o.mp_payment_status!] || "bg-muted text-muted-foreground border-border";
+                                  return (
+                                    <div className="mt-1.5 space-y-1.5">
+                                      <div className="flex items-center gap-2 text-xs">
+                                        <span className="text-muted-foreground">Status:</span>
+                                        <Badge className={`text-[10px] border ${colorClass}`}>
+                                          {mpStatusLabels[o.mp_payment_status!] || o.mp_payment_status}
+                                        </Badge>
+                                      </div>
+                                      {o.mp_payment_status_detail && (
+                                        <div className="flex items-center gap-2 text-xs">
+                                          <span className="text-muted-foreground">Detalhe:</span>
+                                          <span className="text-foreground text-[11px]">{mpDetailLabels[o.mp_payment_status_detail] || o.mp_payment_status_detail}</span>
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                })()}
+
                                 {o.payment_method && (
                                   <div className="flex items-center gap-2 text-xs">
                                     <span className="text-muted-foreground">Método:</span>
-                                    <Badge variant="outline" className="border-purple-500/30 text-purple-400 text-[10px] capitalize">{o.payment_method}</Badge>
+                                    <Badge variant="outline" className="border-purple-500/30 text-purple-400 text-[10px] capitalize">{
+                                      o.payment_method === "pix" ? "PIX" :
+                                      o.payment_method === "credit_card" ? "Cartão de Crédito" :
+                                      o.payment_method === "debit_card" ? "Cartão de Débito" :
+                                      o.payment_method === "bolbradesco" || o.payment_method === "boleto" ? "Boleto Bancário" :
+                                      o.payment_method === "account_money" ? "Saldo MercadoPago" :
+                                      o.payment_method
+                                    }</Badge>
                                   </div>
                                 )}
-                                {(o as any).total_installments && (o as any).total_installments > 1 && (
+                                {o.total_installments && o.total_installments > 1 && (
                                   <div className="flex items-center gap-2 text-xs">
                                     <span className="text-muted-foreground">Parcelas:</span>
-                                    <span className="text-foreground font-medium">{(o as any).total_installments}x</span>
+                                    <span className="text-foreground font-medium">{o.total_installments}x</span>
                                   </div>
                                 )}
-                                {(o as any).gateway_fee && (
+                                {o.gateway_fee && (
                                   <div className="flex items-center gap-2 text-xs">
                                     <span className="text-muted-foreground">Taxa gateway:</span>
-                                    <span className="text-foreground">R$ {Number((o as any).gateway_fee).toFixed(2)}</span>
+                                    <span className="text-foreground">R$ {Number(o.gateway_fee).toFixed(2)}</span>
                                   </div>
                                 )}
                               </div>
@@ -675,18 +750,18 @@ const Pedidos = () => {
                         </div>
 
                         {/* Coinzz statuses */}
-                        {!isLogzz && ((o as any).coinzz_payment_status || (o as any).coinzz_shipping_status) && (
+                        {!isLogzz && (o.coinzz_payment_status || o.coinzz_shipping_status) && (
                           <div className="flex flex-wrap gap-2 mt-2">
-                            {(o as any).coinzz_payment_status && (
+                            {o.coinzz_payment_status && (
                               <div className="flex items-center gap-1.5 text-xs">
-                                <span className="text-muted-foreground">Pgto:</span>
-                                <Badge variant="outline" className="text-[10px] border-border">{(o as any).coinzz_payment_status}</Badge>
+                                <span className="text-muted-foreground">Pgto Coinzz:</span>
+                                <Badge variant="outline" className="text-[10px] border-border">{o.coinzz_payment_status}</Badge>
                               </div>
                             )}
-                            {(o as any).coinzz_shipping_status && (
+                            {o.coinzz_shipping_status && (
                               <div className="flex items-center gap-1.5 text-xs">
-                                <span className="text-muted-foreground">Envio:</span>
-                                <Badge variant="outline" className="text-[10px] border-border">{(o as any).coinzz_shipping_status}</Badge>
+                                <span className="text-muted-foreground">Envio Coinzz:</span>
+                                <Badge variant="outline" className="text-[10px] border-border">{o.coinzz_shipping_status}</Badge>
                               </div>
                             )}
                           </div>
