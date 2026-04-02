@@ -416,7 +416,7 @@ Deno.serve(async (req) => {
 
     // Mode: use_template — create a single flow from template index
     if (body.action === "use_template" && typeof body.template_index === "number") {
-      const tpl = FLOW_TEMPLATES[body.template_index];
+      const tpl = ALL_TEMPLATES[body.template_index];
       if (!tpl) {
         return new Response(JSON.stringify({ error: "Template not found" }), {
           status: 404,
