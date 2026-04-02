@@ -33,11 +33,13 @@ serve(async (req) => {
 
     const configMap: Record<string, string> = {};
     for (const c of configs || []) {
+      let val = "";
       if (c.value && typeof c.value === "string") {
-        configMap[c.key] = c.value;
+        val = c.value.trim();
       } else if (c.value && typeof c.value === "object" && (c.value as any).value) {
-        configMap[c.key] = (c.value as any).value;
+        val = String((c.value as any).value).trim();
       }
+      if (val) configMap[c.key] = val;
     }
 
     const hasElevenLabsConfig = configs?.some(c => c.key === "integration_elevenlabs_api_key");
