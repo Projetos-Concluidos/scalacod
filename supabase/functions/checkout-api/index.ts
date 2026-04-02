@@ -1009,18 +1009,37 @@ Deno.serve(async (req) => {
       const newStatus = mapStatus(rawStatus);
       console.log(`[Webhook Logzz] Status: "${rawStatus}" → "${newStatus}"`);
 
-      // Find order
-      let matchQuery = supabase.from("orders").select("id, status").limit(1);
+      // --- Extract extra fields from payload ---
+      const webhookPayload = payload || {};
+      const extractedDeliveryDate = webhookPayload.date_delivery
+        ? webhookPayload.date_delivery.split(" ")[0]
+        : webhookPayload.delivery_date || null;
+      const extractedTrackingCode = webhookPayload.tracking_code || null;
+      const extractedDeliveryMan = webhookPayload.delivery_man || null;
+      const extractedLogisticOperator = webhookPayload.logistic_operator || null;
+      const extractedLabelA4 = webhookPayload.files?.label_a4 || webhookPayload.label_a4_url || null;
+      const extractedLabelThermal = webhookPayload.files?.label_thermal || webhookPayload.label_thermal_url || null;
+
+      // --- Find order (3 fallback attempts) ---
+      let order: { id: string; status: string; user_id: string } | null = null;
+
+      // Attempt 1: by order_id (external_id)
       if (order_id) {
-        matchQuery = matchQuery.eq("id", order_id);
-      } else if (logzz_order_id) {
-        matchQuery = matchQuery.eq("logzz_order_id", logzz_order_id);
-      } else {
-        return new Response(JSON.stringify({ error: "order_id or logzz_order_id required" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        const { data } = await supabase.from("orders").select("id, status, user_id").eq("id", order_id).limit(1).single();
+        if (data) order = data;
+      }
+      // Attempt 2: by logzz_order_id
+      if (!order && logzz_order_id) {
+        const { data } = await supabase.from("orders").select("id, status, user_id").eq("logzz_order_id", logzz_order_id).limit(1).single();
+        if (data) order = data;
+      }
+      // Attempt 3: by order_number from payload
+      if (!order && (webhookPayload.order_number || body.order_number)) {
+        const orderNum = webhookPayload.order_number || body.order_number;
+        const { data } = await supabase.from("orders").select("id, status, user_id").eq("order_number", orderNum).limit(1).single();
+        if (data) order = data;
       }
 
-      const { data: order } = await matchQuery.single();
       if (!order) {
         return new Response(JSON.stringify({ error: "Order not found" }),
           { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -1028,12 +1047,46 @@ Deno.serve(async (req) => {
 
       const fromStatus = order.status;
 
-      // Update order status
-      await supabase.from("orders").update({
+      // --- Skip if status unchanged ---
+      if (fromStatus === newStatus) {
+        console.log(`[Webhook Logzz] Status unchanged (${newStatus}), skipping.`);
+        return new Response(JSON.stringify({
+          success: true, action: "no_change", status: newStatus, order_id: order.id,
+        }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      // --- Idempotency: check if same transition logged in last 5 min ---
+      const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+      const { data: recentHistory } = await supabase.from("order_status_history")
+        .select("id")
+        .eq("order_id", order.id)
+        .eq("to_status", newStatus)
+        .eq("source", "logzz_webhook")
+        .gte("created_at", fiveMinAgo)
+        .limit(1);
+
+      if (recentHistory && recentHistory.length > 0) {
+        console.log(`[Webhook Logzz] Idempotency hit: ${order.id} → ${newStatus} already processed recently.`);
+        return new Response(JSON.stringify({
+          success: true, action: "already_processed", order_id: order.id,
+        }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      // --- Build update payload (only non-null extracted fields) ---
+      const updateFields: Record<string, any> = {
         status: newStatus,
         status_description: rawStatus,
         updated_at: new Date().toISOString(),
-      }).eq("id", order.id);
+      };
+      if (extractedDeliveryDate) updateFields.delivery_date = extractedDeliveryDate;
+      if (extractedTrackingCode) updateFields.tracking_code = extractedTrackingCode;
+      if (extractedDeliveryMan) updateFields.delivery_man = extractedDeliveryMan;
+      if (extractedLogisticOperator) updateFields.logistic_operator = extractedLogisticOperator;
+      if (extractedLabelA4) updateFields.label_a4_url = extractedLabelA4;
+      if (extractedLabelThermal) updateFields.label_thermal_url = extractedLabelThermal;
+
+      // Update order
+      await supabase.from("orders").update(updateFields).eq("id", order.id);
 
       // Insert status history
       await supabase.from("order_status_history").insert({
@@ -1044,40 +1097,29 @@ Deno.serve(async (req) => {
         raw_payload: payload || { raw_status: rawStatus },
       });
 
-      // P1: Trigger flow notifications for this status change
-      if (fromStatus !== newStatus) {
-        try {
-          // Get order user_id for trigger-flow
-          const { data: fullOrder } = await supabase
-            .from("orders")
-            .select("user_id")
-            .eq("id", order.id)
-            .single();
-
-          if (fullOrder?.user_id) {
-            const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-            const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-            console.log(`[process_logzz_webhook] Triggering flows for status change: ${fromStatus} → ${newStatus}`);
-            
-            const triggerRes = await fetch(`${supabaseUrl}/functions/v1/trigger-flow`, {
-              method: "POST",
-              headers: {
-                Authorization: `Bearer ${serviceKey}`,
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                userId: fullOrder.user_id,
-                orderId: order.id,
-                newStatus,
-                triggerEvent: "order_status_changed",
-              }),
-            });
-            const triggerResult = await triggerRes.json();
-            console.log(`[process_logzz_webhook] trigger-flow result:`, JSON.stringify(triggerResult));
-          }
-        } catch (triggerErr: any) {
-          console.error(`[process_logzz_webhook] trigger-flow error (non-blocking):`, triggerErr.message);
-        }
+      // Trigger flow notifications
+      try {
+        const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+        const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+        console.log(`[process_logzz_webhook] Triggering flows: ${fromStatus} → ${newStatus}`);
+        
+        const triggerRes = await fetch(`${supabaseUrl}/functions/v1/trigger-flow`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${serviceKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            userId: order.user_id,
+            orderId: order.id,
+            newStatus,
+            triggerEvent: "order_status_changed",
+          }),
+        });
+        const triggerResult = await triggerRes.json();
+        console.log(`[process_logzz_webhook] trigger-flow result:`, JSON.stringify(triggerResult));
+      } catch (triggerErr: any) {
+        console.error(`[process_logzz_webhook] trigger-flow error (non-blocking):`, triggerErr.message);
       }
 
       return new Response(JSON.stringify({
