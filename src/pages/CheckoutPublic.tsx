@@ -348,7 +348,7 @@ const CheckoutPublic = () => {
           initialization: {
             amount: totalPrice,
             payer: {
-              email: form.email || "",
+              email: "comprador@checkout.com",
               firstName: form.name.split(" ")[0] || "",
               lastName: form.name.split(" ").slice(1).join(" ") || "",
               identification: { type: "CPF", number: form.cpf.replace(/\D/g, "") },
