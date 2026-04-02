@@ -9,6 +9,7 @@ import { InfiniteSlider } from "@/components/ui/infinite-slider";
 import { HeroAccordion } from "@/components/home/HeroAccordion";
 import { motion, AnimatePresence } from "framer-motion";
 import ScalaCODLogo, { ScalaCODBrandName } from "@/components/ScalaCODLogo";
+import PublicFooter from "@/components/PublicFooter";
 
 function FAQ({ q, a }: { q: string; a: string }) {
   const [open, setOpen] = useState(false);
