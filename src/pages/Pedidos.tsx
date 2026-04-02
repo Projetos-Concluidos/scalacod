@@ -543,7 +543,7 @@ const Pedidos = () => {
       <Dialog open={!!selectedOrder} onOpenChange={(o) => { if (!o) setSelectedOrder(null); }}>
         <DialogContent className="sm:max-w-[700px] bg-card border-border max-h-[85vh] overflow-y-auto">
           {selectedOrder && (() => {
-            const o = selectedOrder;
+            const o = orders.find(ord => ord.id === selectedOrder.id) || selectedOrder;
             const shippingVal = Number(o.shipping_value || 0);
             const offerPrice = detailOffer ? Number(detailOffer.price) : null;
             const bumpsTotal = detailBumps.reduce((s, b) => s + Number(b.current_price || b.price || 0), 0);
