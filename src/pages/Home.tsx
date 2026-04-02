@@ -81,7 +81,7 @@ const tools = [
 
 const testimonials = [
   {
-    text: "Antes eu perdia 40% dos pedidos por CEP fora da área. Hoje o ScalaNinja manda para Coinzz automaticamente. Meu faturamento subiu 60% no primeiro mês.",
+    text: "Antes eu perdia 40% dos pedidos por CEP fora da área. Hoje o ScalaCOD manda para Coinzz automaticamente. Meu faturamento subiu 60% no primeiro mês.",
     author: "Rafael M.", role: "Afiliado COD · 800 pedidos/mês", highlight: "faturamento subiu 60%",
   },
   {
