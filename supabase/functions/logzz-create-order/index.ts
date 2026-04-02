@@ -373,11 +373,12 @@ Deno.serve(async (req) => {
         JSON.stringify({
           success: false,
           logzz_status: resStatus,
+          logzz_error: errorMsg,
           logzz_response: resBody.substring(0, 1000),
           webhook_url: webhookUrl,
         }),
         {
-          status: 502,
+          status: 200,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         }
       );
