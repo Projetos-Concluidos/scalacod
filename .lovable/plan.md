@@ -1,60 +1,57 @@
 
 
-## Plano: Filtros Avançados Inline + Visualização "Todos" por Padrão
+## Plano: Melhorias no Menu Conversas (Teste + Filtros Avançados)
 
-### Problema Atual
-
-1. **Sem "Ver Todos"**: Ao clicar num status, o kanban filtra para aquele status, mas não há como voltar a ver todos os pedidos sem recarregar a página (o `activeFilter` começa como `null`, mas visualmente não há indicação clara).
-2. **Filtros Avançados em Drawer lateral**: O concorrente usa um painel colapsável **inline** (abaixo do header, acima do kanban) com filtros de Plataforma, Data, e botão Limpar — mais acessível que o drawer lateral atual.
+Baseado nos prints do concorrente, identifiquei 2 funcionalidades ausentes:
 
 ---
 
-### Entrega 1: Comportamento "Ver Todos" por Padrão
+### 1. Botão "Teste" + Modal "Enviar Teste"
 
-- `activeFilter` já inicia como `null` (mostra todos) — isso está correto
-- Adicionar nos status chips um chip **"Todos"** como primeiro item, visualmente destacado quando nenhum status está selecionado
-- Clicar em "Todos" seta `activeFilter = null`
-- Clicar em qualquer status individual filtra apenas aquele (e clicar de novo volta para "Todos")
+**O que faz**: Botão com ícone de frasco (flask) no header das Conversas que abre um modal para enviar mensagem ou disparar fluxo para **qualquer número**, sem precisar ter uma conversa existente.
 
----
+**Modal com 2 abas**:
+- **Mensagem Avulsa**: Campo "Número (com DDD)" + campo "Mensagem" + botão "Enviar Mensagem"
+- **Disparar Fluxo**: Campo "Número (com DDD)" + Select "Escolha um fluxo..." (lista flows do usuário com contagem de msgs) + botão "Disparar Fluxo"
 
-### Entrega 2: Filtros Avançados Inline (estilo concorrente)
-
-Substituir o **Sheet/Drawer lateral** por um painel colapsável inline que aparece entre o search e os status chips:
-
-**Layout do painel** (toggle via botão "Filtros Avançados"):
-```text
-┌──────────────────────────────────────────────────────────┐
-│ Plataforma: [Todos] [Logzz] [Coinzz] [COD]              │
-│ 📅 dd/mm/aaaa  até  📅 dd/mm/aaaa   ✕ Limpar            │
-└──────────────────────────────────────────────────────────┘
-```
-
-- **Plataforma**: Toggle chips (Todos, Logzz, Coinzz, COD) — substituem o Select atual
-- **Datas**: Dois inputs de data inline com label "até" entre eles
-- **Limpar**: Botão ✕ que reseta todos os filtros avançados
-- **Indicador ativo**: O botão "Filtros Avançados" mostra um dot colorido quando há filtros ativos (como no print do concorrente)
-- Remover o Sheet/Drawer dos filtros — tudo fica inline
+O envio usa as edge functions já existentes (`send-whatsapp-message` e `trigger-flow`).
 
 ---
 
-### Entrega 3: Barra de Resumo de Status (estilo concorrente)
+### 2. Filtros Avançados (estilo concorrente)
 
-Abaixo dos filtros, adicionar uma barra horizontal scrollável com todos os status e suas contagens, usando dots coloridos:
+Substituir os filtros atuais (simples demais) por um painel completo com 4 grupos de filtros em chip toggle:
 
-```text
-● 0 Aguardando  ● 0 Confirmado  ● 0 Aprovado  ● 0 Agendado  ...
-```
+**Grupo 1 — Leitura**: `Todas` | `Não lidas` | `Lidas`
+**Grupo 2 — Janela WhatsApp**: `Todos` | `Pode responder` | `Janela expirada`
+**Grupo 3 — Tipo de conteúdo**: `Todos` | `Com mídia` | `Só texto`
+**Grupo 4 — Período**: `Qualquer data` | `Hoje` | `7 dias` | `30 dias`
 
-- Essa barra é **apenas informativa** (mostra contagens) E **clicável** (filtra ao clicar)
-- Os status chips atuais serão convertidos para este formato mais compacto do concorrente
+- Badge com contagem de filtros ativos no ícone de filtro
+- Botão "Limpar todos" no topo do painel
+- Remover o filtro antigo (status Abertas/Fechadas/Aguardando + checkbox não lidas)
+
+A filtragem de "Janela expirada" verifica se `last_message_at` tem mais de 24h (regra da Meta). "Com mídia" filtra conversas cujo `last_message` contém marcadores de mídia.
+
+---
+
+### Detalhes Técnicos
+
+**Arquivo editado**: `src/pages/Conversas.tsx`
+
+- Novos estados: `testModalOpen`, `testMode` ("message" | "flow"), `testPhone`, `testMessage`, `testFlowId`, `readFilter`, `windowFilter`, `mediaFilter`, `dateFilter`
+- Import `Flask` de lucide-react para o ícone do botão Teste
+- O modal usa `Dialog` existente com toggle entre as 2 abas
+- A lógica de filtro no `useMemo` `filtered` será expandida para aplicar todos os 4 grupos
+- Para "Disparar Fluxo", reutiliza a edge function `trigger-flow` passando o número e flowId
+
+**Sem migrações, sem edge functions novas.**
 
 ---
 
 ### Escopo
-- **1 arquivo editado**: `src/pages/Pedidos.tsx`
-- Remoção do Sheet/Drawer lateral de filtros
-- Novo painel colapsável inline com filtros de plataforma + data
-- Chip "Todos" nos filtros de status
-- Sem migrações, sem edge functions
+- **1 arquivo editado**: `src/pages/Conversas.tsx`
+- Botão "Teste" + modal com 2 abas
+- 4 grupos de filtros avançados com chips
+- Badge de contagem no ícone de filtro
 
