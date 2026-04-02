@@ -85,7 +85,7 @@ const AppSidebar = () => {
               <span className="text-sidebar-primary">Ninja</span>
             </h1>
             <span className="text-[10px] font-medium uppercase tracking-[0.2em] text-sidebar-foreground">
-              Obsidian Edition
+              AFILIADO Pro
             </span>
           </div>
         </div>
