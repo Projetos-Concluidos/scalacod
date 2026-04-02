@@ -34,6 +34,12 @@ const Upgrade = lazyWithRetry(() => import("@/pages/Upgrade"));
 const Subscription = lazyWithRetry(() => import("@/pages/Subscription"));
 const CheckoutPublic = lazyWithRetry(() => import("@/pages/CheckoutPublic"));
 const HomePub = lazyWithRetry(() => import("@/pages/Home"));
+const Funcionalidades = lazyWithRetry(() => import("@/pages/Funcionalidades"));
+const PlanosPage = lazyWithRetry(() => import("@/pages/Planos"));
+const FaqPage = lazyWithRetry(() => import("@/pages/Faq"));
+const AjudaPage = lazyWithRetry(() => import("@/pages/Ajuda"));
+const StatusPage = lazyWithRetry(() => import("@/pages/StatusPage"));
+const TermosPage = lazyWithRetry(() => import("@/pages/Termos"));
 const NotFound = lazyWithRetry(() => import("@/pages/NotFound"));
 
 // Admin — separate chunk
