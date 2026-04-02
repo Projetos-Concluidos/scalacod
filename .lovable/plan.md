@@ -1,3 +1,5 @@
+
+
 ## Plano: Upgrade Completo do Sistema de Fluxos
 
 Baseado na análise do concorrente (formato exportado decodificado + prints), o sistema deles tem funcionalidades avançadas que faltam no nosso. Este plano implementa as melhorias em 4 blocos.
@@ -65,22 +67,22 @@ O concorrente tem um modal IA mais completo (print image-59):
 **Implementação**:
 - Atualizar `AIFlowModal.tsx`: adicionar seletor de provedor, seção de dicas, suporte a importação de fluxos de outras plataformas no prompt
 - Atualizar `ai-flow-generator` edge function: expandir o system prompt para gerar os novos tipos de nó (action, remarketing, buttons com connections, waitForResponse)
-- A IA continuará usando Lovable AI (já configurado)
+- A IA continuará usando Lovable AI (ja configurado)
 
 ---
 
 ### Detalhes Técnicos
 
 **Arquivos editados**:
-1. `src/pages/Fluxos.tsx` — Export handler, Import modal, botão exportar no dropdown de cada fluxo
-2. `src/components/fluxos/FlowBuilderModal.tsx` — Novos tipos de nó, painel de configuração rico, pré-visualização WhatsApp
-3. `src/components/fluxos/AIFlowModal.tsx` — Seletor de provedor, dicas, suporte a importação
-4. `supabase/functions/ai-flow-generator/index.ts` — System prompt expandido para novos tipos de nó
+1. `src/pages/Fluxos.tsx` -- Export handler, Import modal, botao exportar no dropdown de cada fluxo
+2. `src/components/fluxos/FlowBuilderModal.tsx` -- Novos tipos de no, painel de configuracao rico, pre-visualizacao WhatsApp
+3. `src/components/fluxos/AIFlowModal.tsx` -- Seletor de provedor, dicas, suporte a importacao
+4. `supabase/functions/ai-flow-generator/index.ts` -- System prompt expandido para novos tipos de no
 
-**Sem migrações** — a estrutura de `flows.nodes` (JSONB) já suporta qualquer formato de nó.
+**Sem migracoes** -- a estrutura de `flows.nodes` (JSONB) ja suporta qualquer formato de no.
 
-**Formato de exportação**:
-```
+**Formato de exportacao**:
+```text
 Base64( JSON.stringify({
   _ninjacod: true,
   v: 1,
@@ -91,3 +93,4 @@ Base64( JSON.stringify({
   edges: [...]
 }) )
 ```
+
