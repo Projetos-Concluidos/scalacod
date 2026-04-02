@@ -106,6 +106,18 @@ const Pedidos = () => {
     enabled: !!user,
   });
 
+  // Fetch checkout names for cards
+  const { data: checkoutsMap } = useQuery({
+    queryKey: ["checkouts-map"],
+    queryFn: async () => {
+      const { data } = await supabase.from("checkouts").select("id, name");
+      const map: Record<string, string> = {};
+      data?.forEach((c) => { map[c.id] = c.name; });
+      return map;
+    },
+    enabled: !!user,
+  });
+
   // Realtime
   useEffect(() => {
     if (!user) return;
@@ -427,21 +439,38 @@ const Pedidos = () => {
                           <Draggable key={order.id} draggableId={order.id} index={index}>
                             {(provided, snapshot) => (
                               <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps} className={`rounded-lg border bg-card p-3 transition-shadow cursor-grab active:cursor-grabbing ${snapshot.isDragging ? "shadow-lg shadow-primary/10 border-primary/30" : "border-border hover:border-primary/20"}`}>
-                                <div className="flex items-center justify-between mb-2">
+                                {/* ── Card Header: Order # + platform + link ── */}
+                                <div className="flex items-center justify-between mb-1.5">
                                   <div className="flex items-center gap-1.5">
-                                    <span className="text-xs font-mono text-primary font-semibold">#{order.order_number || order.id.slice(0, 8)}</span>
+                                    {order.logistics_type === "coinzz" && order.coinzz_order_hash ? (
+                                      <a href={`https://app.coinzz.com.br/pedido/${order.coinzz_order_hash}`} target="_blank" rel="noopener noreferrer" className="text-xs font-mono text-purple-400 font-semibold hover:underline" onClick={(e) => e.stopPropagation()}>#{order.order_number || order.coinzz_order_hash}</a>
+                                    ) : order.logistics_type === "logzz" && order.logzz_order_id ? (
+                                      <a href={`https://app.logzz.com.br/meu-pedido/${order.logzz_order_id}`} target="_blank" rel="noopener noreferrer" className="text-xs font-mono text-emerald-400 font-semibold hover:underline" onClick={(e) => e.stopPropagation()}>#{order.order_number || order.logzz_order_id}</a>
+                                    ) : (
+                                      <span className="text-xs font-mono text-primary font-semibold">#{order.order_number || order.id.slice(0, 8)}</span>
+                                    )}
                                     <PlatformBadge type={order.logistics_type} />
                                   </div>
                                   <Badge className={`text-[10px] ${meta.color} text-white border-0 px-1.5 py-0`}>{order.status}</Badge>
                                 </div>
-                                <p className="text-sm font-semibold text-foreground truncate mb-1.5">{order.client_name}</p>
+                                {/* Nome cliente MAIÚSCULO */}
+                                <p className="text-sm font-bold text-foreground truncate mb-0.5 uppercase">{order.client_name}</p>
+                                {/* Nome do produto (checkout name) */}
+                                {order.checkout_id && checkoutsMap?.[order.checkout_id] && (
+                                  <p className="text-[11px] text-muted-foreground truncate mb-1.5">{checkoutsMap[order.checkout_id]}</p>
+                                )}
                                 <div className="space-y-1 text-xs text-muted-foreground">
-                                  <div className="flex items-center gap-1.5"><Package className="h-3 w-3 shrink-0" /><span>x{order.order_quantity || 1}</span></div>
-                                  {order.delivery_date && (
-                                    <div className="flex items-center gap-1.5"><CalendarDays className="h-3 w-3 shrink-0" /><span>{new Date(order.delivery_date).toLocaleDateString("pt-BR")}</span></div>
-                                  )}
                                   <div className="flex items-center gap-1.5"><DollarSign className="h-3 w-3 shrink-0" /><span className="font-semibold text-foreground">R$ {Number(order.order_final_price).toFixed(2)}</span></div>
-                                  <div className="flex items-center gap-1.5"><MapPin className="h-3 w-3 shrink-0" /><span className="truncate">{order.client_address_city} - {order.client_address_state}</span></div>
+                                  {/* Data agendamento — APENAS Logzz */}
+                                  {order.logistics_type === "logzz" && order.delivery_date && (
+                                    <div className="flex items-center gap-1.5"><CalendarDays className="h-3 w-3 shrink-0 text-amber-400" /><span className="text-amber-400 font-medium">{new Date(order.delivery_date).toLocaleDateString("pt-BR")}</span></div>
+                                  )}
+                                  {/* Forma de pagamento — APENAS Coinzz */}
+                                  {order.logistics_type === "coinzz" && order.payment_method && (
+                                    <div className="flex items-center gap-1.5"><span className="text-[10px]">💳</span><span className="text-purple-400 font-medium capitalize">{order.payment_method}</span></div>
+                                  )}
+                                  <div className="flex items-center gap-1.5"><MapPin className="h-3 w-3 shrink-0" /><span className="truncate">{order.client_address_city}/{order.client_address_state}</span></div>
+                                  <div className="flex items-center gap-1.5"><Clock className="h-3 w-3 shrink-0" /><span>{order.created_at ? new Date(order.created_at).toLocaleDateString("pt-BR") + " " + new Date(order.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) : "—"}</span></div>
                                 </div>
                                 <div className="flex items-center gap-1 mt-3 pt-2 border-t border-border">
                                   <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-emerald-500" onClick={(e) => { e.stopPropagation(); window.open(`https://wa.me/${order.client_phone.replace(/\D/g, "")}`, "_blank"); }}>
@@ -451,7 +480,7 @@ const Pedidos = () => {
                                     <Eye className="h-3.5 w-3.5" />
                                   </Button>
                                   {order.logistics_type === "logzz" && !order.logzz_order_id && (
-                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-primary" title="Enviar para Logzz" onClick={async (e) => {
+                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-emerald-500" title="Enviar para Logzz" onClick={async (e) => {
                                       e.stopPropagation();
                                       toast.loading("Enviando para Logzz...", { id: `logzz-${order.id}` });
                                       try {
@@ -462,6 +491,21 @@ const Pedidos = () => {
                                       } catch (err: any) { toast.error(`Erro: ${err.message}`, { id: `logzz-${order.id}` }); }
                                     }}>
                                       <Truck className="h-3.5 w-3.5" />
+                                    </Button>
+                                  )}
+                                  {/* Botão Enviar para Coinzz */}
+                                  {order.logistics_type === "coinzz" && !order.coinzz_order_hash && (
+                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-purple-500" title="Enviar para Coinzz" onClick={async (e) => {
+                                      e.stopPropagation();
+                                      toast.loading("Enviando para Coinzz...", { id: `coinzz-${order.id}` });
+                                      try {
+                                        const { data, error } = await supabase.functions.invoke("checkout-api", { body: { action: "create_coinzz_order", order_id: order.id, user_id: user?.id } });
+                                        if (error) throw error;
+                                        if (data?.success) { toast.success(`Pedido enviado! Hash: ${data.coinzz_order_hash || "OK"}`, { id: `coinzz-${order.id}` }); refetch(); }
+                                        else toast.error(`Erro Coinzz: ${(data?.error || "falha").slice(0, 100)}`, { id: `coinzz-${order.id}` });
+                                      } catch (err: any) { toast.error(`Erro: ${err.message}`, { id: `coinzz-${order.id}` }); }
+                                    }}>
+                                      <Truck className="h-3.5 w-3.5 text-purple-400" />
                                     </Button>
                                   )}
                                   {/* ─── Dropdown "..." ─── */}
@@ -586,7 +630,7 @@ const Pedidos = () => {
                       )}
                     </div>
 
-                    {/* Financeiro */}
+                     {/* Financeiro */}
                     <div className="rounded-lg border border-border bg-secondary/50 p-4">
                       <h4 className="text-xs font-bold uppercase text-muted-foreground mb-3">💰 Financeiro</h4>
                       <div className="space-y-2 text-sm">
@@ -600,11 +644,53 @@ const Pedidos = () => {
                           <span className="font-bold text-foreground text-base">Total do Pedido</span>
                           <span className="font-bold text-primary text-xl">R$ {Number(o.order_final_price).toFixed(2)}</span>
                         </div>
-                        <div className="mt-3 p-2.5 rounded-md bg-muted/50 border border-border">
+
+                        {/* Forma de pagamento */}
+                        <div className="mt-3 p-2.5 rounded-md bg-muted/50 border border-border space-y-2">
                           {isLogzz
                             ? <span className="text-sm font-semibold text-amber-400">💵 PAGAMENTO NA ENTREGA</span>
-                            : <span className="text-sm font-semibold text-purple-400">💳 PAGAMENTO ONLINE — ENTREGA VIA CORREIOS</span>}
+                            : (
+                              <div className="space-y-1.5">
+                                <span className="text-sm font-semibold text-purple-400">💳 PAGAMENTO ONLINE — ENTREGA VIA CORREIOS</span>
+                                {o.payment_method && (
+                                  <div className="flex items-center gap-2 text-xs">
+                                    <span className="text-muted-foreground">Método:</span>
+                                    <Badge variant="outline" className="border-purple-500/30 text-purple-400 text-[10px] capitalize">{o.payment_method}</Badge>
+                                  </div>
+                                )}
+                                {(o as any).total_installments && (o as any).total_installments > 1 && (
+                                  <div className="flex items-center gap-2 text-xs">
+                                    <span className="text-muted-foreground">Parcelas:</span>
+                                    <span className="text-foreground font-medium">{(o as any).total_installments}x</span>
+                                  </div>
+                                )}
+                                {(o as any).gateway_fee && (
+                                  <div className="flex items-center gap-2 text-xs">
+                                    <span className="text-muted-foreground">Taxa gateway:</span>
+                                    <span className="text-foreground">R$ {Number((o as any).gateway_fee).toFixed(2)}</span>
+                                  </div>
+                                )}
+                              </div>
+                            )}
                         </div>
+
+                        {/* Coinzz statuses */}
+                        {!isLogzz && ((o as any).coinzz_payment_status || (o as any).coinzz_shipping_status) && (
+                          <div className="flex flex-wrap gap-2 mt-2">
+                            {(o as any).coinzz_payment_status && (
+                              <div className="flex items-center gap-1.5 text-xs">
+                                <span className="text-muted-foreground">Pgto:</span>
+                                <Badge variant="outline" className="text-[10px] border-border">{(o as any).coinzz_payment_status}</Badge>
+                              </div>
+                            )}
+                            {(o as any).coinzz_shipping_status && (
+                              <div className="flex items-center gap-1.5 text-xs">
+                                <span className="text-muted-foreground">Envio:</span>
+                                <Badge variant="outline" className="text-[10px] border-border">{(o as any).coinzz_shipping_status}</Badge>
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </TabsContent>
@@ -668,13 +754,42 @@ const Pedidos = () => {
                             </Button>
                           </div>
                         ) : null}
-                        {o.coinzz_order_hash && (
+                        {/* Coinzz section */}
+                        {o.coinzz_order_hash ? (
                           <div className="col-span-2 flex items-center gap-1.5">
                             <span className="text-muted-foreground">Pedido Coinzz:</span>
                             <a href={`https://app.coinzz.com.br/pedido/${o.coinzz_order_hash}`} target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:underline font-mono font-medium inline-flex items-center gap-1">#{o.coinzz_order_hash}<ExternalLink className="h-3 w-3" /></a>
                             <CopyBtn value={o.coinzz_order_hash} label="Hash Coinzz" />
                           </div>
-                        )}
+                        ) : o.logistics_type === "coinzz" && o.status !== "Frustrado" ? (
+                          <div className="col-span-2 space-y-2">
+                            <div className="flex items-center gap-2 rounded-md border border-purple-500/30 bg-purple-500/10 px-3 py-2">
+                              <AlertTriangle className="h-4 w-4 text-purple-400 shrink-0" />
+                              <span className="text-xs text-purple-400 font-medium">Coinzz: Sincronização pendente</span>
+                            </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="border-purple-500/30 text-purple-400 hover:bg-purple-500/10 w-full"
+                              onClick={async () => {
+                                toast.loading("Enviando para Coinzz...", { id: `coinzz-retry-${o.id}` });
+                                try {
+                                  const { data, error } = await supabase.functions.invoke("checkout-api", { body: { action: "create_coinzz_order", order_id: o.id, user_id: user?.id } });
+                                  if (error) throw error;
+                                  if (data?.success) {
+                                    toast.success(`Pedido enviado! Hash: ${data.coinzz_order_hash || "OK"}`, { id: `coinzz-retry-${o.id}` });
+                                    refetch();
+                                    supabase.from("orders").select("*").eq("id", o.id).single().then(({ data: refreshed }) => { if (refreshed) setSelectedOrder(refreshed as Order); });
+                                  } else {
+                                    toast.error(`Erro: ${(data?.error || "falha").slice(0, 150)}`, { id: `coinzz-retry-${o.id}` });
+                                  }
+                                } catch (err: any) { toast.error(`Erro: ${err.message}`, { id: `coinzz-retry-${o.id}` }); }
+                              }}
+                            >
+                              <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Enviar para Coinzz
+                            </Button>
+                          </div>
+                        ) : null}
                       </div>
                     </div>
                     {/* Labels */}
