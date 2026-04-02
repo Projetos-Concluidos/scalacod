@@ -543,7 +543,7 @@ const Pedidos = () => {
       <Dialog open={!!selectedOrder} onOpenChange={(o) => { if (!o) setSelectedOrder(null); }}>
         <DialogContent className="sm:max-w-[700px] bg-card border-border max-h-[85vh] overflow-y-auto">
           {selectedOrder && (() => {
-            const o = selectedOrder;
+            const o = orders.find(ord => ord.id === selectedOrder.id) || selectedOrder;
             const shippingVal = Number(o.shipping_value || 0);
             const offerPrice = detailOffer ? Number(detailOffer.price) : null;
             const bumpsTotal = detailBumps.reduce((s, b) => s + Number(b.current_price || b.price || 0), 0);
@@ -654,7 +654,27 @@ const Pedidos = () => {
                                 <span className="text-sm font-semibold text-purple-400">💳 PAGAMENTO ONLINE — ENTREGA VIA CORREIOS</span>
 
                                 {/* Status de pagamento MercadoPago */}
-                                {o.mp_payment_status && (() => {
+                                {(() => {
+                                  // Fallback: parse status_description "MP: status - detail"
+                                  let mpStatus = o.mp_payment_status || null;
+                                  let mpDetail = o.mp_payment_status_detail || null;
+                                  if (!mpStatus && o.status_description) {
+                                    const match = o.status_description.match(/^MP:\s*(\w+)\s*-\s*(.+)$/i);
+                                    if (match) {
+                                      mpStatus = match[1].trim().toLowerCase();
+                                      mpDetail = match[2].trim().toLowerCase();
+                                    }
+                                  }
+                                  if (!mpStatus) {
+                                    return (
+                                      <div className="mt-1.5">
+                                        <div className="flex items-center gap-2 text-xs">
+                                          <span className="text-muted-foreground">Status:</span>
+                                          <Badge className="text-[10px] border bg-muted text-muted-foreground border-border">Status não informado</Badge>
+                                        </div>
+                                      </div>
+                                    );
+                                  }
                                   const mpStatusLabels: Record<string, string> = {
                                     approved: "Pagamento Aprovado",
                                     pending: "Pagamento Pendente",
@@ -700,20 +720,21 @@ const Pedidos = () => {
                                     cc_rejected_other_reason: "Rejeitado pelo banco",
                                     partially_refunded: "Reembolso parcial",
                                     bank_rejected: "Rejeitado pelo banco",
+                                    expired: "Pagamento expirado",
                                   };
-                                  const colorClass = mpStatusColors[o.mp_payment_status!] || "bg-muted text-muted-foreground border-border";
+                                  const colorClass = mpStatusColors[mpStatus] || "bg-muted text-muted-foreground border-border";
                                   return (
                                     <div className="mt-1.5 space-y-1.5">
                                       <div className="flex items-center gap-2 text-xs">
                                         <span className="text-muted-foreground">Status:</span>
                                         <Badge className={`text-[10px] border ${colorClass}`}>
-                                          {mpStatusLabels[o.mp_payment_status!] || o.mp_payment_status}
+                                          {mpStatusLabels[mpStatus] || mpStatus}
                                         </Badge>
                                       </div>
-                                      {o.mp_payment_status_detail && (
+                                      {mpDetail && (
                                         <div className="flex items-center gap-2 text-xs">
                                           <span className="text-muted-foreground">Detalhe:</span>
-                                          <span className="text-foreground text-[11px]">{mpDetailLabels[o.mp_payment_status_detail] || o.mp_payment_status_detail}</span>
+                                          <span className="text-foreground text-[11px]">{mpDetailLabels[mpDetail] || mpDetail}</span>
                                         </div>
                                       )}
                                     </div>
