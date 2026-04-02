@@ -102,8 +102,9 @@ export default function Home() {
             <ScalaCODBrandName className="text-xl font-extrabold tracking-tight" />
           </div>
           <div className="hidden items-center gap-6 md:flex">
-            <a href="#features" className="text-sm font-medium text-gray-400 transition hover:text-emerald-400">Recursos</a>
-            <a href="#pricing" className="text-sm font-medium text-gray-400 transition hover:text-emerald-400">Planos</a>
+            <Link to="/funcionalidades" className="text-sm font-medium text-gray-400 transition hover:text-emerald-400">Recursos</Link>
+            <Link to="/planos" className="text-sm font-medium text-gray-400 transition hover:text-emerald-400">Planos</Link>
+            <Link to="/faq" className="text-sm font-medium text-gray-400 transition hover:text-emerald-400">FAQ</Link>
             <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-400 animate-pulse">
               ⚡ Checkout COD híbrido
             </span>
