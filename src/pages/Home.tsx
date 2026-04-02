@@ -213,7 +213,7 @@ export default function Home() {
               </h1>
 
               <p className="reveal mt-6 max-w-xl text-lg leading-relaxed text-gray-400">
-                A única plataforma que une Logzz + Coinzz em um checkout híbrido inteligente. Seu cliente digita o CEP — a ScalaNinja escolhe automaticamente a melhor logística.{" "}
+                A única plataforma que une Logzz + Coinzz em um checkout híbrido inteligente. Seu cliente digita o CEP — o ScalaCOD escolhe automaticamente a melhor logística.{" "}
                 <span className="text-emerald-400">Zero decisão manual.</span>
               </p>
 
