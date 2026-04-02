@@ -63,7 +63,7 @@ const Login = () => {
           <div className="mb-8 flex items-center gap-3">
             <ShurikenLogo size={40} />
             <div>
-              <h1 className="text-2xl font-black text-white">ScalaNinja</h1>
+              <h1 className="text-2xl font-black text-white">ScalaCOD</h1>
               <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-gray-600">Obsidian Edition</span>
             </div>
           </div>
