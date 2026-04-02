@@ -765,7 +765,7 @@ const Vozes = () => {
             <div className="space-y-5">
               <div className="rounded-xl bg-muted/50 p-4 text-center">
                 <p className="text-2xl font-bold text-foreground">{selectedPack?.tokens.toLocaleString("pt-BR")} tokens</p>
-                <p className="text-lg font-bold text-primary">{selectedPack?.price}</p>
+                <p className="text-lg font-bold text-primary">R$ {selectedPack ? Number(selectedPack.price).toFixed(2).replace(".", ",") : ""}</p>
               </div>
 
               <div className="space-y-2">
