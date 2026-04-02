@@ -325,7 +325,7 @@ serve(async (req) => {
           .eq("provider", "evolution")
           .maybeSingle();
 
-        const wiPayload = { status: "connected", phone_number: phoneNumber, qr_code: null, instance_name: instanceName };
+        const wiPayload = { status: "connected", phone_number: phoneNumber, qr_code: null, instance_name: instanceName, evolution_server_url: evoUrl, api_key: evoApiKey };
         if (existingWi) {
           await supabaseAdmin.from("whatsapp_instances").update(wiPayload).eq("id", existingWi.id);
         } else {
