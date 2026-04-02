@@ -8,19 +8,7 @@ import { SpotlightCard } from "@/components/ui/spotlight-card";
 import { InfiniteSlider } from "@/components/ui/infinite-slider";
 import { HeroAccordion } from "@/components/home/HeroAccordion";
 import { motion, AnimatePresence } from "framer-motion";
-
-const ShurikenLogo = ({ size = 24 }: { size?: number }) => (
-  <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
-    <defs>
-      <linearGradient id="shuriken-home" x1="0" y1="0" x2="32" y2="32">
-        <stop offset="0%" stopColor="#34D399" />
-        <stop offset="100%" stopColor="#10B981" />
-      </linearGradient>
-    </defs>
-    <path d="M16 2L20 12L30 16L20 20L16 30L12 20L2 16L12 12Z" fill="url(#shuriken-home)" />
-    <circle cx="16" cy="16" r="3" fill="#030712" />
-  </svg>
-);
+import ScalaCODLogo, { ScalaCODBrandName } from "@/components/ScalaCODLogo";
 
 const painPoints = [
   {
@@ -157,8 +145,8 @@ export default function Home() {
       <nav className="fixed top-0 z-50 w-full border-b border-emerald-900/30 bg-black/60 backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 md:px-8">
           <div className="flex items-center gap-2">
-            <ShurikenLogo size={28} />
-            <span className="text-xl font-extrabold tracking-tight text-white">ScalaCOD</span>
+            <ScalaCODLogo size={28} />
+            <ScalaCODBrandName className="text-xl font-extrabold tracking-tight" />
           </div>
           <div className="hidden items-center gap-6 md:flex">
             <a href="#features" className="text-sm font-medium text-gray-400 transition hover:text-emerald-400">Recursos</a>
@@ -508,8 +496,8 @@ export default function Home() {
         <div className="mx-auto grid max-w-6xl gap-8 px-4 md:grid-cols-4">
           <div>
             <div className="flex items-center gap-2">
-              <ShurikenLogo size={20} />
-              <span className="text-lg font-extrabold text-white">ScalaCOD</span>
+              <ScalaCODLogo size={20} />
+              <ScalaCODBrandName className="text-lg font-extrabold" />
             </div>
             <p className="mt-2 text-sm text-gray-500">Automação COD com checkout híbrido Logzz + Coinzz. WhatsApp automático. Escale sem parar.</p>
           </div>

@@ -5,6 +5,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
+import ScalaCODLogo from "@/components/ScalaCODLogo";
 import { useMobileSidebar } from "@/contexts/MobileSidebarContext";
 import { useEffect } from "react";
 
@@ -20,18 +21,7 @@ const mainNav = [
   { label: "WhatsApp Cloud", icon: Cloud, path: "/whatsapp-cloud" },
 ];
 
-const ShurikenLogo = () => (
-  <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-    <defs>
-      <linearGradient id="shuriken-grad-sb" x1="0" y1="0" x2="32" y2="32">
-        <stop offset="0%" stopColor="#10B981" />
-        <stop offset="100%" stopColor="#059669" />
-      </linearGradient>
-    </defs>
-    <path d="M16 2L20 12L30 16L20 20L16 30L12 20L2 16L12 12Z" fill="url(#shuriken-grad-sb)" />
-    <circle cx="16" cy="16" r="3" fill="#0F1923" />
-  </svg>
-);
+// Logo imported from shared component
 
 const AppSidebar = () => {
   const location = useLocation();
@@ -78,11 +68,11 @@ const AppSidebar = () => {
         </button>
 
         <div className="flex items-center gap-3 px-6 py-6">
-          <ShurikenLogo />
+          <ScalaCODLogo size={32} centerFill="#0F1923" />
           <div>
             <h1 className="text-base font-bold leading-tight">
               <span className="text-white">Scala</span>
-              <span className="text-sidebar-primary">COD</span>
+              <span className="text-emerald-400" style={{ textShadow: "0 0 12px rgba(52,211,153,0.5)" }}>COD</span>
             </h1>
             <span className="text-[10px] font-medium uppercase tracking-[0.2em] text-sidebar-foreground">
               AFILIADO Pro

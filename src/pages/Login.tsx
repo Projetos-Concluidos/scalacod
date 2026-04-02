@@ -3,19 +3,7 @@ import { Link, Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Loader2, Eye, EyeOff } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-
-const ShurikenLogo = ({ size = 32 }: { size?: number }) => (
-  <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
-    <defs>
-      <linearGradient id="shuriken-login" x1="0" y1="0" x2="32" y2="32">
-        <stop offset="0%" stopColor="#34D399" />
-        <stop offset="100%" stopColor="#10B981" />
-      </linearGradient>
-    </defs>
-    <path d="M16 2L20 12L30 16L20 20L16 30L12 20L2 16L12 12Z" fill="url(#shuriken-login)" />
-    <circle cx="16" cy="16" r="3" fill="#030712" />
-  </svg>
-);
+import ScalaCODLogo, { ScalaCODBrandName } from "@/components/ScalaCODLogo";
 
 const phrases = [
   "Seu COD no piloto automático.",
@@ -61,9 +49,9 @@ const Login = () => {
         <div className="relative w-full max-w-[420px]">
           {/* Logo */}
           <div className="mb-8 flex items-center gap-3">
-            <ShurikenLogo size={40} />
+            <ScalaCODLogo size={40} />
             <div>
-              <h1 className="text-2xl font-black text-white">ScalaCOD</h1>
+              <h1 className="text-2xl font-black"><ScalaCODBrandName /></h1>
               <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-gray-600">Obsidian Edition</span>
             </div>
           </div>
