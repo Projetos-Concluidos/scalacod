@@ -1,96 +1,83 @@
 
 
-## Plano: Upgrade Completo do Sistema de Fluxos
-
-Baseado na análise do concorrente (formato exportado decodificado + prints), o sistema deles tem funcionalidades avançadas que faltam no nosso. Este plano implementa as melhorias em 4 blocos.
+## Respostas + Plano de Melhorias no Checkout
 
 ---
 
-### 1. Exportar/Importar Fluxos (Base64)
+### Respostas às suas perguntas
 
-**O que faz**: O concorrente exporta fluxos como string Base64 (JSON codificado) para compartilhar entre contas. Ao importar, o usuário pode escolher manter o provider original ou converter para Evolution/Oficial.
+**Diferença entre tipos de Checkout (Padrão, Express, Hibrido):**
+Atualmente os 3 tipos são **apenas um label visual** — o campo `type` é salvo no banco mas **não altera nenhum comportamento** no checkout público. Todos os checkouts seguem o mesmo fluxo de 3-4 steps. Para funcionar de verdade:
+- **Padrão**: Fluxo completo (dados → endereço → entrega/pagamento → confirmação)
+- **Express**: Formulário simplificado em 1 step só (nome, telefone, CEP, tudo junto) para conversão rápida
+- **Híbrido**: O fluxo atual multi-step (já implementado)
 
-**Implementação**:
-- **Exportar**: No dropdown "Mais opções" de cada fluxo, botão "Exportar" que serializa `{ _ninjacod: true, v: 1, name, description, provider, nodes, edges }` → `btoa()` → copia para clipboard
-- **Importar**: Modal com textarea para colar o código, 3 botões ("Manter original", "Evolution", "API Oficial"), valida o JSON, cria o fluxo na conta do usuário
-- Arquivo: `src/pages/Fluxos.tsx` (modal de importação + handler de exportação)
+**CSS Customizado:**
+Funciona sim. O CSS é injetado via `<style>{checkout.custom_css}</style>` no checkout público. Qualquer CSS válido que target elementos da página será aplicado. Porém não existem classes CSS documentadas para facilitar.
 
----
-
-### 2. Novos Tipos de Nó no Builder
-
-O concorrente tem tipos que não temos:
-
-| Tipo | Descrição |
-|------|-----------|
-| **trigger** | Nó de início com keyword/evento (substitui o "start" genérico) |
-| **action** | Atualizar status do pedido (ex: CONFIRMED_BY_CUSTOMER) |
-| **remarketing** | Sequência de follow-ups com delays (2h, 6h, 1 dia) |
-| **template** | Mensagem tipo template oficial Meta |
-| **video** | Mensagem de vídeo |
-| **document** | Mensagem de documento |
-
-**Implementação**:
-- Expandir `NODE_TYPES_CONFIG` no `FlowBuilderModal.tsx` com os novos tipos
-- Cada tipo terá configuração específica no painel lateral direito
+**CSS de teste para copiar e colar:**
+```css
+/* Muda cor do botão principal */
+button.bg-emerald-500, .bg-emerald-500 {
+  background-color: #7c3aed !important;
+}
+/* Header do checkout */
+header { background: linear-gradient(135deg, #1e3a5f, #0d1b2a) !important; }
+header span { color: #fff !important; }
+/* Cards com borda roxa */
+.rounded-2xl { border-color: #7c3aed33 !important; }
+/* Resumo do pedido - fundo */
+.sticky { background: #faf5ff !important; border-color: #7c3aed22 !important; }
+```
 
 ---
 
-### 3. Painel de Configuração Rico (Sidebar Direita)
+### Plano de Implementação
 
-O concorrente tem um painel lateral completo ao clicar num nó (prints image-64, image-65):
+#### 1. Quantidade visível e destaque no Resumo do Pedido
 
-- **Rótulo** (nome editável do nó)
-- **Tipo de mensagem** com grid de ícones: Texto, Imagem, Vídeo, Documento, Áudio, Botões, Lista, Template
-- **Cabeçalho** (opcional) com emoji picker
-- **Texto da mensagem** com variáveis clicáveis e botão "Gerar áudio"
-- **Rodapé** (opcional)
-- **Aguardar resposta do cliente**: Padrão (1 resposta), Smart (campos específicos), Nenhum
-- **Continuar se não responder** (toggle com timeout)
-- **Pré-visualização WhatsApp** em tempo real
-- **Botão "Concluído"** para salvar configuração do nó
+**Problema**: Mostra "1 unidade(s)" fixo em texto pequeno. O nome do checkout (ex: "KIT 2 ORGANIC LIZZ") indica a quantidade mas não é extraído.
 
-**Implementação**:
-- Reescrever o painel direito do `FlowBuilderModal.tsx` (step 2) com todas essas seções
-- Os dados editados atualizam o `node.data` em tempo real via `setNodes`
-- A pré-visualização mostra bubble WhatsApp com header, body, footer, botões
+**Solução**:
+- Extrair quantidade do nome do checkout usando regex (ex: "KIT 2" → qty=2, "1 ORGANIC" → qty=1)
+- Exibir quantidade em destaque grande (badge ou número grande) no resumo
+- Usar o nome do **produto** no resumo e o nome do **checkout** como título H1
 
----
+#### 2. Melhor aproveitamento do espaço no Resumo
 
-### 4. Melhoria do Agente IA para Fluxos
+- Imagem do produto maior (de 64px para 80px)
+- Nome do produto com fonte maior e sem truncate
+- Preço em destaque maior
+- Quantidade como badge grande colorido (ex: "2x" em verde grande)
+- Espaçamento melhorado entre seções
 
-O concorrente tem um modal IA mais completo (print image-59):
-- Seletor de provedor WhatsApp (Oficial/Evolution)
-- Dicas para melhores resultados
-- Aceita colar fluxos de outras plataformas (ManyChat, Botpress) para adaptar
+#### 3. Implementar diferença real dos tipos de Checkout
 
-**Implementação**:
-- Atualizar `AIFlowModal.tsx`: adicionar seletor de provedor, seção de dicas, suporte a importação de fluxos de outras plataformas no prompt
-- Atualizar `ai-flow-generator` edge function: expandir o system prompt para gerar os novos tipos de nó (action, remarketing, buttons com connections, waitForResponse)
-- A IA continuará usando Lovable AI (ja configurado)
+- **Express**: Renderizar formulário em 1 único step (nome, telefone, CPF, CEP, número — tudo junto), sem collapse/expand
+- **Padrão**: Fluxo atual multi-step mantido como está
+- **Híbrido**: Igual ao Padrão (comportamento atual)
+
+#### 4. Classes CSS documentadas para customização
+
+Adicionar classes semânticas nos elementos principais do checkout para facilitar CSS customizado:
+- `.checkout-header`, `.checkout-form`, `.checkout-summary`, `.checkout-step`, `.checkout-btn-primary`, `.checkout-trust-badges`
 
 ---
 
 ### Detalhes Técnicos
 
-**Arquivos editados**:
-1. `src/pages/Fluxos.tsx` -- Export handler, Import modal, botao exportar no dropdown de cada fluxo
-2. `src/components/fluxos/FlowBuilderModal.tsx` -- Novos tipos de no, painel de configuracao rico, pre-visualizacao WhatsApp
-3. `src/components/fluxos/AIFlowModal.tsx` -- Seletor de provedor, dicas, suporte a importacao
-4. `supabase/functions/ai-flow-generator/index.ts` -- System prompt expandido para novos tipos de no
+**Arquivo editado**: `src/pages/CheckoutPublic.tsx`
 
-**Sem migracoes** -- a estrutura de `flows.nodes` (JSONB) ja suporta qualquer formato de no.
-
-**Formato de exportacao**:
+**Extração de quantidade**:
 ```text
-Base64( JSON.stringify({
-  _ninjacod: true,
-  v: 1,
-  name: "Pedido Feito",
-  description: "...",
-  provider: "official" | "evolution",
-  nodes: [...],
-  edges: [...]
-}) )
+const extractQty = (name: string) => {
+  const match = name.match(/^(\d+)\s|kit\s*(\d+)/i);
+  return parseInt(match?.[1] || match?.[2] || "1");
+};
+const quantity = extractQty(checkout.name);
 ```
+
+**Resumo melhorado**: O componente `OrderSummary` será reescrito para usar melhor o espaço com imagem maior, quantidade em badge e preço destacado.
+
+**Checkout Express**: Condicional `checkout.type === "express"` renderiza 1 form único em vez dos steps animados.
 
