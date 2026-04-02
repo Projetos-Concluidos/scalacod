@@ -78,6 +78,7 @@ const Pedidos = () => {
   const [filterDateTo, setFilterDateTo] = useState("");
   const [filterProvider, setFilterProvider] = useState("");
   const [filterCity, setFilterCity] = useState("");
+  const [filterPayment, setFilterPayment] = useState("");
 
   // Edit modal
   const [editOrder, setEditOrder] = useState<Order | null>(null);
@@ -203,8 +204,9 @@ const Pedidos = () => {
     if (filterDateTo) result = result.filter((o) => o.created_at && o.created_at <= filterDateTo + "T23:59:59");
     if (filterProvider && filterProvider !== "all") result = result.filter((o) => o.logistics_type === filterProvider);
     if (filterCity) result = result.filter((o) => o.client_address_city.toLowerCase().includes(filterCity.toLowerCase()));
+    if (filterPayment) result = result.filter((o) => o.payment_method?.toLowerCase() === filterPayment.toLowerCase());
     return result;
-  }, [orders, search, activeFilter, filterDateFrom, filterDateTo, filterProvider, filterCity]);
+  }, [orders, search, activeFilter, filterDateFrom, filterDateTo, filterProvider, filterCity, filterPayment]);
 
   const columns = useMemo(() => {
     const map: Record<string, Order[]> = {};
@@ -246,7 +248,7 @@ const Pedidos = () => {
 
   const fullAddress = (o: Order) => `${o.client_address}, ${o.client_address_number}${o.client_address_comp ? ` - ${o.client_address_comp}` : ""}, ${o.client_address_district}, ${o.client_address_city}/${o.client_address_state} — CEP ${o.client_zip_code}`;
 
-    const hasAdvancedFilters = !!filterDateFrom || !!filterDateTo || (!!filterProvider && filterProvider !== "all") || !!filterCity;
+    const hasAdvancedFilters = !!filterDateFrom || !!filterDateTo || (!!filterProvider && filterProvider !== "all") || !!filterCity || !!filterPayment;
 
     return (
     <div className="flex flex-col h-full">
@@ -330,12 +332,37 @@ const Pedidos = () => {
                 <Input value={filterCity} onChange={(e) => setFilterCity(e.target.value)} placeholder="Ex: São Paulo" className="bg-input border-border h-9 w-[160px] text-xs" />
               </div>
 
+              {/* Método de Pagamento */}
+              <div>
+                <span className="text-xs font-medium text-muted-foreground mb-1.5 block">Pagamento</span>
+                <div className="flex gap-1.5">
+                  {[
+                    { value: "", label: "Todos" },
+                    { value: "pix", label: "PIX" },
+                    { value: "credit_card", label: "Cartão" },
+                    { value: "boleto", label: "Boleto" },
+                  ].map((p) => (
+                    <button
+                      key={p.value}
+                      onClick={() => setFilterPayment(filterPayment === p.value ? "" : p.value)}
+                      className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors border ${
+                        (filterPayment === p.value || (p.value === "" && !filterPayment))
+                          ? "border-primary bg-primary/15 text-primary"
+                          : "border-border bg-secondary text-muted-foreground hover:bg-muted"
+                      }`}
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               {/* Limpar */}
               {hasAdvancedFilters && (
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => { setFilterDateFrom(""); setFilterDateTo(""); setFilterProvider(""); setFilterCity(""); }}
+                  onClick={() => { setFilterDateFrom(""); setFilterDateTo(""); setFilterProvider(""); setFilterCity(""); setFilterPayment(""); }}
                   className="text-destructive hover:text-destructive h-9"
                 >
                   <X className="h-3.5 w-3.5 mr-1" /> Limpar
