@@ -16,7 +16,7 @@ export function useNotificationSound() {
 
     // Browser notification
     if ("Notification" in window && Notification.permission === "granted") {
-      new Notification("ScalaNinja 🥷", {
+      new Notification("ScalaCOD 🥷", {
         body: "Nova mensagem recebida no WhatsApp",
         icon: "/favicon.ico",
       });

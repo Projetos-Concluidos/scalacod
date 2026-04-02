@@ -353,7 +353,7 @@ const Vozes = () => {
 
   const handleGenerateAudio = async (voice: Voice) => {
     if (!user || !voice.elevenlabs_voice_id) return;
-    const text = generateText[voice.id] || "Olá! Esta é minha voz no ScalaNinja.";
+    const text = generateText[voice.id] || "Olá! Esta é minha voz no ScalaCOD.";
     if (!text.trim()) return;
 
     setGenerating(g => ({ ...g, [voice.id]: true }));

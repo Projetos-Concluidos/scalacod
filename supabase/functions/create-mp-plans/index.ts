@@ -81,7 +81,7 @@ Deno.serve(async (req) => {
 
       try {
         const mpPayload = {
-          reason: `ScalaNinja ${plan.name}`,
+          reason: `ScalaCOD ${plan.name}`,
           auto_recurring: {
             frequency: 1,
             frequency_type: "months",

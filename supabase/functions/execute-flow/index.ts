@@ -73,7 +73,7 @@ Deno.serve(async (req) => {
     }
 
     // Fetch store name
-    let storeName = "ScalaNinja";
+    let storeName = "ScalaCOD";
     const { data: store } = await supabase
       .from("stores")
       .select("name")
