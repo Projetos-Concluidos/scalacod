@@ -70,6 +70,7 @@ serve(async (req) => {
         language: v.labels?.language || v.fine_tuning?.language || null,
         gender: v.labels?.gender || null,
         useCase: v.labels?.use_case || null,
+        description: v.description || v.labels?.description || "",
       }));
 
       return new Response(JSON.stringify({ voices, provider: "elevenlabs" }), {

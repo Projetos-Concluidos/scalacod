@@ -15,6 +15,7 @@ serve(async (req) => {
     const formData = await req.formData();
     const name = formData.get("name") as string;
     const userId = formData.get("userId") as string;
+    const description = formData.get("description") as string || "";
     const files = formData.getAll("files") as File[];
 
     if (!name || !userId || files.length === 0) {
@@ -61,7 +62,7 @@ serve(async (req) => {
     // Clone voice on ElevenLabs
     const elevenForm = new FormData();
     elevenForm.append("name", name);
-    elevenForm.append("description", `Voz clonada por ${userId} via ScalaNinja`);
+    elevenForm.append("description", description || `Voz clonada por ${userId} via ScalaNinja`);
     for (const file of files) {
       elevenForm.append("files", file);
     }

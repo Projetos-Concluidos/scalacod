@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Mic, Info, Upload, Globe, Play, Pause, Heart, Trash2, Loader2, AlertTriangle, Music, X, Check, Star, Volume2, Send, CreditCard, QrCode, Copy, CheckCircle } from "lucide-react";
+import { Mic, Info, Upload, Globe, Play, Pause, Heart, HeartOff, Trash2, Loader2, AlertTriangle, Music, X, Check, Star, Volume2, Send, CreditCard, QrCode, Copy, CheckCircle, Search, Plus } from "lucide-react";
 import { useFeatureGate, UpgradePrompt } from "@/hooks/useFeatureGate";
 import PageHeader from "@/components/PageHeader";
 import EmptyState from "@/components/EmptyState";
@@ -34,6 +34,7 @@ interface LibraryVoice {
   language: string | null;
   gender: string | null;
   useCase: string | null;
+  description?: string;
 }
 
 interface TokenPack {
@@ -78,12 +79,13 @@ const Vozes = () => {
   const [cloneOpen, setCloneOpen] = useState(false);
   const [cloneStep, setCloneStep] = useState(1);
   const [cloneName, setCloneName] = useState("");
+  const [cloneDescription, setCloneDescription] = useState("");
   const [cloneFiles, setCloneFiles] = useState<File[]>([]);
   const [cloning, setCloning] = useState(false);
   const [playingId, setPlayingId] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [libFilter, setLibFilter] = useState({ lang: "", gender: "" });
+  const [libFilter, setLibFilter] = useState({ lang: "", gender: "", search: "", useCase: "" });
   const [libraryVoices, setLibraryVoices] = useState<LibraryVoice[]>(FALLBACK_LIBRARY);
   const [libLoading, setLibLoading] = useState(false);
   const [ttsProvider, setTtsProvider] = useState<"elevenlabs" | "openai" | "none">("elevenlabs");
@@ -286,7 +288,10 @@ const Vozes = () => {
     if (!user) return;
     const exists = voices.find(v => v.elevenlabs_voice_id === libVoice.id);
     if (exists) {
-      toast.info("Voz já adicionada às suas vozes");
+      // Unfavorite — remove from voices
+      await supabase.from("voices").delete().eq("id", exists.id);
+      toast.success(`${libVoice.name} removida das suas vozes`);
+      fetchData();
       return;
     }
     await supabase.from("voices").insert({
@@ -315,6 +320,7 @@ const Vozes = () => {
       const formData = new FormData();
       formData.append("name", cloneName);
       formData.append("userId", user.id);
+      if (cloneDescription) formData.append("description", cloneDescription);
       for (const file of cloneFiles) {
         formData.append("files", file);
       }
@@ -424,6 +430,11 @@ const Vozes = () => {
       if (libFilter.gender === "male" && g !== "male") return false;
       if (libFilter.gender === "female" && g !== "female") return false;
     }
+    if (libFilter.useCase && v.useCase?.toLowerCase() !== libFilter.useCase.toLowerCase()) return false;
+    if (libFilter.search) {
+      const s = libFilter.search.toLowerCase();
+      if (!v.name.toLowerCase().includes(s) && !(v.description || "").toLowerCase().includes(s)) return false;
+    }
     return true;
   });
 
@@ -431,6 +442,7 @@ const Vozes = () => {
     setCloneOpen(false);
     setCloneStep(1);
     setCloneName("");
+    setCloneDescription("");
     setCloneFiles([]);
   };
 
@@ -570,87 +582,122 @@ const Vozes = () => {
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-40 rounded-xl" />)}
           </div>
-        ) : voices.length === 0 ? (
-          <EmptyState
-            icon={<Mic className="h-12 w-12" />}
-            title="Nenhuma voz ainda"
-            description="Clone sua primeira voz ou explore a biblioteca e favorite as que mais gostar"
-            action={
-              <div className="flex items-center gap-3">
-                {ttsProvider === "elevenlabs" && (
-                  <button onClick={() => { resetClone(); setCloneOpen(true); }} className="gradient-primary flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-primary-foreground">
-                    <Upload className="h-4 w-4" /> Clonar Voz
-                  </button>
-                )}
-                <button onClick={() => setTab("library")} className="flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm text-foreground hover:bg-muted">
-                  <Globe className="h-4 w-4" /> Explorar Biblioteca
-                </button>
-              </div>
-            }
-          />
         ) : (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {voices.map(voice => (
-              <div key={voice.id} className="ninja-card flex flex-col">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-bold text-foreground">{voice.name}</h3>
-                  <NinjaBadge variant={voice.is_cloned ? "warning" : "info"}>
-                    {voice.is_cloned ? "Clonada" : "Biblioteca"}
-                  </NinjaBadge>
-                </div>
-
-                {/* Preview player */}
-                <div className="flex items-center gap-2 mb-3">
-                  <button onClick={() => handlePlay(voice.preview_url, voice.id)} className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 hover:bg-primary/20 transition-colors shrink-0">
-                    {playingId === voice.id ? <Pause className="h-4 w-4 text-primary" /> : <Play className="h-4 w-4 text-primary" />}
-                  </button>
-                  <div className="flex-1 h-1 rounded-full bg-muted">
-                    <div className={`h-1 rounded-full bg-primary transition-all ${playingId === voice.id ? "w-1/2 animate-pulse" : "w-0"}`} />
-                  </div>
-                </div>
-
-                {/* Audio generation */}
-                {voice.elevenlabs_voice_id && (
-                  <div className="mb-3 space-y-2">
-                    <Textarea
-                      value={generateText[voice.id] ?? "Olá! Esta é minha voz no ScalaNinja."}
-                      onChange={e => setGenerateText(t => ({ ...t, [voice.id]: e.target.value }))}
-                      placeholder="Digite o texto para gerar áudio..."
-                      rows={2}
-                      className="text-xs resize-none"
-                    />
-                    <div className="flex items-center gap-2">
-                      <Button
-                        size="sm"
-                        onClick={() => handleGenerateAudio(voice)}
-                        disabled={generating[voice.id]}
-                        className="flex-1 gradient-primary text-primary-foreground text-xs"
-                      >
-                        {generating[voice.id] ? (
-                          <><Loader2 className="h-3 w-3 animate-spin mr-1" /> Gerando...</>
-                        ) : (
-                          <><Volume2 className="h-3 w-3 mr-1" /> Gerar Áudio</>
-                        )}
-                      </Button>
-                      <span className="text-[10px] text-muted-foreground whitespace-nowrap">
-                        {(generateText[voice.id] ?? "Olá! Esta é minha voz no ScalaNinja.").length} tokens
-                      </span>
-                    </div>
-                    {generatedAudio[voice.id] && (
-                      <audio controls src={generatedAudio[voice.id]} className="w-full h-8" />
-                    )}
-                  </div>
-                )}
-
-                {/* Actions */}
-                <div className="flex items-center gap-2 pt-3 border-t border-border mt-auto">
-                  <button className="flex-1 rounded-lg border border-border px-3 py-1.5 text-xs text-foreground hover:bg-muted transition-colors">Usar nos fluxos</button>
-                  <button onClick={() => handleDeleteVoice(voice.id)} className="text-muted-foreground hover:text-destructive transition-colors">
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </div>
+          <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
+            {/* Vozes Clonadas */}
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-base font-bold text-foreground">🎙 Vozes Clonadas <span className="text-muted-foreground font-normal text-sm">({voices.filter(v => v.is_cloned).length} vozes)</span></h3>
               </div>
-            ))}
+              <div className="grid grid-cols-1 gap-3">
+                {voices.filter(v => v.is_cloned).map(voice => (
+                  <div key={voice.id} className="ninja-card flex flex-col">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-sm font-bold text-foreground">{voice.name}</h3>
+                      <NinjaBadge variant="warning">Clonada</NinjaBadge>
+                    </div>
+                    <div className="flex items-center gap-2 mb-3">
+                      <button onClick={() => handlePlay(voice.preview_url, voice.id)} className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 hover:bg-primary/20 transition-colors shrink-0">
+                        {playingId === voice.id ? <Pause className="h-4 w-4 text-primary" /> : <Play className="h-4 w-4 text-primary" />}
+                      </button>
+                      <div className="flex-1 h-1 rounded-full bg-muted">
+                        <div className={`h-1 rounded-full bg-primary transition-all ${playingId === voice.id ? "w-1/2 animate-pulse" : "w-0"}`} />
+                      </div>
+                    </div>
+                    {voice.elevenlabs_voice_id && (
+                      <div className="mb-3 space-y-2">
+                        <Textarea
+                          value={generateText[voice.id] ?? "Olá! Esta é minha voz no ScalaNinja."}
+                          onChange={e => setGenerateText(t => ({ ...t, [voice.id]: e.target.value }))}
+                          placeholder="Digite o texto para gerar áudio..."
+                          rows={2}
+                          className="text-xs resize-none"
+                        />
+                        <div className="flex items-center gap-2">
+                          <Button size="sm" onClick={() => handleGenerateAudio(voice)} disabled={generating[voice.id]} className="flex-1 gradient-primary text-primary-foreground text-xs">
+                            {generating[voice.id] ? <><Loader2 className="h-3 w-3 animate-spin mr-1" /> Gerando...</> : <><Volume2 className="h-3 w-3 mr-1" /> Gerar Áudio</>}
+                          </Button>
+                          <span className="text-[10px] text-muted-foreground whitespace-nowrap">{(generateText[voice.id] ?? "Olá! Esta é minha voz no ScalaNinja.").length} tokens</span>
+                        </div>
+                        {generatedAudio[voice.id] && <audio controls src={generatedAudio[voice.id]} className="w-full h-8" />}
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2 pt-3 border-t border-border mt-auto">
+                      <button className="flex-1 rounded-lg border border-border px-3 py-1.5 text-xs text-foreground hover:bg-muted transition-colors">Usar nos fluxos</button>
+                      <button onClick={() => handleDeleteVoice(voice.id)} className="text-muted-foreground hover:text-destructive transition-colors">
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                {/* New clone slot */}
+                {ttsProvider === "elevenlabs" && (
+                  <button
+                    onClick={() => { resetClone(); setCloneOpen(true); }}
+                    className="ninja-card flex flex-col items-center justify-center gap-2 border-2 border-dashed border-border hover:border-primary/50 transition-colors min-h-[120px] cursor-pointer"
+                  >
+                    <Plus className="h-8 w-8 text-muted-foreground" />
+                    <span className="text-sm font-medium text-muted-foreground">Novo slot de clonagem</span>
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Vozes Escolhidas (Favoritas) */}
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-base font-bold text-foreground">💜 Vozes Escolhidas <span className="text-muted-foreground font-normal text-sm">({voices.filter(v => !v.is_cloned).length} vozes)</span></h3>
+                <button onClick={() => setTab("library")} className="text-xs text-primary hover:underline font-medium">Ver Biblioteca →</button>
+              </div>
+              <div className="grid grid-cols-1 gap-3">
+                {voices.filter(v => !v.is_cloned).length === 0 ? (
+                  <div className="ninja-card flex flex-col items-center justify-center gap-2 min-h-[120px] text-center">
+                    <Heart className="h-8 w-8 text-muted-foreground" />
+                    <p className="text-sm text-muted-foreground">Nenhuma voz favoritada ainda</p>
+                    <button onClick={() => setTab("library")} className="text-xs text-primary hover:underline font-medium">Explorar Biblioteca</button>
+                  </div>
+                ) : voices.filter(v => !v.is_cloned).map(voice => (
+                  <div key={voice.id} className="ninja-card flex flex-col">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-sm font-bold text-foreground">{voice.name}</h3>
+                      <NinjaBadge variant="info">Favorita</NinjaBadge>
+                    </div>
+                    <div className="flex items-center gap-2 mb-3">
+                      <button onClick={() => handlePlay(voice.preview_url, voice.id)} className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 hover:bg-primary/20 transition-colors shrink-0">
+                        {playingId === voice.id ? <Pause className="h-4 w-4 text-primary" /> : <Play className="h-4 w-4 text-primary" />}
+                      </button>
+                      <div className="flex-1 h-1 rounded-full bg-muted">
+                        <div className={`h-1 rounded-full bg-primary transition-all ${playingId === voice.id ? "w-1/2 animate-pulse" : "w-0"}`} />
+                      </div>
+                    </div>
+                    {voice.elevenlabs_voice_id && (
+                      <div className="mb-3 space-y-2">
+                        <Textarea
+                          value={generateText[voice.id] ?? "Olá! Esta é minha voz no ScalaNinja."}
+                          onChange={e => setGenerateText(t => ({ ...t, [voice.id]: e.target.value }))}
+                          placeholder="Digite o texto para gerar áudio..."
+                          rows={2}
+                          className="text-xs resize-none"
+                        />
+                        <div className="flex items-center gap-2">
+                          <Button size="sm" onClick={() => handleGenerateAudio(voice)} disabled={generating[voice.id]} className="flex-1 gradient-primary text-primary-foreground text-xs">
+                            {generating[voice.id] ? <><Loader2 className="h-3 w-3 animate-spin mr-1" /> Gerando...</> : <><Volume2 className="h-3 w-3 mr-1" /> Gerar Áudio</>}
+                          </Button>
+                          <span className="text-[10px] text-muted-foreground whitespace-nowrap">{(generateText[voice.id] ?? "Olá! Esta é minha voz no ScalaNinja.").length} tokens</span>
+                        </div>
+                        {generatedAudio[voice.id] && <audio controls src={generatedAudio[voice.id]} className="w-full h-8" />}
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2 pt-3 border-t border-border mt-auto">
+                      <button className="flex-1 rounded-lg border border-border px-3 py-1.5 text-xs text-foreground hover:bg-muted transition-colors">Usar nos fluxos</button>
+                      <button onClick={() => handleDeleteVoice(voice.id)} className="text-muted-foreground hover:text-destructive transition-colors" title="Desfavoritar">
+                        <HeartOff className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         )
       )}
@@ -658,7 +705,16 @@ const Vozes = () => {
       {/* Biblioteca */}
       {tab === "library" && (
         <>
-          <div className="flex items-center gap-3 mb-6">
+          <div className="flex flex-wrap items-center gap-3 mb-6">
+            <div className="relative flex-1 min-w-[200px] max-w-sm">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                value={libFilter.search}
+                onChange={e => setLibFilter(f => ({ ...f, search: e.target.value }))}
+                placeholder="Buscar voz por nome..."
+                className="pl-9"
+              />
+            </div>
             <select value={libFilter.lang} onChange={e => setLibFilter(f => ({ ...f, lang: e.target.value }))} className="rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground">
               <option value="">Todos idiomas</option>
               <option value="pt">Português</option>
@@ -669,7 +725,16 @@ const Vozes = () => {
               <option value="male">Masculino</option>
               <option value="female">Feminino</option>
             </select>
-           {libLoading && <Loader2 className="h-4 w-4 text-primary animate-spin" />}
+            <select value={libFilter.useCase} onChange={e => setLibFilter(f => ({ ...f, useCase: e.target.value }))} className="rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground">
+              <option value="">Todas categorias</option>
+              <option value="narration">Narração</option>
+              <option value="conversational">Conversacional</option>
+              <option value="formal">Formal</option>
+              <option value="storytelling">Storytelling</option>
+              <option value="sweet">Suave</option>
+              <option value="versatile">Versátil</option>
+            </select>
+            {libLoading && <Loader2 className="h-4 w-4 text-primary animate-spin" />}
             {ttsProvider === "openai" && (
               <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">OpenAI TTS — vozes multilíngue</span>
             )}
@@ -681,21 +746,33 @@ const Vozes = () => {
                 <div key={voice.id} className="ninja-card">
                   <div className="flex items-center justify-between mb-2">
                     <h3 className="text-sm font-bold text-foreground">{voice.name}</h3>
-                    <button onClick={() => handleFavorite(voice)} className={`transition-colors ${isFav ? "text-destructive" : "text-muted-foreground hover:text-destructive"}`}>
+                    <button
+                      onClick={() => handleFavorite(voice)}
+                      className={`transition-colors ${isFav ? "text-destructive" : "text-muted-foreground hover:text-destructive"}`}
+                      title={isFav ? "Desfavoritar" : "Favoritar"}
+                    >
                       <Heart className={`h-4 w-4 ${isFav ? "fill-current" : ""}`} />
                     </button>
                   </div>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground mb-3">
+                  {voice.description && (
+                    <p className="text-xs text-muted-foreground mb-2 line-clamp-2">{voice.description}</p>
+                  )}
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground mb-3 flex-wrap">
                     <span className="bg-muted px-2 py-0.5 rounded">
                       {voice.language === "pt" ? "🇧🇷 PT" : voice.language === "en" ? "🇺🇸 EN" : voice.language || "—"}
                     </span>
                     <span>{voice.gender === "male" ? "Masculino" : voice.gender === "female" ? "Feminino" : voice.gender || ""}</span>
-                    {voice.useCase && <span>• {voice.useCase}</span>}
+                    {voice.useCase && <span className="bg-muted px-2 py-0.5 rounded">• {voice.useCase}</span>}
                   </div>
-                  <button onClick={() => handlePlay(voice.previewUrl, voice.id)} className="flex items-center gap-2 w-full rounded-lg border border-border px-3 py-2 text-xs text-foreground hover:bg-muted transition-colors">
-                    {playingId === voice.id ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
-                    Preview
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => handlePlay(voice.previewUrl, voice.id)} className="flex items-center gap-2 flex-1 rounded-lg border border-border px-3 py-2 text-xs text-foreground hover:bg-muted transition-colors">
+                      {playingId === voice.id ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
+                      Preview
+                    </button>
+                    {isFav && (
+                      <span className="text-[10px] text-primary font-medium bg-primary/10 px-2 py-1 rounded">Favoritada ✓</span>
+                    )}
+                  </div>
                 </div>
               );
             })}
@@ -849,6 +926,10 @@ const Vozes = () => {
                 <Label>Nome da Voz</Label>
                 <Input value={cloneName} onChange={e => setCloneName(e.target.value)} placeholder="Ex: Minha Voz Comercial" />
               </div>
+              <div className="space-y-2">
+                <Label>Descrição <span className="text-muted-foreground font-normal">(opcional)</span></Label>
+                <Textarea value={cloneDescription} onChange={e => setCloneDescription(e.target.value)} placeholder="Ex: Voz suave para narração de vídeos comerciais" rows={2} className="resize-none" />
+              </div>
               <div className="rounded-lg border border-primary/10 bg-primary/5 p-3">
                 <p className="text-xs text-muted-foreground">
                   <strong className="text-foreground">Dica:</strong> Use áudios de pelo menos 1 minuto, sem ruído de fundo, com fala clara e natural. Quanto mais amostras, melhor a qualidade da clonagem.
@@ -868,11 +949,11 @@ const Vozes = () => {
               >
                 <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
                 <p className="text-sm text-foreground font-medium">Clique ou arraste arquivos aqui</p>
-                <p className="text-xs text-muted-foreground mt-1">.mp3 ou .wav — mínimo 1 min, máximo 30 min</p>
+                <p className="text-xs text-muted-foreground mt-1">.mp3, .wav ou .m4a — máx 25 amostras</p>
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept=".mp3,.wav"
+                  accept=".mp3,.wav,.m4a"
                   multiple
                   className="hidden"
                   onChange={e => {
