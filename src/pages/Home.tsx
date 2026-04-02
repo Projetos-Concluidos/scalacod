@@ -509,7 +509,7 @@ export default function Home() {
           <div>
             <div className="flex items-center gap-2">
               <ShurikenLogo size={20} />
-              <span className="text-lg font-extrabold text-white">ScalaNinja</span>
+              <span className="text-lg font-extrabold text-white">ScalaCOD</span>
             </div>
             <p className="mt-2 text-sm text-gray-500">Automação COD com checkout híbrido Logzz + Coinzz. WhatsApp automático. Escale sem parar.</p>
           </div>
