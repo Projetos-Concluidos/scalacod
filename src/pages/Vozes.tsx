@@ -66,6 +66,7 @@ const Vozes = () => {
   const [libFilter, setLibFilter] = useState({ lang: "", gender: "" });
   const [libraryVoices, setLibraryVoices] = useState<LibraryVoice[]>(FALLBACK_LIBRARY);
   const [libLoading, setLibLoading] = useState(false);
+  const [ttsProvider, setTtsProvider] = useState<"elevenlabs" | "openai" | "none">("elevenlabs");
 
   // Purchase modal state
   const [purchaseOpen, setPurchaseOpen] = useState(false);
