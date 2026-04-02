@@ -1,4 +1,4 @@
-// ScalaNinja Pixel & Tracking Utilities
+// ScalaCOD Pixel & Tracking Utilities
 
 const PIXEL_URL = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/pixel-event`;
 
