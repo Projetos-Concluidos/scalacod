@@ -10,88 +10,6 @@ import { HeroAccordion } from "@/components/home/HeroAccordion";
 import { motion, AnimatePresence } from "framer-motion";
 import ScalaCODLogo, { ScalaCODBrandName } from "@/components/ScalaCODLogo";
 
-const painPoints = [
-  {
-    emoji: "😤",
-    problem: "CEP fora da área Logzz?",
-    pain: "Pedido perdido. Cliente sumiu. Você não fatura.",
-    solution: "ScalaCOD roteia automaticamente para Coinzz + Correios. Zero perda.",
-  },
-  {
-    emoji: "📵",
-    problem: "Cliente não confirma na entrega?",
-    pain: "Frustrado, reagendamento manual, nota fiscal emitida em vão.",
-    solution: "Fluxo automático de WhatsApp confirma antes, durante e depois.",
-  },
-  {
-    emoji: "🤦",
-    problem: "Gestão no Excel + 3 plataformas?",
-    pain: "Logzz aqui, Coinzz ali, WhatsApp no celular. Caos total.",
-    solution: "Tudo em um painel: kanban, leads, conversas, analytics.",
-  },
-];
-
-const features = [
-  {
-    tag: "AUTOMAÇÃO DE WHATSAPP",
-    title: "Mensagens certas,\nna hora certa,\nsem você tocar.",
-    description: "Configure uma vez. Funcione para sempre. Confirmação de pedido, lembrete de entrega, pós-venda — tudo automático via API Oficial ou Evolution API.",
-    bullets: ["Builder visual drag & drop de fluxos", "Vozes clonadas com IA (ElevenLabs)", "Templates prontos para todos os status COD", "Campanhas em massa para sua base"],
-    highlight: "Seus clientes recebem mensagens enquanto você dorme.",
-    side: "right" as const,
-  },
-  {
-    tag: "KANBAN DE PEDIDOS",
-    title: "Todos os seus\npedidos. Um\nlugar. Ao vivo.",
-    description: "Kanban em tempo real sincronizado com a Logzz via webhook. Mova um pedido para \"Em Rota\" e o WhatsApp dispara automaticamente.",
-    bullets: ["Realtime — atualiza sem recarregar", "Etiquetas de impressão A4 e térmica", "Histórico completo de status", "Filtros avançados por período, cidade, produto"],
-    highlight: "Nunca mais perca um pedido de vista.",
-    side: "left" as const,
-  },
-  {
-    tag: "PIXEL ANALYTICS",
-    title: "Saiba exatamente\nonde seu dinheiro\nestá indo.",
-    description: "Facebook Pixel + Google Ads + UTM completos, integrados diretamente no checkout. Conversion API server-side para máxima precisão.",
-    bullets: ["FB Pixel + Meta CAPI server-side", "Google Ads + Google Analytics", "UTM tracking em todos os pedidos", "Funil de conversão por hora"],
-    highlight: "Dados reais = decisões certas = mais lucro.",
-    side: "right" as const,
-  },
-];
-
-const tools = [
-  { icon: "🛒", name: "Checkout Híbrido", description: "Logzz + Coinzz. CEP inteligente. COD ou Correios automático.", badge: "EXCLUSIVO" },
-  { icon: "📱", name: "WhatsApp Cloud", description: "YCloud, Meta ou Evolution API. Mensagens reais, entregadas.", badge: "API OFICIAL" },
-  { icon: "🤖", name: "Fluxos com IA", description: "Builder visual. IA gera fluxos completos em segundos.", badge: "IA NATIVO" },
-  { icon: "🎤", name: "Vozes IA", description: "Clone sua voz. Áudios personalizados no WhatsApp.", badge: "ELEVENLABS" },
-  { icon: "📊", name: "Pixel Analytics", description: "FB + Google + UTM + Conversion API server-side.", badge: "CAPI NATIVO" },
-  { icon: "👥", name: "CRM de Leads", description: "Base de clientes, tags, histórico e receita acumulada.", badge: "CRM COD" },
-];
-
-const testimonials = [
-  {
-    text: "Antes eu perdia 40% dos pedidos por CEP fora da área. Hoje o ScalaCOD manda para Coinzz automaticamente. Meu faturamento subiu 60% no primeiro mês.",
-    author: "Rafael M.", role: "Afiliado COD · 800 pedidos/mês", highlight: "faturamento subiu 60%",
-  },
-  {
-    text: "O checkout híbrido é genial. Cliente do interior que não tinha Logzz agora compra pelo Correios via Coinzz. Zero pedido perdido por falta de cobertura.",
-    author: "Juliana S.", role: "Produtora · 2.300 pedidos/mês", highlight: "Zero pedido perdido",
-  },
-  {
-    text: "Os fluxos automáticos de WhatsApp reduziram minha taxa de frustração de 23% para 8%. Os clientes recebem a mensagem certa na hora certa.",
-    author: "Carlos R.", role: "Afiliado · 1.100 pedidos/mês", highlight: "frustração de 23% para 8%",
-  },
-];
-
-const faqs = [
-  { q: "O que é o checkout híbrido Logzz + Coinzz?", a: "Quando o cliente digita o CEP no checkout, o ScalaCOD verifica automaticamente se a Logzz atende aquela região. Se sim, o pedido é COD. Se não, redireciona para Coinzz + Correios. Tudo invisível para o cliente." },
-  { q: "Preciso ter conta na Logzz e Coinzz separadamente?", a: "Sim. O ScalaCOD integra com suas contas existentes via tokens de API. Você só configura uma vez e tudo funciona automaticamente." },
-  { q: "Como funciona a automação de WhatsApp?", a: "Você cria fluxos no builder visual. Quando um pedido muda de status, o WhatsApp dispara automaticamente a mensagem certa para o cliente." },
-  { q: "Posso usar para vender como afiliado?", a: "Sim. Importe as ofertas direto da Logzz, crie seu checkout em minutos e comece a vender." },
-  { q: "Os 7 dias de trial são realmente grátis?", a: "Sim. Nenhum cartão necessário. Teste todas as funcionalidades. Após o período, assine ou cancele — sem cobrança automática." },
-];
-
-const logos = ["Logzz", "Coinzz", "MercadoPago", "WhatsApp", "Meta", "YCloud", "ElevenLabs", "OpenAI"];
-
 function FAQ({ q, a }: { q: string; a: string }) {
   const [open, setOpen] = useState(false);
   return (
@@ -131,6 +49,25 @@ export default function Home() {
     return () => observer.disconnect();
   }, [isLoading]);
 
+  // Update SEO meta tags dynamically
+  useEffect(() => {
+    if (!s) return;
+    const seo = s.seo;
+    document.title = seo.meta_title;
+    const updateMeta = (attr: string, val: string, content: string) => {
+      let el = document.querySelector(`meta[${attr}="${val}"]`) as HTMLMetaElement;
+      if (el) el.content = content;
+    };
+    updateMeta("name", "description", seo.meta_description);
+    updateMeta("name", "keywords", seo.keywords);
+    updateMeta("property", "og:title", seo.og_title);
+    updateMeta("property", "og:description", seo.og_description);
+    if (seo.og_image_url) updateMeta("property", "og:image", seo.og_image_url);
+    updateMeta("name", "twitter:title", seo.og_title);
+    updateMeta("name", "twitter:description", seo.og_description);
+    if (seo.og_image_url) updateMeta("name", "twitter:image", seo.og_image_url);
+  }, [s]);
+
   if (isLoading || !s) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#030712]">
@@ -138,6 +75,12 @@ export default function Home() {
       </div>
     );
   }
+
+  const pp = s.pain_points;
+  const cs = s.checkout_section;
+  const tl = s.tools;
+  const fq = s.faqs;
+  const ft = s.footer;
 
   return (
     <div className="min-h-screen bg-[#030712] text-gray-100 font-['Sora',sans-serif]">
@@ -156,7 +99,7 @@ export default function Home() {
             </span>
             <Link to="/login" className="text-sm font-medium text-gray-300 transition hover:text-white">Login</Link>
             <button onClick={() => navigate("/register")} className="rounded-full bg-emerald-500 px-6 py-2 text-sm font-bold text-black transition hover:bg-emerald-400">
-              Começar grátis →
+              {s.navbar.cta_text}
             </button>
           </div>
           <button onClick={() => setMenuOpen(!menuOpen)} className="text-white md:hidden">
@@ -169,7 +112,7 @@ export default function Home() {
             <a href="#pricing" className="block py-2 text-sm text-gray-400" onClick={() => setMenuOpen(false)}>Planos</a>
             <Link to="/login" className="block py-2 text-sm text-gray-400" onClick={() => setMenuOpen(false)}>Login</Link>
             <button onClick={() => { navigate("/register"); setMenuOpen(false); }} className="mt-2 w-full rounded-full bg-emerald-500 px-6 py-2 text-sm font-bold text-black">
-              Começar grátis →
+              {s.navbar.cta_text}
             </button>
           </div>
         )}
@@ -177,18 +120,15 @@ export default function Home() {
 
       {/* HERO */}
       <AnimatedGradientBackground className="relative overflow-hidden pt-28 pb-16 md:pt-40 md:pb-28">
-        {/* Grid dots */}
         <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: "radial-gradient(circle, #10B981 1px, transparent 1px)", backgroundSize: "40px 40px" }} />
-
         <div className="relative mx-auto max-w-7xl px-4">
           <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
-            {/* Left — Copy */}
             <div>
               <div className="reveal mb-6 inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-4 py-2">
                 <span className="flex -space-x-1.5">
                   {[1,2,3,4,5].map(i => <div key={i} className="h-5 w-5 rounded-full border-2 border-[#030712] bg-gradient-to-br from-emerald-400 to-emerald-600" />)}
                 </span>
-                <span className="text-sm font-semibold text-emerald-300">+500 afiliados COD já escalaram</span>
+                <span className="text-sm font-semibold text-emerald-300">{s.hero.social_proof_text}</span>
               </div>
 
               <h1 className="reveal text-4xl font-black leading-[1.05] tracking-tight text-white sm:text-5xl md:text-6xl lg:text-7xl">
@@ -201,11 +141,10 @@ export default function Home() {
               </h1>
 
               <p className="reveal mt-6 max-w-xl text-lg leading-relaxed text-gray-400">
-                A única plataforma que une Logzz + Coinzz em um checkout híbrido inteligente. Seu cliente digita o CEP — o ScalaCOD escolhe automaticamente a melhor logística.{" "}
+                {s.hero.subtitle}{" "}
                 <span className="text-emerald-400">Zero decisão manual.</span>
               </p>
 
-              {/* Stats */}
               <div className="reveal mt-8 flex gap-8">
                 {[
                   { num: "98%", label: "Taxa de entrega", sub: "com Logzz ativa" },
@@ -220,13 +159,12 @@ export default function Home() {
                 ))}
               </div>
 
-              {/* CTAs */}
               <div className="reveal mt-8 flex flex-col gap-3 sm:flex-row">
                 <button onClick={() => navigate("/register")} className="flex items-center justify-center gap-2 rounded-xl bg-emerald-500 px-8 py-4 text-base font-black text-black shadow-lg shadow-emerald-500/25 transition-all hover:bg-emerald-400 hover:shadow-emerald-500/40 hover:-translate-y-0.5">
-                  Começar 7 dias grátis <span>→</span>
+                  {s.hero.cta_primary || "Começar 7 dias grátis →"}
                 </button>
                 <button className="rounded-xl border border-white/10 px-8 py-4 text-base font-medium text-gray-300 transition hover:border-emerald-500/30 hover:text-white">
-                  ▶ Ver demonstração
+                  {s.hero.cta_secondary || "▶ Ver demonstração"}
                 </button>
               </div>
 
@@ -237,7 +175,6 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Right — Accordion */}
             <div className="reveal hidden lg:block">
               <HeroAccordion />
             </div>
@@ -247,9 +184,9 @@ export default function Home() {
 
       {/* LOGOS */}
       <section className="border-y border-white/5 bg-black/40 py-10">
-        <p className="mb-6 text-center text-xs font-medium uppercase tracking-widest text-gray-600">Integra nativamente com as melhores plataformas do mercado COD</p>
+        <p className="mb-6 text-center text-xs font-medium uppercase tracking-widest text-gray-600">{s.logos.title}</p>
         <InfiniteSlider>
-          {logos.map((name) => (
+          {s.logos.items.map((name) => (
             <span key={name} className="text-lg font-bold text-gray-600 transition hover:text-emerald-400">{name}</span>
           ))}
         </InfiniteSlider>
@@ -259,13 +196,13 @@ export default function Home() {
       <section className="py-20 md:py-28">
         <div className="mx-auto max-w-6xl px-4">
           <div className="reveal text-center">
-            <span className="text-xs font-bold uppercase tracking-widest text-red-400">A DOR REAL DO COD</span>
+            <span className="text-xs font-bold uppercase tracking-widest text-red-400">{pp.section_tag}</span>
             <h2 className="mt-4 text-3xl font-black text-white md:text-5xl">
-              Você perde dinheiro<br /><span className="text-gray-500">todo dia sem perceber.</span>
+              {pp.section_title}<br /><span className="text-gray-500">{pp.section_subtitle}</span>
             </h2>
           </div>
           <div className="mt-14 grid gap-6 md:grid-cols-3">
-            {painPoints.map((card) => (
+            {pp.items.map((card) => (
               <div key={card.problem} className="reveal group relative rounded-2xl border border-white/10 bg-gray-950 p-6 transition-all hover:border-emerald-500/30">
                 <div className="absolute inset-0 rounded-2xl bg-gradient-to-b from-emerald-500/5 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
                 <div className="relative">
@@ -287,37 +224,31 @@ export default function Home() {
       <section className="relative overflow-hidden py-20 md:py-28">
         <div className="absolute inset-0 bg-gradient-to-b from-emerald-950/20 via-transparent to-transparent" />
         <div className="relative mx-auto max-w-5xl px-4 text-center">
-          <span className="reveal inline-block rounded-full border border-emerald-500/30 bg-emerald-500/10 px-4 py-1.5 text-xs font-bold text-emerald-400">🇧🇷 EXCLUSIVO NO BRASIL</span>
+          <span className="reveal inline-block rounded-full border border-emerald-500/30 bg-emerald-500/10 px-4 py-1.5 text-xs font-bold text-emerald-400">{cs.badge}</span>
           <h2 className="reveal mt-6 text-3xl font-black text-white md:text-5xl">
-            O único checkout que<br /><span className="bg-gradient-to-r from-emerald-400 to-emerald-300 bg-clip-text text-transparent">pensa antes de você.</span>
+            {cs.title}<br /><span className="bg-gradient-to-r from-emerald-400 to-emerald-300 bg-clip-text text-transparent">{cs.subtitle}</span>
           </h2>
           <p className="reveal mx-auto mt-6 max-w-2xl text-base text-gray-400">
             Seu cliente digita o CEP. O ScalaCOD verifica em tempo real.
             Logzz disponível? COD. Sem cobertura? Coinzz + Correios.{" "}
-            <span className="font-bold text-emerald-400">Automático. Invisível. Perfeito.</span>
+            <span className="font-bold text-emerald-400">{cs.highlight}</span>
           </p>
 
-          {/* Flow */}
           <div className="reveal mt-14 grid gap-4 md:grid-cols-4">
-            {[
-              { icon: "📍", step: "1", title: "Cliente digita CEP", sub: "No checkout público" },
-              { icon: "⚡", step: "2", title: "ScalaCOD verifica", sub: "API Logzz em tempo real" },
-              { icon: "🚚", step: "3A", title: "Logzz disponível", sub: "COD. Paga na entrega." },
-              { icon: "📦", step: "3B", title: "Sem cobertura", sub: "Coinzz Correios. Paga agora." },
-            ].map((s) => (
-              <div key={s.step} className="rounded-xl border border-white/10 bg-gray-950/80 p-5 text-center">
-                <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500/10 text-xl">{s.icon}</div>
-                <div className="text-sm font-bold text-white">{s.step}. {s.title}</div>
-                <div className="mt-1 text-xs text-gray-500">{s.sub}</div>
+            {cs.steps.map((step) => (
+              <div key={step.step} className="rounded-xl border border-white/10 bg-gray-950/80 p-5 text-center">
+                <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500/10 text-xl">{step.icon}</div>
+                <div className="text-sm font-bold text-white">{step.step}. {step.title}</div>
+                <div className="mt-1 text-xs text-gray-500">{step.sub}</div>
               </div>
             ))}
           </div>
 
           <div className="reveal mt-10 inline-flex items-center gap-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-6 py-3">
-            <span className="text-3xl font-black text-emerald-400">0%</span>
+            <span className="text-3xl font-black text-emerald-400">{cs.result_number}</span>
             <div className="text-left">
-              <div className="text-sm font-bold text-white">Taxa de pedidos perdidos por CEP</div>
-              <div className="text-xs text-gray-400">O fallback automático garante que SEMPRE tem opção de entrega</div>
+              <div className="text-sm font-bold text-white">{cs.result_title}</div>
+              <div className="text-xs text-gray-400">{cs.result_subtitle}</div>
             </div>
           </div>
         </div>
@@ -326,17 +257,21 @@ export default function Home() {
       {/* FEATURES */}
       <section id="features" className="py-20 md:py-28">
         <div className="mx-auto max-w-6xl space-y-24 px-4">
-          {features.map((feat, i) => (
-            <div key={i} className={`reveal flex flex-col items-center gap-12 lg:gap-16 md:flex-row ${feat.side === "left" ? "" : "md:flex-row-reverse"}`}>
+          {s.features.items.map((feat, i) => (
+            <div key={i} className={`reveal flex flex-col items-center gap-12 lg:gap-16 md:flex-row ${feat.image_side === "left" ? "" : "md:flex-row-reverse"}`}>
               <div className="flex-1">
                 <div className="overflow-hidden rounded-2xl border border-white/10 bg-gray-950 p-1">
-                  <div className="h-64 w-full rounded-xl bg-gradient-to-br from-emerald-950/50 to-gray-900 flex items-center justify-center text-gray-600 text-sm">
-                    Screenshot {feat.tag}
-                  </div>
+                  {feat.image_url ? (
+                    <img src={feat.image_url} alt={feat.tag || feat.title} className="h-64 w-full rounded-xl object-cover" />
+                  ) : (
+                    <div className="h-64 w-full rounded-xl bg-gradient-to-br from-emerald-950/50 to-gray-900 flex items-center justify-center text-gray-600 text-sm">
+                      Screenshot {feat.tag}
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="flex-1 space-y-5">
-                <span className="text-xs font-bold tracking-widest text-emerald-400">{feat.tag}</span>
+                {feat.tag && <span className="text-xs font-bold tracking-widest text-emerald-400">{feat.tag}</span>}
                 <h3 className="whitespace-pre-line text-3xl font-black leading-tight text-white md:text-4xl">{feat.title}</h3>
                 <p className="text-base leading-relaxed text-gray-400">{feat.description}</p>
                 <ul className="space-y-3">
@@ -347,7 +282,7 @@ export default function Home() {
                     </li>
                   ))}
                 </ul>
-                <p className="text-sm font-semibold italic text-emerald-400">"{feat.highlight}"</p>
+                {feat.highlight && <p className="text-sm font-semibold italic text-emerald-400">"{feat.highlight}"</p>}
               </div>
             </div>
           ))}
@@ -358,13 +293,13 @@ export default function Home() {
       <section className="py-20 md:py-28">
         <div className="mx-auto max-w-6xl px-4">
           <div className="reveal text-center">
-            <span className="text-xs font-bold uppercase tracking-widest text-emerald-400">ECOSSISTEMA COMPLETO</span>
+            <span className="text-xs font-bold uppercase tracking-widest text-emerald-400">{tl.section_tag}</span>
             <h2 className="mt-4 text-3xl font-black text-white md:text-5xl">
-              Uma plataforma.<br /><span className="text-gray-500">Zero limitações.</span>
+              {tl.section_title}<br /><span className="text-gray-500">{tl.section_subtitle}</span>
             </h2>
           </div>
           <div className="mt-14 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {tools.map((tool) => (
+            {tl.items.map((tool) => (
               <SpotlightCard key={tool.name}>
                 <div className="flex items-start gap-4">
                   <div className="text-3xl">{tool.icon}</div>
@@ -390,20 +325,22 @@ export default function Home() {
             <h2 className="mt-4 text-3xl font-black text-white">O que dizem os ninjas do COD</h2>
           </div>
           <div className="mt-14 grid gap-6 md:grid-cols-3">
-            {testimonials.map((t) => (
+            {s.testimonials.items.map((t) => (
               <div key={t.author} className="reveal rounded-2xl border border-white/10 bg-gray-950 p-6">
                 <div className="mb-3 flex gap-1">
                   {[1,2,3,4,5].map(i => <span key={i} className="text-amber-400">★</span>)}
                 </div>
-                <p className="text-sm leading-relaxed text-gray-300">"{t.text}"</p>
-                <div className="mt-3 rounded-lg bg-emerald-500/10 px-3 py-1.5 text-xs font-bold text-emerald-400">
-                  Resultado: {t.highlight}
-                </div>
+                <p className="text-sm leading-relaxed text-gray-300">"{t.quote}"</p>
+                {t.highlight && (
+                  <div className="mt-3 rounded-lg bg-emerald-500/10 px-3 py-1.5 text-xs font-bold text-emerald-400">
+                    Resultado: {t.highlight}
+                  </div>
+                )}
                 <div className="mt-4 flex items-center gap-3">
                   <div className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-500/20 text-sm font-bold text-emerald-400">{t.author[0]}</div>
                   <div>
                     <div className="text-sm font-bold text-white">{t.author}</div>
-                    <div className="text-xs text-gray-500">{t.role}</div>
+                    <div className="text-xs text-gray-500">{t.detail}</div>
                   </div>
                 </div>
               </div>
@@ -418,9 +355,9 @@ export default function Home() {
           <div className="reveal text-center">
             <span className="text-xs font-bold uppercase tracking-widest text-emerald-400">PLANOS</span>
             <h2 className="mt-4 text-3xl font-black text-white md:text-5xl">
-              Escolha o plano<br /><span className="text-gray-500">ideal para escalar.</span>
+              {s.pricing.title || "Escolha o plano"}<br /><span className="text-gray-500">ideal para escalar.</span>
             </h2>
-            <p className="mt-4 text-base text-gray-400">7 dias grátis em todos os planos. Sem cartão de crédito.</p>
+            <p className="mt-4 text-base text-gray-400">{s.pricing.subtitle}</p>
             <div className="mt-6 inline-flex items-center gap-1 rounded-full border border-white/10 bg-gray-950 p-1">
               <button onClick={() => setBilling("monthly")} className={`rounded-full px-5 py-2 text-sm font-semibold transition ${billing === "monthly" ? "bg-emerald-500 text-black" : "text-gray-400"}`}>Mensal</button>
               <button onClick={() => setBilling("yearly")} className={`rounded-full px-5 py-2 text-sm font-semibold transition ${billing === "yearly" ? "bg-emerald-500 text-black" : "text-gray-400"}`}>Anual -20%</button>
@@ -443,7 +380,7 @@ export default function Home() {
                       <span className="text-gray-500">/mês</span>
                     </div>
                     <button onClick={() => navigate("/register")} className={`w-full rounded-xl py-3 text-sm font-bold transition ${plan.is_featured ? "bg-emerald-500 text-black hover:bg-emerald-400 shadow-lg shadow-emerald-500/25" : "border border-white/10 bg-white/5 text-white hover:bg-white/10"}`}>
-                      Começar grátis por 7 dias
+                      {s.pricing.cta_text || "Começar grátis por 7 dias"}
                     </button>
                     <ul className="mt-6 space-y-2">
                       {planFeatures.map((f: string, idx: number) => (
@@ -464,8 +401,8 @@ export default function Home() {
       {/* FAQ */}
       <section className="py-20 md:py-28">
         <div className="mx-auto max-w-3xl px-4">
-          <h2 className="reveal mb-10 text-center text-3xl font-black text-white">Perguntas sobre o ScalaCOD</h2>
-          {faqs.map((faq) => <FAQ key={faq.q} q={faq.q} a={faq.a} />)}
+          <h2 className="reveal mb-10 text-center text-3xl font-black text-white">{fq.title}</h2>
+          {fq.items.map((faq) => <FAQ key={faq.q} q={faq.q} a={faq.a} />)}
         </div>
       </section>
 
@@ -476,17 +413,19 @@ export default function Home() {
         <div className="relative mx-auto max-w-3xl px-4 text-center">
           <span className="reveal text-xs font-bold uppercase tracking-widest text-emerald-400">PRONTO PARA ESCALAR?</span>
           <h2 className="reveal mt-6 text-4xl font-black text-white md:text-6xl">
-            Seu COD no automático.<br /><span className="text-gray-500">Começa hoje.</span>
+            {s.cta_final.title}<br /><span className="text-gray-500">Começa hoje.</span>
           </h2>
           <p className="reveal mt-6 text-base text-gray-400">
-            7 dias grátis. Sem cartão. Setup em 5 minutos.<br />
+            {s.cta_final.subtitle}<br />
             Junte-se a +500 afiliados que já escalam com o ScalaCOD.
           </p>
           <button onClick={() => navigate("/register")} className="reveal mt-8 rounded-xl bg-emerald-500 px-10 py-4 text-lg font-black text-black shadow-lg shadow-emerald-500/25 transition-all hover:bg-emerald-400 hover:-translate-y-0.5">
-            Criar conta grátis 🥷
+            {s.cta_final.cta_text} 🥷
           </button>
           <div className="reveal mt-6 text-xs text-gray-500">
-            ✓ Logzz + Coinzz integrados  ·  ✓ WhatsApp automático  ·  ✓ Checkout híbrido
+            {s.cta_final.bullets.map((b, i) => (
+              <span key={i}>{i > 0 ? "  ·  " : ""}✓ {b}</span>
+            ))}
           </div>
         </div>
       </section>
@@ -499,32 +438,32 @@ export default function Home() {
               <ScalaCODLogo size={20} />
               <ScalaCODBrandName className="text-lg font-extrabold" />
             </div>
-            <p className="mt-2 text-sm text-gray-500">Automação COD com checkout híbrido Logzz + Coinzz. WhatsApp automático. Escale sem parar.</p>
+            <p className="mt-2 text-sm text-gray-500">{ft.tagline}</p>
           </div>
           <div>
-            <h4 className="mb-3 text-sm font-bold text-gray-300">Produto</h4>
+            <h4 className="mb-3 text-sm font-bold text-gray-300">{ft.col1_title}</h4>
             <ul className="space-y-2">
-              {["Checkout Híbrido", "WhatsApp Auto", "Fluxos COD", "Analytics", "Vozes IA"].map(l => (
+              {ft.col1_links.map(l => (
                 <li key={l}><a href="#" className="text-sm text-gray-500 transition hover:text-emerald-400">{l}</a></li>
               ))}
             </ul>
           </div>
           <div>
-            <h4 className="mb-3 text-sm font-bold text-gray-300">Empresa</h4>
+            <h4 className="mb-3 text-sm font-bold text-gray-300">{ft.col2_title}</h4>
             <ul className="space-y-2">
-              {["Planos", "Suporte", "Blog", "Status", "Termos"].map(l => (
+              {ft.col2_links.map(l => (
                 <li key={l}><a href="#" className="text-sm text-gray-500 transition hover:text-emerald-400">{l}</a></li>
               ))}
             </ul>
           </div>
           <div>
             <h4 className="mb-3 text-sm font-bold text-gray-300">Contato</h4>
-            <p className="text-sm text-gray-500">📧 suporte@scalacod.com.br</p>
+            <p className="text-sm text-gray-500">📧 {ft.email}</p>
             <p className="mt-1 text-sm text-gray-500">💬 WhatsApp</p>
           </div>
         </div>
         <div className="mx-auto mt-8 max-w-6xl border-t border-white/5 px-4 pt-6 text-center">
-          <p className="text-xs text-gray-600">© 2026 ScalaCOD. Todos os direitos reservados.</p>
+          <p className="text-xs text-gray-600">{ft.copyright}</p>
           <p className="mt-1 text-xs text-gray-700">Feito 🥷 para afiliados COD brasileiros</p>
         </div>
       </footer>

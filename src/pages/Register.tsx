@@ -1,20 +1,31 @@
 import { useState, useEffect } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useHomeSettings } from "@/hooks/useHomeSettings";
 import { Loader2, Eye, EyeOff } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import ScalaCODLogo, { ScalaCODBrandName } from "@/components/ScalaCODLogo";
 
-const phrases = [
-  "Comece em 5 minutos.",
-  "COD automático te espera.",
-  "Logzz + Coinzz unificados.",
-  "Zero pedido perdido.",
-  "Escale sem parar.",
-];
-
 const Register = () => {
   const { signUp, user, loading: authLoading } = useAuth();
+  const { data: settings } = useHomeSettings();
+  const rp = settings?.register_page;
+  const brand = settings?.brand;
+
+  const phrases = rp?.phrases?.length ? rp.phrases : [
+    "Comece em 5 minutos.",
+    "COD automático te espera.",
+    "Logzz + Coinzz unificados.",
+    "Zero pedido perdido.",
+    "Escale sem parar.",
+  ];
+
+  const benefits = rp?.benefits?.length ? rp.benefits : [
+    { icon: "⚡", text: "Setup em 5 min" },
+    { icon: "🔒", text: "Dados seguros" },
+    { icon: "💬", text: "Suporte BR" },
+  ];
+
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -28,7 +39,7 @@ const Register = () => {
   useEffect(() => {
     const interval = setInterval(() => setPhraseIndex((i) => (i + 1) % phrases.length), 3500);
     return () => clearInterval(interval);
-  }, []);
+  }, [phrases.length]);
 
   if (authLoading) return null;
   if (user) return <Navigate to="/dashboard" replace />;
@@ -75,12 +86,12 @@ const Register = () => {
             <ScalaCODLogo size={40} />
             <div>
               <h1 className="text-2xl font-black"><ScalaCODBrandName /></h1>
-              <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-gray-600">Obsidian Edition</span>
+              <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-gray-600">{brand?.edition_label || "Obsidian Edition"}</span>
             </div>
           </div>
 
-          <h2 className="text-xl font-bold text-white">Crie sua conta ninja. 🥷</h2>
-          <p className="mt-1 text-sm text-gray-500">7 dias grátis. Sem cartão de crédito.</p>
+          <h2 className="text-xl font-bold text-white">{rp?.title || "Crie sua conta ninja. 🥷"}</h2>
+          <p className="mt-1 text-sm text-gray-500">{rp?.subtitle || "7 dias grátis. Sem cartão de crédito."}</p>
 
           <form onSubmit={handleSubmit} className="mt-6 space-y-4">
             <div>
@@ -122,11 +133,7 @@ const Register = () => {
 
           {/* Benefits */}
           <div className="mt-6 flex justify-center gap-6">
-            {[
-              { icon: "⚡", text: "Setup em 5 min" },
-              { icon: "🔒", text: "Dados seguros" },
-              { icon: "💬", text: "Suporte BR" },
-            ].map((b) => (
+            {benefits.map((b) => (
               <div key={b.text} className="flex items-center gap-1.5 text-xs text-gray-500">
                 <span>{b.icon}</span>
                 <span>{b.text}</span>
@@ -148,8 +155,8 @@ const Register = () => {
       {/* Right — Image (desktop) */}
       <div className="relative hidden flex-1 lg:flex">
         <img
-          src="https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=1200&q=80"
-          alt="Analytics dashboard"
+          src={rp?.image_url || "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=1200&q=80"}
+          alt={rp?.image_alt || "Analytics dashboard"}
           className="h-full w-full object-cover"
         />
         <div className="absolute inset-0 bg-gradient-to-r from-[#030712] via-[#030712]/60 to-transparent" />
