@@ -369,7 +369,7 @@ const Vozes = () => {
     }
   };
 
-  const openPurchaseModal = (pack: typeof packs[0]) => {
+  const openPurchaseModal = (pack: TokenPack) => {
     setSelectedPack(pack);
     setPaymentMethod("pix");
     setPixData(null);
