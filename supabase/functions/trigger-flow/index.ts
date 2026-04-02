@@ -29,10 +29,25 @@ Deno.serve(async (req) => {
 
     console.log(`[trigger-flow] event=${event} orderId=${orderId} status=${newStatus} userId=${userId}`);
 
+    // Determine flow_type based on order's logistics_type
+    let flowType: string | null = null;
+    if (orderId) {
+      const { data: order } = await supabase
+        .from("orders")
+        .select("logistics_type")
+        .eq("id", orderId)
+        .single();
+      if (order) {
+        flowType = order.logistics_type === "coinzz" ? "coinzz" : "cod";
+      }
+    }
+
+    console.log(`[trigger-flow] Resolved flow_type=${flowType}`);
+
     // Find active flows matching this trigger
     let query = supabase
       .from("flows")
-      .select("id, name, trigger_event, trigger_status")
+      .select("id, name, trigger_event, trigger_status, flow_type")
       .eq("user_id", userId)
       .eq("is_active", true)
       .eq("trigger_event", event);
@@ -40,6 +55,11 @@ Deno.serve(async (req) => {
     // Only filter by trigger_status if newStatus is provided
     if (newStatus) {
       query = query.eq("trigger_status", newStatus);
+    }
+
+    // Filter by flow_type to avoid cross-triggering COD/Coinzz
+    if (flowType) {
+      query = query.eq("flow_type", flowType);
     }
 
     const { data: flows, error } = await query;

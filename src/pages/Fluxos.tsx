@@ -588,14 +588,22 @@ const Fluxos = () => {
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {galleryTemplates.map((tpl: any, i: number) => {
-                    const existingFlow = flows.find(f => f.trigger_status === tpl.trigger_status);
+                    const existingFlow = flows.find(f => f.trigger_status === tpl.trigger_status && f.flow_type === tpl.flow_type);
+                    const isCoinzz = tpl.flow_type === "coinzz";
                     return (
                       <div key={i} className="bg-muted/50 border border-border rounded-xl p-4 hover:border-primary/30 transition-all group">
                         <div className="flex items-start justify-between mb-2">
                           <h4 className="font-semibold text-foreground text-sm">{tpl.name}</h4>
-                          <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium shrink-0">
-                            Pronto
-                          </span>
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            {isCoinzz ? (
+                              <span className="text-[10px] bg-purple-500/15 text-purple-400 px-2 py-0.5 rounded-full font-bold">COINZZ</span>
+                            ) : (
+                              <span className="text-[10px] bg-emerald-500/15 text-emerald-400 px-2 py-0.5 rounded-full font-bold">LOGZZ</span>
+                            )}
+                            <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">
+                              Pronto
+                            </span>
+                          </div>
                         </div>
                         <p className="text-xs text-muted-foreground mb-1">{tpl.description}</p>
                         <p className="text-[10px] text-muted-foreground mb-3">

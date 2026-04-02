@@ -1,0 +1,2 @@
+ALTER TABLE public.flows DROP CONSTRAINT flows_flow_type_check;
+ALTER TABLE public.flows ADD CONSTRAINT flows_flow_type_check CHECK (flow_type = ANY (ARRAY['cod'::text, 'standard'::text, 'coinzz'::text]));
