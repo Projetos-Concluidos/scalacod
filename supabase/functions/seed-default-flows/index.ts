@@ -430,6 +430,7 @@ Deno.serve(async (req) => {
         .select("id, name")
         .eq("user_id", user.id)
         .eq("trigger_status", tpl.trigger_status)
+        .eq("flow_type", tpl.flow_type)
         .limit(1);
 
       if (existing && existing.length > 0) {
