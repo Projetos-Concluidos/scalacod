@@ -118,6 +118,7 @@ const Fluxos = () => {
   }, [subTab, user]);
 
   const activeFlows = flows.filter(f => f.is_active);
+  const filteredFlows = flowFilter === "all" ? flows : flows.filter(f => f.flow_type === flowFilter);
 
   const handleSaveFlow = async (data: any) => {
     if (!user) return;
