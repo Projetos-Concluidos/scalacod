@@ -330,6 +330,28 @@ Deno.serve(async (req) => {
 
       console.log("[logzz-create-order] SUCCESS! logzz_order_id:", logzzOrderId);
 
+      // Trigger flow notifications for status change to Agendado
+      try {
+        console.log("[logzz-create-order] Triggering flow for Agendado...");
+        const triggerRes = await fetch(`${supabaseUrl}/functions/v1/trigger-flow`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${serviceKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            userId: effectiveUserId,
+            orderId: order_id,
+            newStatus: "Agendado",
+            triggerEvent: "order_status_changed",
+          }),
+        });
+        const triggerData = await triggerRes.json();
+        console.log("[logzz-create-order] trigger-flow result:", JSON.stringify(triggerData));
+      } catch (triggerErr: any) {
+        console.warn("[logzz-create-order] trigger-flow error (non-blocking):", triggerErr.message);
+      }
+
       return new Response(
         JSON.stringify({
           success: true,
