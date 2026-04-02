@@ -427,39 +427,116 @@ Deno.serve(async (req) => {
         );
       }
 
+      if (!order_data?.offer_hash) {
+        return new Response(
+          JSON.stringify({ error: "offer_hash é obrigatório para criar venda na Coinzz" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
       try {
-        const res = await fetch("https://app.coinzz.com.br/api/orders", {
+        console.log("[coinzz] Creating sale via POST /api/sales");
+        const coinzzPayload: any = {
+          offer_hash: order_data.offer_hash,
+          payment_method: order_data.payment_method || "afterpay",
+          customer: {
+            name: order_data.name || order_data.client_name,
+            email: order_data.email || order_data.client_email || "cliente@scalacod.com",
+            document: (order_data.document || order_data.client_document || "").replace(/\D/g, ""),
+            phone: order_data.phone || order_data.client_phone,
+            address: {
+              zip_code: (order_data.cep || order_data.client_zip_code || "").replace(/\D/g, ""),
+              street: order_data.address || order_data.client_address,
+              number: order_data.address_number || order_data.client_address_number,
+              complement: order_data.complement || order_data.client_address_comp || "",
+              neighborhood: order_data.district || order_data.client_address_district,
+              city: order_data.city || order_data.client_address_city,
+              state: order_data.state || order_data.client_address_state,
+            },
+          },
+          shipping_value: order_data.shipping_value || 0,
+        };
+
+        // Add variations if present
+        if (order_data.variations?.length) {
+          coinzzPayload.variations = order_data.variations;
+        }
+
+        // Add order_bumps if present
+        if (order_data.order_bumps?.length) {
+          coinzzPayload.order_bumps = order_data.order_bumps;
+        }
+
+        // Add affiliate if present
+        if (order_data.affiliate_email) {
+          coinzzPayload.affiliate_email = order_data.affiliate_email;
+        }
+
+        // Add discount coupon if present
+        if (order_data.discount_coupon) {
+          coinzzPayload.discount_coupon = order_data.discount_coupon;
+        }
+
+        console.log("[coinzz] Payload:", JSON.stringify(coinzzPayload));
+
+        const res = await fetch("https://app.coinzz.com.br/api/sales", {
           method: "POST",
+          redirect: "manual",
           headers: {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
+            Accept: "application/json",
           },
-          body: JSON.stringify({
-            customer: {
-              name: order_data.name,
-              phone: order_data.phone,
-              email: order_data.email,
-              document: order_data.document,
-            },
-            shipping: {
-              zip_code: order_data.cep,
-              address: order_data.address,
-              number: order_data.address_number,
-              complement: order_data.complement,
-              district: order_data.district,
-              city: order_data.city,
-              state: order_data.state,
-            },
-            items: order_data.items || [],
-            total: order_data.amount,
-          }),
+          body: JSON.stringify(coinzzPayload),
         });
 
+        console.log("[coinzz] Response status:", res.status);
+
+        // Check for redirect (HTML page)
+        if (res.status >= 300 && res.status < 400) {
+          const location = res.headers.get("location");
+          console.error("[coinzz] Redirect detected to:", location);
+          return new Response(
+            JSON.stringify({ error: "Coinzz retornou redirect. Verifique o token.", redirect: location }),
+            { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        const contentType = res.headers.get("content-type") || "";
+        if (!contentType.includes("application/json")) {
+          const rawBody = await res.text();
+          console.error("[coinzz] Non-JSON response:", rawBody.substring(0, 500));
+          return new Response(
+            JSON.stringify({ error: "Coinzz retornou resposta não-JSON. Verifique o token e endpoint." }),
+            { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
         const data = await res.json();
-        return new Response(JSON.stringify(data), {
+        console.log("[coinzz] Response data:", JSON.stringify(data));
+
+        if (!res.ok) {
+          return new Response(
+            JSON.stringify({ error: data.message || "Erro na API Coinzz", details: data }),
+            { status: res.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        // Extract order_hash from response
+        const orderHash = data?.data?.[0]?.order_hash || data?.order_hash || null;
+
+        return new Response(JSON.stringify({
+          success: true,
+          coinzz_order_hash: orderHash,
+          status: data?.data?.[0]?.status || "PENDING",
+          pix: data?.data?.[0]?.pix || null,
+          bank_slip: data?.data?.[0]?.bank_slip || null,
+          raw: data,
+        }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       } catch (e) {
+        console.error("[coinzz] Error:", e.message);
         return new Response(
           JSON.stringify({ error: e.message }),
           { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
