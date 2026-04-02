@@ -201,6 +201,7 @@ Deno.serve(async (req) => {
           delivery_date: order_data.delivery_date || null,
           delivery_type_code: order_data.delivery_type_code || null,
           delivery_type_name: order_data.delivery_type_name || null,
+          local_operation_code: order_data.local_operation_code || null,
           payment_method: order_data.payment_method || null,
           utm_source: order_data.utm_source || null,
           utm_medium: order_data.utm_medium || null,
