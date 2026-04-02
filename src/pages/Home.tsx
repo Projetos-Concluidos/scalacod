@@ -508,8 +508,8 @@ export default function Home() {
         <div className="mx-auto grid max-w-6xl gap-8 px-4 md:grid-cols-4">
           <div>
             <div className="flex items-center gap-2">
-              <ShurikenLogo size={20} />
-              <span className="text-lg font-extrabold text-white">ScalaCOD</span>
+              <ScalaCODLogo size={20} />
+              <ScalaCODBrandName className="text-lg font-extrabold" />
             </div>
             <p className="mt-2 text-sm text-gray-500">Automação COD com checkout híbrido Logzz + Coinzz. WhatsApp automático. Escale sem parar.</p>
           </div>

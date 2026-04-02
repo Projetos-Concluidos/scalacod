@@ -72,7 +72,7 @@ const AppSidebar = () => {
           <div>
             <h1 className="text-base font-bold leading-tight">
               <span className="text-white">Scala</span>
-              <span className="text-sidebar-primary">COD</span>
+              <span className="text-emerald-400" style={{ textShadow: "0 0 12px rgba(52,211,153,0.5)" }}>COD</span>
             </h1>
             <span className="text-[10px] font-medium uppercase tracking-[0.2em] text-sidebar-foreground">
               AFILIADO Pro
