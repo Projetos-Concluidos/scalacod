@@ -826,6 +826,24 @@ const Checkouts = () => {
                 <div><Label>Upsell</Label><p className="text-xs text-muted-foreground">Oferta pós-compra</p></div>
                 <Switch checked={formUpsell} onCheckedChange={setFormUpsell} />
               </div>
+
+              {/* Coinzz Offer Hash */}
+              <div className="rounded-xl border border-purple-500/20 bg-purple-500/5 p-4 space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] bg-purple-500/15 text-purple-400 px-2 py-0.5 rounded-full font-bold">COINZZ</span>
+                  <Label className="text-sm">Hash da Oferta Coinzz</Label>
+                </div>
+                <Input
+                  value={formCoinzzOfferHash}
+                  onChange={(e) => setFormCoinzzOfferHash(e.target.value)}
+                  placeholder="Ex: abc123xyz"
+                  className="bg-input border-border font-mono text-sm"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Para pedidos fora da cobertura Logzz (Correios), o sistema envia automaticamente para a Coinzz usando este hash.
+                  Deixe em branco se este checkout não usa Coinzz.
+                </p>
+              </div>
             </div>
           )}
 
