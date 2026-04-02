@@ -1,97 +1,39 @@
 
 
-## Plano: Gerenciamento Dinâmico de Packs de Tokens + Badges Promocionais
+## Plano: Calculadora de Custo Justo de Tokens no Admin
 
-### Problema Atual
+### Contexto
 
-Os packs de tokens estão **hardcoded** em 3 lugares:
-- `src/pages/Vozes.tsx` (frontend, array `packs`)
-- `supabase/functions/purchase-tokens/index.ts` (edge function, `TOKEN_PACKS`)
+Atualmente o admin não tem visibilidade do custo real da plataforma por token. O provedor ativo é OpenAI TTS (`tts-1-hd`), que custa **US$ 0,030 por 1.000 caracteres** (1 token = 1 caractere). Com câmbio ~R$ 5,20, isso dá **R$ 0,000156 por token**.
 
-Isso impede alterar preços, criar promoções ou adicionar/remover packs sem deploy. Também não existe análise de custo por token para o assinante.
+Os packs atuais cobram ~R$ 0,00398/token, gerando margem de ~96%. A calculadora ajudará o admin a entender o custo real e definir preços justos.
 
-### Análise de Custo por Token (atual)
+### Funcionalidade: Nova aba "🧮 Calculadora" no AdminTokens
 
-| Pack | Tokens | Preço | Custo/Token |
-|------|--------|-------|-------------|
-| Iniciante | 5.000 | R$ 19,90 | R$ 0,00398 |
-| Essencial | 10.000 | R$ 39,90 | R$ 0,00399 |
-| Profissional | 50.000 | R$ 197,00 | R$ 0,00394 |
-| Enterprise | 100.000 | R$ 397,00 | R$ 0,00397 |
+Adicionar uma **4a aba** na página `/admin/tokens`:
 
-Os preços são quase lineares — sem benefício real por volume. O gerenciamento dinâmico permitirá ajustar isso.
+**Seção 1 — Parâmetros de custo**:
+- Campo "Custo API por 1.000 tokens (USD)": default 0.030 (OpenAI tts-1-hd) — editável
+- Campo "Câmbio USD/BRL": default 5.20 — editável
+- Campo "Taxa gateway (%)": default 4.99 (MercadoPago) — editável
+- Custo real por token calculado automaticamente em BRL
 
----
+**Seção 2 — Simulador de Pack**:
+- Campo "Quantidade de tokens" (input numérico)
+- Exibe automaticamente:
+  - Custo da plataforma (API + gateway)
+  - Preço sugerido com margens de 30%, 50%, 80%, 100%
+  - Lucro estimado por venda
+- Tabela comparativa com as 4 margens lado a lado
 
-### Entrega 1: Tabela `token_packs` no banco
-
-Nova tabela para armazenar os packs dinamicamente:
-
-```sql
-CREATE TABLE public.token_packs (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  name text NOT NULL,
-  slug text NOT NULL UNIQUE,
-  tokens integer NOT NULL,
-  price numeric NOT NULL,
-  is_active boolean DEFAULT true,
-  is_popular boolean DEFAULT false,
-  badge_type text DEFAULT null, -- 'blackfriday', 'promo', 'oferta', 'semana_assinante', null
-  badge_label text DEFAULT null, -- texto custom do badge ex: "🔥 Black Friday -40%"
-  sort_order integer DEFAULT 0,
-  original_price numeric DEFAULT null, -- preço original (riscado) para promoções
-  created_at timestamptz DEFAULT now(),
-  updated_at timestamptz DEFAULT now()
-);
-```
-
-RLS: leitura pública, escrita superadmin.
-
-Migração inclui seed dos 4 packs atuais.
-
----
-
-### Entrega 2: Painel Admin — Aba "Packs" no AdminTokens
-
-Nova aba **"📦 Packs"** na página `/admin/tokens`:
-
-- **Tabela de packs**: nome, tokens, preço, custo/token (calculado), badge, status ativo/inativo
-- **Botão "Novo Pack"** + modal de criação/edição com:
-  - Nome, slug, tokens, preço atual, preço original (para mostrar "de/por")
-  - Toggle ativo, toggle popular
-  - Seletor de badge promocional com preview visual:
-    - 🖤 **Black Friday** (fundo preto, texto dourado)
-    - 🔥 **Promoção** (fundo vermelho, texto branco)
-    - 💰 **Em Oferta** (fundo verde, texto branco)
-    - 🎉 **Semana do Assinante** (fundo roxo, texto branco)
-    - Sem badge
-  - Campo "Label do badge" para texto personalizado
-- **Coluna "Custo/Token"**: calculada automaticamente (preço / tokens) para facilitar análise
-
----
-
-### Entrega 3: Frontend Vozes.tsx — Packs dinâmicos
-
-- Remove o array `packs` hardcoded
-- Busca `token_packs` do banco (apenas `is_active = true`, ordenado por `sort_order`)
-- Renderiza badges promocionais nos cards:
-  - `original_price` aparece riscado quando presente
-  - Badge colorido no canto do card conforme `badge_type`
-- O `popular` continua destacando o card com borda especial
-
----
-
-### Entrega 4: Edge Function `purchase-tokens` — Validação dinâmica
-
-- Remove `TOKEN_PACKS` hardcoded
-- Busca o pack por `slug` na tabela `token_packs` (via service role)
-- Valida `is_active = true` antes de processar
-- Usa `price` e `tokens` do banco para criar o pagamento
-
----
+**Seção 3 — Análise dos Packs Atuais**:
+- Lista os packs existentes da tabela `token_packs`
+- Para cada pack mostra: custo real, preço atual, margem real (%), lucro por venda
+- Indicador visual: verde (margem saudável >50%), amarelo (30-50%), vermelho (<30%)
+- Mostra se o pack tem desconto por volume comparado ao menor pack
 
 ### Escopo
-- **1 migração**: tabela `token_packs` + seed + RLS
-- **1 edge function editada**: `purchase-tokens`
-- **2 arquivos frontend editados**: `AdminTokens.tsx` (nova aba), `Vozes.tsx` (packs dinâmicos)
+- **1 arquivo editado**: `src/pages/admin/AdminTokens.tsx` (nova aba "Calculadora")
+- Sem migrações, sem edge functions
+- Tudo calculado no frontend com os dados já disponíveis
 
