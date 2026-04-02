@@ -110,7 +110,7 @@ const CheckoutPublic = () => {
   const gAdsRef = useRef<GoogleAds | null>(null);
 
   const [form, setForm] = useState({
-    name: "", cpf: "", email: "", phone: "",
+    name: "", cpf: "", phone: "",
     cep: "", street: "", number: "", complement: "", district: "", city: "", state: "",
   });
 
