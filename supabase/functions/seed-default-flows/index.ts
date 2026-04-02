@@ -201,6 +201,176 @@ const FLOW_TEMPLATES = [
   },
 ];
 
+/* ─── COINZZ FLOW TEMPLATES ─── */
+const COINZZ_FLOW_TEMPLATES = [
+  {
+    name: "💳 Pagamento Aprovado (Coinzz)",
+    description: "Notifica o cliente quando o pagamento online é aprovado",
+    trigger_event: "order_status_changed",
+    trigger_status: "Aprovado",
+    is_official: true,
+    is_active: true,
+    flow_type: "coinzz",
+    node_count: 1,
+    message_count: 1,
+    nodes: [
+      {
+        id: "node-1",
+        type: "text",
+        position: { x: 250, y: 100 },
+        data: {
+          content: "✅ *Pagamento Aprovado!*\n\nOlá, {{cliente_nome}}! 🎉\n\nSeu pagamento do pedido *#{{pedido_numero}}* foi *aprovado com sucesso*!\n\n📦 *Produto:* {{produto_nome}}\n💰 *Valor:* R$ {{valor_total}}\n💳 *Método:* {{metodo_pagamento}}\n\nSeu pedido já está sendo preparado para envio. Você receberá o código de rastreio assim que for despachado! 🚚\n\n_— Equipe {{loja_nome}}_",
+        },
+      },
+    ],
+    edges: [],
+  },
+  {
+    name: "⏳ Pagamento Pendente (Coinzz)",
+    description: "Notifica quando o pagamento está aguardando confirmação",
+    trigger_event: "order_status_changed",
+    trigger_status: "Aguardando",
+    is_official: true,
+    is_active: true,
+    flow_type: "coinzz",
+    node_count: 2,
+    message_count: 2,
+    nodes: [
+      {
+        id: "node-1",
+        type: "text",
+        position: { x: 250, y: 100 },
+        data: {
+          content: "⏳ *Pedido Recebido!*\n\nOlá, {{cliente_nome}}!\n\nRecebemos seu pedido *#{{pedido_numero}}*! 🎊\n\n📦 *Produto:* {{produto_nome}}\n💰 *Valor:* R$ {{valor_total}}\n\n⚠️ *Seu pagamento está sendo processado.* Assim que for confirmado, iniciaremos a preparação do envio.\n\n_Se pagou via PIX ou Boleto, aguarde alguns minutos para a confirmação._",
+        },
+      },
+      {
+        id: "node-2",
+        type: "delay",
+        position: { x: 250, y: 300 },
+        data: { unit: "hours", value: 24 },
+      },
+      {
+        id: "node-3",
+        type: "text",
+        position: { x: 250, y: 460 },
+        data: {
+          content: "🔔 *Lembrete de Pagamento*\n\nOlá, {{cliente_nome}}!\n\nNotamos que o pagamento do pedido *#{{pedido_numero}}* ainda não foi confirmado.\n\n💰 *Valor:* R$ {{valor_total}}\n\nSe já realizou o pagamento, aguarde a confirmação. Caso contrário, finalize para garantir seu produto! 😊\n\n_Precisa de ajuda? Responda esta mensagem._",
+        },
+      },
+    ],
+    edges: [
+      { id: "e1-2", source: "node-1", target: "node-2" },
+      { id: "e2-3", source: "node-2", target: "node-3" },
+    ],
+  },
+  {
+    name: "📦 Pedido Em Separação (Coinzz)",
+    description: "Notifica quando o pedido está sendo preparado",
+    trigger_event: "order_status_changed",
+    trigger_status: "Em Separação",
+    is_official: true,
+    is_active: true,
+    flow_type: "coinzz",
+    node_count: 1,
+    message_count: 1,
+    nodes: [
+      {
+        id: "node-1",
+        type: "text",
+        position: { x: 250, y: 100 },
+        data: {
+          content: "📦 *Pedido em Separação!*\n\nOlá, {{cliente_nome}}!\n\nSeu pedido *#{{pedido_numero}}* está sendo *preparado para envio*! 🏭\n\n📦 *Produto:* {{produto_nome}}\n\nEm breve você receberá o código de rastreio. Fique atento! 👀\n\n_— Equipe {{loja_nome}}_",
+        },
+      },
+    ],
+    edges: [],
+  },
+  {
+    name: "🚚 Pedido Enviado (Coinzz)",
+    description: "Notifica com código de rastreio quando despachado",
+    trigger_event: "order_status_changed",
+    trigger_status: "Em Rota",
+    is_official: true,
+    is_active: true,
+    flow_type: "coinzz",
+    node_count: 1,
+    message_count: 1,
+    nodes: [
+      {
+        id: "node-1",
+        type: "text",
+        position: { x: 250, y: 100 },
+        data: {
+          content: "🚚 *Pedido Enviado!*\n\nOlá, {{cliente_nome}}! 🎉\n\nSeu pedido *#{{pedido_numero}}* foi *despachado*!\n\n📦 *Produto:* {{produto_nome}}\n📮 *Rastreio:* {{codigo_rastreio}}\n🔗 *Rastrear:* https://rastreamento.correios.com.br/app/index.php\n\n📍 *Endereço de entrega:*\n{{endereco_completo}}\n\nAcompanhe pelo site dos Correios! 📬\n\n_— Equipe {{loja_nome}}_",
+        },
+      },
+    ],
+    edges: [],
+  },
+  {
+    name: "🎉 Pedido Entregue (Coinzz)",
+    description: "Confirma entrega e solicita avaliação",
+    trigger_event: "order_status_changed",
+    trigger_status: "Entregue",
+    is_official: true,
+    is_active: true,
+    flow_type: "coinzz",
+    node_count: 3,
+    message_count: 2,
+    nodes: [
+      {
+        id: "node-1",
+        type: "text",
+        position: { x: 250, y: 100 },
+        data: {
+          content: "🎉 *Pedido Entregue!*\n\nOlá, {{cliente_nome}}!\n\nSeu pedido *#{{pedido_numero}}* foi entregue com sucesso! 📬\n\n📦 *{{produto_nome}}*\n\nEsperamos que você ame o produto! 😍",
+        },
+      },
+      {
+        id: "node-2",
+        type: "delay",
+        position: { x: 250, y: 280 },
+        data: { unit: "hours", value: 48 },
+      },
+      {
+        id: "node-3",
+        type: "text",
+        position: { x: 250, y: 440 },
+        data: {
+          content: "⭐ *Sua opinião é importante!*\n\nOlá, {{cliente_nome}}!\n\nJá faz 2 dias que recebeu *{{produto_nome}}*.\n\nComo está sendo sua experiência?\n\n1️⃣ Amei! ❤️\n2️⃣ Gostei 👍\n3️⃣ Regular 😐\n4️⃣ Não gostei 👎\n\n_Responda com o número! Seu feedback nos ajuda a melhorar._ 🙏",
+        },
+      },
+    ],
+    edges: [
+      { id: "e1-2", source: "node-1", target: "node-2" },
+      { id: "e2-3", source: "node-2", target: "node-3" },
+    ],
+  },
+  {
+    name: "❌ Pagamento Rejeitado (Coinzz)",
+    description: "Notifica quando o pagamento é rejeitado ou cancelado",
+    trigger_event: "order_status_changed",
+    trigger_status: "Frustrado",
+    is_official: true,
+    is_active: true,
+    flow_type: "coinzz",
+    node_count: 1,
+    message_count: 1,
+    nodes: [
+      {
+        id: "node-1",
+        type: "text",
+        position: { x: 250, y: 100 },
+        data: {
+          content: "❌ *Pagamento Não Aprovado*\n\nOlá, {{cliente_nome}},\n\nInfelizmente o pagamento do pedido *#{{pedido_numero}}* *não foi aprovado*.\n\n📦 *Produto:* {{produto_nome}}\n💰 *Valor:* R$ {{valor_total}}\n\n*Possíveis motivos:*\n• Saldo insuficiente\n• Dados do cartão incorretos\n• Limite excedido\n\nVocê pode tentar novamente com outro método de pagamento. Se precisar de ajuda, responda esta mensagem! 🙏\n\n_— Equipe {{loja_nome}}_",
+        },
+      },
+    ],
+    edges: [],
+  },
+];
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
