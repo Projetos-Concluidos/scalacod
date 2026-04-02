@@ -34,6 +34,12 @@ const Upgrade = lazyWithRetry(() => import("@/pages/Upgrade"));
 const Subscription = lazyWithRetry(() => import("@/pages/Subscription"));
 const CheckoutPublic = lazyWithRetry(() => import("@/pages/CheckoutPublic"));
 const HomePub = lazyWithRetry(() => import("@/pages/Home"));
+const Funcionalidades = lazyWithRetry(() => import("@/pages/Funcionalidades"));
+const PlanosPage = lazyWithRetry(() => import("@/pages/Planos"));
+const FaqPage = lazyWithRetry(() => import("@/pages/Faq"));
+const AjudaPage = lazyWithRetry(() => import("@/pages/Ajuda"));
+const StatusPage = lazyWithRetry(() => import("@/pages/StatusPage"));
+const TermosPage = lazyWithRetry(() => import("@/pages/Termos"));
 const NotFound = lazyWithRetry(() => import("@/pages/NotFound"));
 
 // Admin — separate chunk
@@ -64,6 +70,12 @@ const App = () => (
               <Route path="/c/:slug" element={<CheckoutPublic />} />
               <Route path="/" element={<HomePub />} />
               <Route path="/home" element={<HomePub />} />
+              <Route path="/funcionalidades" element={<Funcionalidades />} />
+              <Route path="/planos" element={<PlanosPage />} />
+              <Route path="/faq" element={<FaqPage />} />
+              <Route path="/ajuda" element={<AjudaPage />} />
+              <Route path="/status" element={<StatusPage />} />
+              <Route path="/termos" element={<TermosPage />} />
               <Route element={<AuthGuard><AppLayout /></AuthGuard>}>
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/checkouts" element={<Checkouts />} />

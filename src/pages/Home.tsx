@@ -9,6 +9,7 @@ import { InfiniteSlider } from "@/components/ui/infinite-slider";
 import { HeroAccordion } from "@/components/home/HeroAccordion";
 import { motion, AnimatePresence } from "framer-motion";
 import ScalaCODLogo, { ScalaCODBrandName } from "@/components/ScalaCODLogo";
+import PublicFooter from "@/components/PublicFooter";
 
 function FAQ({ q, a }: { q: string; a: string }) {
   const [open, setOpen] = useState(false);
@@ -101,8 +102,9 @@ export default function Home() {
             <ScalaCODBrandName className="text-xl font-extrabold tracking-tight" />
           </div>
           <div className="hidden items-center gap-6 md:flex">
-            <a href="#features" className="text-sm font-medium text-gray-400 transition hover:text-emerald-400">Recursos</a>
-            <a href="#pricing" className="text-sm font-medium text-gray-400 transition hover:text-emerald-400">Planos</a>
+            <Link to="/funcionalidades" className="text-sm font-medium text-gray-400 transition hover:text-emerald-400">Recursos</Link>
+            <Link to="/planos" className="text-sm font-medium text-gray-400 transition hover:text-emerald-400">Planos</Link>
+            <Link to="/faq" className="text-sm font-medium text-gray-400 transition hover:text-emerald-400">FAQ</Link>
             <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-400 animate-pulse">
               ⚡ Checkout COD híbrido
             </span>
@@ -117,8 +119,9 @@ export default function Home() {
         </div>
         {menuOpen && (
           <div className="border-t border-white/10 bg-gray-950 px-4 pb-4 md:hidden">
-            <a href="#features" className="block py-2 text-sm text-gray-400" onClick={() => setMenuOpen(false)}>Recursos</a>
-            <a href="#pricing" className="block py-2 text-sm text-gray-400" onClick={() => setMenuOpen(false)}>Planos</a>
+            <Link to="/funcionalidades" className="block py-2 text-sm text-gray-400" onClick={() => setMenuOpen(false)}>Recursos</Link>
+            <Link to="/planos" className="block py-2 text-sm text-gray-400" onClick={() => setMenuOpen(false)}>Planos</Link>
+            <Link to="/faq" className="block py-2 text-sm text-gray-400" onClick={() => setMenuOpen(false)}>FAQ</Link>
             <Link to="/login" className="block py-2 text-sm text-gray-400" onClick={() => setMenuOpen(false)}>Login</Link>
             <button onClick={() => { navigate("/register"); setMenuOpen(false); }} className="mt-2 w-full rounded-full bg-emerald-500 px-6 py-2 text-sm font-bold text-black">
               {s.navbar.cta_text}
@@ -440,42 +443,7 @@ export default function Home() {
       </section>
 
       {/* FOOTER */}
-      <footer className="relative border-t border-white/5 bg-black/60 py-12">
-        <div className="mx-auto grid max-w-6xl gap-8 px-4 md:grid-cols-4">
-          <div>
-            <div className="flex items-center gap-2">
-              <ScalaCODLogo size={20} />
-              <ScalaCODBrandName className="text-lg font-extrabold" />
-            </div>
-            <p className="mt-2 text-sm text-gray-500">{ft.tagline}</p>
-          </div>
-          <div>
-            <h4 className="mb-3 text-sm font-bold text-gray-300">{ft.col1_title}</h4>
-            <ul className="space-y-2">
-              {ft.col1_links.map(l => (
-                <li key={l}><a href="#" className="text-sm text-gray-500 transition hover:text-emerald-400">{l}</a></li>
-              ))}
-            </ul>
-          </div>
-          <div>
-            <h4 className="mb-3 text-sm font-bold text-gray-300">{ft.col2_title}</h4>
-            <ul className="space-y-2">
-              {ft.col2_links.map(l => (
-                <li key={l}><a href="#" className="text-sm text-gray-500 transition hover:text-emerald-400">{l}</a></li>
-              ))}
-            </ul>
-          </div>
-          <div>
-            <h4 className="mb-3 text-sm font-bold text-gray-300">Contato</h4>
-            <p className="text-sm text-gray-500">📧 {ft.email}</p>
-            <p className="mt-1 text-sm text-gray-500">💬 WhatsApp</p>
-          </div>
-        </div>
-        <div className="mx-auto mt-8 max-w-6xl border-t border-white/5 px-4 pt-6 text-center">
-          <p className="text-xs text-gray-600">{ft.copyright}</p>
-          <p className="mt-1 text-xs text-gray-700">​</p>
-        </div>
-      </footer>
+      <PublicFooter />
     </div>
   );
 }
