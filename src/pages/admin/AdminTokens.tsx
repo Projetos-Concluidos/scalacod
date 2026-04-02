@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import NinjaBadge from "@/components/NinjaBadge";
-import { Coins, TrendingUp, Search, DollarSign, ShoppingCart, CheckCircle, Clock, Package, Plus, Pencil, Trash2 } from "lucide-react";
+import { Coins, TrendingUp, Search, DollarSign, ShoppingCart, CheckCircle, Clock, Package, Plus, Pencil, Trash2, Calculator } from "lucide-react";
 import { toast } from "sonner";
 
 interface TokenRow {
