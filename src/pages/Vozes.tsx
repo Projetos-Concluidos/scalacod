@@ -203,7 +203,7 @@ const Vozes = () => {
 
         const controller = await bricksBuilder.create("cardPayment", "tokenCardPaymentBrick", {
           initialization: {
-            amount: selectedPack.amount,
+            amount: selectedPack.price,
             payer: { email: user?.email || "" },
           },
           customization: {
@@ -232,7 +232,7 @@ const Vozes = () => {
                 if (data.error) throw new Error(data.error);
                 if (data.status === "approved") {
                   setPurchaseSuccess(true);
-                  toast.success(`${selectedPack.display} tokens creditados!`);
+                  toast.success(`${selectedPack.tokens.toLocaleString("pt-BR")} tokens creditados!`);
                   fetchData();
                 } else {
                   toast.info("Pagamento em análise. Tokens serão creditados após aprovação.");
@@ -398,7 +398,7 @@ const Vozes = () => {
 
       if (data.status === "approved") {
         setPurchaseSuccess(true);
-        toast.success(`${selectedPack.display} tokens creditados!`);
+        toast.success(`${selectedPack.tokens.toLocaleString("pt-BR")} tokens creditados!`);
         fetchData();
       } else if (paymentMethod === "pix") {
         toast.info("PIX gerado! Escaneie o QR Code para pagar.");
@@ -503,18 +503,18 @@ const Vozes = () => {
       <h2 className="text-xl font-bold text-foreground mb-4">Comprar Tokens</h2>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-8">
         {packs.map((pack) => (
-          <div key={pack.name} className={`ninja-card relative text-center ${pack.popular ? "border-primary" : ""}`}>
-            {pack.popular && (
+          <div key={pack.name} className={`ninja-card relative text-center ${pack.is_popular ? "border-primary" : ""}`}>
+            {pack.is_popular && (
               <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-success px-3 py-0.5 text-[10px] font-bold uppercase text-success-foreground">
                 <Star className="inline h-3 w-3 mr-0.5" /> Mais Popular
               </span>
             )}
             <p className="text-xs text-muted-foreground mb-2">{pack.name}</p>
-            <p className="text-3xl font-bold text-foreground">{pack.display}</p>
+            <p className="text-3xl font-bold text-foreground">{pack.tokens.toLocaleString("pt-BR")}</p>
             <p className="text-xs font-semibold text-primary mb-1">Tokens</p>
-            <p className="text-lg font-bold text-foreground mb-4">{pack.price}</p>
+            <p className="text-lg font-bold text-foreground mb-4">{`R$ ${pack.price.toFixed(2).replace(".", ",")}`}</p>
             <button onClick={() => openPurchaseModal(pack)} className={`w-full rounded-lg py-2.5 text-sm font-semibold transition-all ${
-              pack.popular
+              pack.is_popular
                 ? "gradient-primary text-primary-foreground hover:opacity-90"
                 : "border border-border text-foreground hover:bg-muted"
             }`}>
@@ -689,7 +689,7 @@ const Vozes = () => {
         <DialogContent className="max-w-md bg-card border-border">
           <DialogHeader>
             <DialogTitle className="text-foreground">
-              {purchaseSuccess ? "Pagamento Confirmado!" : `Comprar ${selectedPack?.display || ""} Tokens`}
+              {purchaseSuccess ? "Pagamento Confirmado!" : `Comprar ${selectedPack?.tokens.toLocaleString("pt-BR") || ""} Tokens`}
             </DialogTitle>
           </DialogHeader>
 
@@ -698,7 +698,7 @@ const Vozes = () => {
               <div className="h-14 w-14 mx-auto rounded-full bg-success/10 flex items-center justify-center">
                 <CheckCircle className="h-7 w-7 text-success" />
               </div>
-              <p className="text-lg font-bold text-foreground">{selectedPack?.display} tokens creditados!</p>
+              <p className="text-lg font-bold text-foreground">{selectedPack?.tokens.toLocaleString("pt-BR")} tokens creditados!</p>
               <p className="text-sm text-muted-foreground">Seus tokens já estão disponíveis para gerar áudios.</p>
               <Button onClick={() => setPurchaseOpen(false)} className="gradient-primary text-primary-foreground">
                 Fechar
@@ -745,7 +745,7 @@ const Vozes = () => {
           ) : (
             <div className="space-y-5">
               <div className="rounded-xl bg-muted/50 p-4 text-center">
-                <p className="text-2xl font-bold text-foreground">{selectedPack?.display} tokens</p>
+                <p className="text-2xl font-bold text-foreground">{selectedPack?.tokens.toLocaleString("pt-BR")} tokens</p>
                 <p className="text-lg font-bold text-primary">{selectedPack?.price}</p>
               </div>
 
