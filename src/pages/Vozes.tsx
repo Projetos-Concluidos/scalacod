@@ -317,6 +317,7 @@ const Vozes = () => {
       const formData = new FormData();
       formData.append("name", cloneName);
       formData.append("userId", user.id);
+      if (cloneDescription) formData.append("description", cloneDescription);
       for (const file of cloneFiles) {
         formData.append("files", file);
       }
