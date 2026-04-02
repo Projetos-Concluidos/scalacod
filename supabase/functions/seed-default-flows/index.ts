@@ -473,7 +473,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    const flowsToInsert = FLOW_TEMPLATES.map((t) => ({ ...t, user_id: user.id }));
+    const flowsToInsert = ALL_TEMPLATES.map((t) => ({ ...t, user_id: user.id }));
     const { error: insertError } = await supabase.from("flows").insert(flowsToInsert);
 
     if (insertError) {
