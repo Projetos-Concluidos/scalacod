@@ -404,10 +404,12 @@ Deno.serve(async (req) => {
     let body: any = {};
     try { body = await req.json(); } catch { /* no body = seed mode */ }
 
+    const ALL_TEMPLATES = [...FLOW_TEMPLATES, ...COINZZ_FLOW_TEMPLATES];
+
     // Mode: list_templates — return templates without creating
     if (body.action === "list_templates") {
       return new Response(
-        JSON.stringify({ templates: FLOW_TEMPLATES }),
+        JSON.stringify({ templates: ALL_TEMPLATES }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
