@@ -1883,6 +1883,10 @@ export type Database = {
         Args: { p_block: boolean; p_user_id: string }
         Returns: undefined
       }
+      admin_remove_tokens: {
+        Args: { p_amount: number; p_reason: string; p_user_id: string }
+        Returns: undefined
+      }
       admin_update_user_plan: {
         Args: { p_plan_id: string; p_user_id: string }
         Returns: undefined
