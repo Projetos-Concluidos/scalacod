@@ -32,6 +32,8 @@ const Fluxos = () => {
   const [galleryTemplates, setGalleryTemplates] = useState<any[]>([]);
   const [galleryLoading, setGalleryLoading] = useState(false);
   const [creatingTemplate, setCreatingTemplate] = useState<number | null>(null);
+  const [importOpen, setImportOpen] = useState(false);
+  const [importCode, setImportCode] = useState("");
 
   const openGallery = async () => {
     setGalleryOpen(true);
