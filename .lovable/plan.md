@@ -1,79 +1,61 @@
 
 
-## Plano: CMS Completo — Personalizar TUDO via Admin
+## Relatório de Teste: Admin > Gerenciar Home Page
 
-### Problema Identificado
+### Status Geral: ✅ Código funcional, ⚠️ Dados desatualizados
 
-A Home.tsx importa `useHomeSettings` mas **quase não usa** — todos os dados estão hardcoded em arrays locais (`painPoints`, `features`, `tools`, `testimonials`, `faqs`, `logos`). O Admin CMS tem as abas mas os dados não fluem para a página real.
+### Estrutura do CMS (17 abas)
 
-Login e Register são 100% hardcoded (textos, imagens, frases rotativas). SEO não tem gestão no admin.
+| Aba | Código | Dados no DB | Status |
+|---|---|---|---|
+| Navbar | ✅ Editor genérico | ✅ Existe | ⚠️ logo_text = "ScalaNinja" |
+| Hero | ✅ Editor genérico | ✅ Existe | ✅ OK |
+| Logos | ✅ Editor genérico | ✅ Existe | ✅ OK |
+| Pain Points | ✅ Editor dedicado | ✅ 3 cards | ✅ OK |
+| Checkout | ✅ Editor dedicado | ✅ 4 steps | ✅ OK |
+| Features | ✅ Editor dedicado | ✅ 3 items | ✅ OK |
+| Tools | ✅ Editor dedicado | ✅ 6 items | ✅ OK |
+| Depoimentos | ✅ Editor dedicado | ✅ 3 items | ✅ OK |
+| FAQs | ✅ Editor dedicado | ✅ 5 items | ✅ OK |
+| Pricing | ✅ Editor genérico | ✅ Existe | ✅ OK |
+| CTA Final | ✅ Editor genérico | ✅ Existe | ✅ OK |
+| Footer | ✅ Editor genérico | ✅ Existe | ⚠️ logo_text/copyright = "ScalaNinja" |
+| Login | ✅ Editor dedicado | ✅ Existe | ✅ OK |
+| Cadastro | ✅ Editor dedicado | ✅ Existe | ✅ OK |
+| SEO | ✅ Editor dedicado | ✅ Existe | ✅ OK |
+| Marca | ✅ Editor dedicado | ✅ Existe | ✅ OK |
+| Imagens | ✅ Upload com 7 slots | ✅ Bucket existe | ✅ OK |
 
-### Mapeamento Atual vs Desejado
+### Problemas Encontrados
 
-| Seção | Fonte Atual | Fonte Desejada |
-|---|---|---|
-| Home > Navbar | Hardcoded | CMS ✅ (já tem aba, falta consumir) |
-| Home > Hero | Hardcoded | CMS ✅ |
-| Home > Pain Points | Hardcoded array | CMS ❌ (nova seção) |
-| Home > Checkout Híbrido | Hardcoded | CMS ❌ (nova seção) |
-| Home > Features | Hardcoded array | CMS ✅ (já tem aba, falta consumir) |
-| Home > Tools (6 cards) | Hardcoded array | CMS ❌ (nova seção) |
-| Home > Testimonials | Hardcoded array | CMS ✅ (já tem aba, falta consumir) |
-| Home > FAQs | Hardcoded array | CMS ❌ (nova seção) |
-| Home > CTA Final | Hardcoded | CMS ✅ (já tem aba, falta consumir) |
-| Home > Footer | Hardcoded | CMS ✅ (já tem aba, falta consumir) |
-| Login textos + imagem | Hardcoded | CMS ❌ (nova seção) |
-| Register textos + imagem | Hardcoded | CMS ❌ (nova seção) |
-| SEO (meta tags, OG) | index.html estático | CMS ❌ (nova seção) |
-| Sidebar brand | Hardcoded | CMS ❌ |
+#### 1. ⚠️ Dados "ScalaNinja" persistem no DB (navbar + footer)
+O rebranding atualizou os **defaults no código** mas não atualizou os **dados já salvos** no banco. Como o CMS prioriza dados do DB sobre defaults, o navbar e footer ainda mostram "ScalaNinja".
 
-### Arquitetura da Solução
+**Correção:** Atualizar os registros `navbar` e `footer` no banco para "ScalaCOD".
 
-Usar a tabela `home_settings` existente com novas `section_key`:
+#### 2. ⚠️ Acesso ao Admin via Browser Tool bloqueado
+O AdminGuard verifica `profile?.role === "superadmin"` mas a sessão do browser tool não compartilha a sessão do preview do usuário. Teste manual é necessário pelo usuário na preview.
 
-```text
-SEÇÕES EXISTENTES (manter):     NOVAS SEÇÕES (criar):
-├── navbar                      ├── pain_points
-├── hero                        ├── checkout_section
-├── logos                       ├── tools
-├── features                   ├── faqs
-├── pricing                    ├── login_page
-├── testimonials               ├── register_page
-├── cta_final                  ├── seo
-└── footer                     └── brand (sidebar/topbar)
+**Nota:** Isso NÃO é um bug — é comportamento correto de segurança.
+
+### Plano de Correção
+
+**1 ação:** Atualizar os dados `navbar` e `footer` no banco para corrigir "ScalaNinja" → "ScalaCOD":
+
+```sql
+-- navbar: logo_text ScalaNinja → ScalaCOD
+UPDATE home_settings 
+SET content = jsonb_set(content, '{logo_text}', '"ScalaCOD"')
+WHERE section_key = 'navbar';
+
+-- footer: logo_text e copyright
+UPDATE home_settings 
+SET content = jsonb_set(
+  jsonb_set(content, '{logo_text}', '"ScalaCOD"'),
+  '{copyright}', '"© 2026 ScalaCOD. Feito com ❤️ no Pará."'
+)
+WHERE section_key = 'footer';
 ```
 
-### Implementação — 4 Etapas
-
-#### 1. `src/hooks/useHomeSettings.ts` — Expandir interface + defaults
-Adicionar tipos para as 8 novas seções: `pain_points`, `checkout_section`, `tools`, `faqs`, `login_page`, `register_page`, `seo`, `brand`. Cada uma com defaults que espelham o conteúdo hardcoded atual.
-
-#### 2. `src/pages/admin/AdminHome.tsx` — Adicionar novas abas ao CMS
-- **Pain Points** — editor de cards (emoji, problem, pain, solution) com add/remove
-- **Checkout Section** — título, subtítulo, steps editáveis
-- **Tools** — editor de 6 cards (icon, name, description, badge)
-- **FAQs** — editor de perguntas/respostas com add/remove
-- **Login** — textos (título, subtítulo, frases rotativas), upload de imagem lateral
-- **Register** — textos (título, subtítulo, frases, benefits), upload de imagem lateral
-- **SEO** — meta title, description, keywords, OG title, OG description, OG image (upload)
-- **Brand** — nome da marca, subtítulo sidebar, email suporte, WhatsApp suporte
-- **Imagens** — expandir com slots para login_bg e register_bg
-
-#### 3. `src/pages/Home.tsx` — Consumir TODOS os dados do CMS
-Remover os arrays hardcoded (`painPoints`, `features`, `tools`, `testimonials`, `faqs`, `logos`) e substituir pelos dados de `useHomeSettings()`. Cada seção lê do objeto `s` retornado pelo hook, com fallback nos defaults.
-
-#### 4. `src/pages/Login.tsx` e `Register.tsx` — Consumir CMS
-Importar `useHomeSettings` e usar os campos de `login_page` / `register_page` para: título, subtítulo, frases rotativas, imagem lateral.
-
-### Arquivos Alterados
-
-| Arquivo | Ação |
-|---|---|
-| `src/hooks/useHomeSettings.ts` | Expandir interface com 8 novas seções |
-| `src/pages/admin/AdminHome.tsx` | Adicionar 8 novas abas com editores |
-| `src/pages/Home.tsx` | Remover hardcoded, consumir CMS |
-| `src/pages/Login.tsx` | Consumir `login_page` do CMS |
-| `src/pages/Register.tsx` | Consumir `register_page` do CMS |
-
-Sem migração necessária — a tabela `home_settings` já aceita qualquer `section_key` com `content` JSONB.
+Apenas 1 migração SQL. Nenhum arquivo de código precisa ser alterado.
 
