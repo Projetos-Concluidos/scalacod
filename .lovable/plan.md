@@ -1,56 +1,79 @@
 
 
-## Plano: Rebranding Logo + SEO Premium
+## Plano: CMS Completo — Personalizar TUDO via Admin
 
-### 1. Nova Logo — Carrinho de Compras Premium
+### Problema Identificado
 
-Substituir o ícone shuriken (estrela de 4 pontas) por um **carrinho de compras estilizado** em SVG com gradiente emerald. Design: linhas finas e elegantes, cantos arredondados, com um pequeno brilho/glow — visual premium que combina com o tema BLACK COD.
+A Home.tsx importa `useHomeSettings` mas **quase não usa** — todos os dados estão hardcoded em arrays locais (`painPoints`, `features`, `tools`, `testimonials`, `faqs`, `logos`). O Admin CMS tem as abas mas os dados não fluem para a página real.
 
-O SVG será criado como componente reutilizável `ScalaCODLogo` em um único arquivo compartilhado (`src/components/ScalaCODLogo.tsx`) para evitar duplicação.
+Login e Register são 100% hardcoded (textos, imagens, frases rotativas). SEO não tem gestão no admin.
 
-**Arquivos que usam o logo (substituir ShurikenLogo):**
-- `src/components/AuthLogo.tsx` — tela de auth
-- `src/components/AppSidebar.tsx` — sidebar interna
-- `src/pages/Home.tsx` — navbar + footer
-- `src/pages/Login.tsx` — formulário
-- `src/pages/Register.tsx` — formulário
+### Mapeamento Atual vs Desejado
 
-### 2. Nome "COD" com Verde Esmeralda Chamativo
+| Seção | Fonte Atual | Fonte Desejada |
+|---|---|---|
+| Home > Navbar | Hardcoded | CMS ✅ (já tem aba, falta consumir) |
+| Home > Hero | Hardcoded | CMS ✅ |
+| Home > Pain Points | Hardcoded array | CMS ❌ (nova seção) |
+| Home > Checkout Híbrido | Hardcoded | CMS ❌ (nova seção) |
+| Home > Features | Hardcoded array | CMS ✅ (já tem aba, falta consumir) |
+| Home > Tools (6 cards) | Hardcoded array | CMS ❌ (nova seção) |
+| Home > Testimonials | Hardcoded array | CMS ✅ (já tem aba, falta consumir) |
+| Home > FAQs | Hardcoded array | CMS ❌ (nova seção) |
+| Home > CTA Final | Hardcoded | CMS ✅ (já tem aba, falta consumir) |
+| Home > Footer | Hardcoded | CMS ✅ (já tem aba, falta consumir) |
+| Login textos + imagem | Hardcoded | CMS ❌ (nova seção) |
+| Register textos + imagem | Hardcoded | CMS ❌ (nova seção) |
+| SEO (meta tags, OG) | index.html estático | CMS ❌ (nova seção) |
+| Sidebar brand | Hardcoded | CMS ❌ |
 
-Em todos os lugares onde aparece "ScalaCOD":
-- "Scala" em branco/foreground
-- "COD" em `text-emerald-400` (#34D399) com leve text-shadow glow emerald
+### Arquitetura da Solução
 
-### 3. Favicon
+Usar a tabela `home_settings` existente com novas `section_key`:
 
-Gerar o SVG do carrinho premium como `public/favicon.svg` e atualizar `index.html` com `<link rel="icon">`. Remover `favicon.ico` se existir.
+```text
+SEÇÕES EXISTENTES (manter):     NOVAS SEÇÕES (criar):
+├── navbar                      ├── pain_points
+├── hero                        ├── checkout_section
+├── logos                       ├── tools
+├── features                   ├── faqs
+├── pricing                    ├── login_page
+├── testimonials               ├── register_page
+├── cta_final                  ├── seo
+└── footer                     └── brand (sidebar/topbar)
+```
 
-### 4. SEO / OG para WhatsApp
+### Implementação — 4 Etapas
 
-Problemas visíveis no print:
-- URL ainda mostra "scalaninja.lovable.app" (isso é config de deploy, não código)
-- Título e descrição genéricos demais
-- Sem OG image real (aponta para `scalacod.com.br/og-image.png` que não existe)
+#### 1. `src/hooks/useHomeSettings.ts` — Expandir interface + defaults
+Adicionar tipos para as 8 novas seções: `pain_points`, `checkout_section`, `tools`, `faqs`, `login_page`, `register_page`, `seo`, `brand`. Cada uma com defaults que espelham o conteúdo hardcoded atual.
 
-**Correções em `index.html`:**
-- OG title: `ScalaCOD — Seu COD no Piloto Automático`
-- OG description: `Checkout híbrido Logzz + Coinzz. WhatsApp automático. Kanban em tempo real. 7 dias grátis.`
-- OG URL: apontar para a URL real do deploy (`https://scalaninja.lovable.app` por enquanto)
-- OG image: gerar uma imagem OG programaticamente (1200x630) com o logo + tagline e salvar em `public/og-image.png`
-- Twitter card: mesmos dados atualizados
-- Schema JSON-LD: atualizar descrição
+#### 2. `src/pages/admin/AdminHome.tsx` — Adicionar novas abas ao CMS
+- **Pain Points** — editor de cards (emoji, problem, pain, solution) com add/remove
+- **Checkout Section** — título, subtítulo, steps editáveis
+- **Tools** — editor de 6 cards (icon, name, description, badge)
+- **FAQs** — editor de perguntas/respostas com add/remove
+- **Login** — textos (título, subtítulo, frases rotativas), upload de imagem lateral
+- **Register** — textos (título, subtítulo, frases, benefits), upload de imagem lateral
+- **SEO** — meta title, description, keywords, OG title, OG description, OG image (upload)
+- **Brand** — nome da marca, subtítulo sidebar, email suporte, WhatsApp suporte
+- **Imagens** — expandir com slots para login_bg e register_bg
 
-### Resumo de Arquivos
+#### 3. `src/pages/Home.tsx` — Consumir TODOS os dados do CMS
+Remover os arrays hardcoded (`painPoints`, `features`, `tools`, `testimonials`, `faqs`, `logos`) e substituir pelos dados de `useHomeSettings()`. Cada seção lê do objeto `s` retornado pelo hook, com fallback nos defaults.
+
+#### 4. `src/pages/Login.tsx` e `Register.tsx` — Consumir CMS
+Importar `useHomeSettings` e usar os campos de `login_page` / `register_page` para: título, subtítulo, frases rotativas, imagem lateral.
+
+### Arquivos Alterados
 
 | Arquivo | Ação |
 |---|---|
-| `src/components/ScalaCODLogo.tsx` | **Criar** — componente SVG carrinho premium |
-| `src/components/AuthLogo.tsx` | Importar novo logo |
-| `src/components/AppSidebar.tsx` | Importar novo logo |
-| `src/pages/Home.tsx` | Importar novo logo, estilizar "COD" |
-| `src/pages/Login.tsx` | Importar novo logo |
-| `src/pages/Register.tsx` | Importar novo logo |
-| `public/favicon.svg` | **Criar** — favicon SVG |
-| `public/og-image.png` | **Gerar** via script |
-| `index.html` | Favicon + OG tags corrigidos |
+| `src/hooks/useHomeSettings.ts` | Expandir interface com 8 novas seções |
+| `src/pages/admin/AdminHome.tsx` | Adicionar 8 novas abas com editores |
+| `src/pages/Home.tsx` | Remover hardcoded, consumir CMS |
+| `src/pages/Login.tsx` | Consumir `login_page` do CMS |
+| `src/pages/Register.tsx` | Consumir `register_page` do CMS |
+
+Sem migração necessária — a tabela `home_settings` já aceita qualquer `section_key` com `content` JSONB.
 
