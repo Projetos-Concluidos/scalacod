@@ -1,69 +1,88 @@
+
+
 ## Plano: Integração Coinzz — POST /api/sales
 
 ### Problema Atual
-O `create_coinzz_order` no `checkout-api/index.ts` (linha 431) usa:
-- **Endpoint errado**: `https://app.coinzz.com.br/api/orders` → retorna HTML (erro de redirect)
-- **Payload errado**: estrutura `{ customer, shipping, items, total }` que não existe na API Coinzz
-- **Não é chamado automaticamente**: quando `logistics_type === "coinzz"`, o pedido é criado no banco mas NUNCA enviado à Coinzz
 
-### O que será feito
+O bloco `create_coinzz_order` no `checkout-api/index.ts` (linhas 412-468) está **completamente errado**:
 
-#### 1. Corrigir `create_coinzz_order` no checkout-api
+| Item | Atual (quebrado) | Correto (API Coinzz) |
+|---|---|---|
+| Endpoint | `POST /api/orders` | `POST /api/sales` |
+| Payload | `{ customer, shipping, items, total }` | `{ offer_hash, payment_method, customer: { name, email, document, phone, address: {...} } }` |
+| Proteção HTML | Nenhuma | `redirect: "manual"` + validação content-type |
+| Envio automático | Não acontece | Após `create_order` quando `logistics_type === "coinzz"` |
 
-Atualizar para usar a API oficial documentada:
+Além disso, **não existe webhook** para receber atualizações de pedidos da Coinzz.
 
-| De (atual) | Para (correto) |
-|---|---|
-| `POST /api/orders` | `POST /api/sales` |
-| `{ customer, shipping, items, total }` | `{ offer_hash, payment_method: "afterpay", customer: { name, email, document, phone, address: {...} }, shipping_value }` |
-| Sem validação de HTML | `redirect: "manual"` + validação content-type |
+### Implementação
 
-O payload seguirá exatamente a documentação fornecida, usando `payment_method: "afterpay"` (COD) como padrão para pedidos Coinzz.
+#### 1. Corrigir `create_coinzz_order` no checkout-api (linhas 412-468)
 
-#### 2. Envio automático após criação do pedido
+Reescrever o bloco para usar `POST https://app.coinzz.com.br/api/sales` com o payload correto:
 
-No bloco `create_order`, quando `logistics_type === "coinzz"`, chamar a Coinzz automaticamente (igual já faz com Logzz na linha 276). O fluxo:
+```typescript
+// Payload conforme documentação oficial
+{
+  offer_hash: order_data.coinzz_offer_hash,
+  payment_method: "afterpay", // COD
+  customer: {
+    name: order_data.name,
+    email: order_data.email || "cliente@scalacod.com",
+    document: order_data.document,
+    phone: order_data.phone,
+    address: {
+      zip_code: order_data.cep,
+      street: order_data.address,
+      number: order_data.address_number,
+      complement: order_data.complement || "",
+      neighborhood: order_data.district,
+      city: order_data.city,
+      state: order_data.state,
+    }
+  },
+  shipping_value: order_data.shipping_value || 0,
+  order_bumps: order_data.coinzz_bumps || [],
+}
+```
 
-1. Pedido inserido no banco → recebe `order_id`
-2. Buscar integração Coinzz do tenant
-3. Buscar `offer_hash` da oferta vinculada ao checkout
-4. Montar payload `/api/sales` com dados do pedido
-5. Enviar à Coinzz → receber `order_hash` da resposta
-6. Salvar `coinzz_order_hash` no pedido
+Incluir `redirect: "manual"` e validação de content-type antes de parsear JSON.
 
-#### 3. Criar webhook `coinzz-webhook` (receber atualizações)
+#### 2. Envio automático no `create_order` (após linha 297)
 
-Nova Edge Function `supabase/functions/coinzz-webhook/index.ts` para receber callbacks da Coinzz quando o status do pedido mudar. Fluxo:
-- Recebe POST com dados do pedido
-- Busca pedido por `coinzz_order_hash`
-- Atualiza status + tracking_code
-- Dispara `trigger-flow` para automações
+Adicionar bloco `else if (logistics_type === "coinzz")` que:
+1. Busca a integração Coinzz do tenant
+2. Busca o `offer_hash` da oferta (campo `hash` na tabela `offers`)
+3. Chama `POST /api/sales` com os dados do pedido
+4. Salva `coinzz_order_hash` da resposta no pedido
+5. Log de sucesso/erro
 
-#### 4. Configurar `offer_hash` no checkout
+**SEGURANÇA**: O bloco Logzz (linhas 274-297) NÃO será tocado. O novo bloco será um `else if` separado.
 
-O checkout precisa saber qual `offer_hash` da Coinzz usar. Adicionar campo `coinzz_offer_hash` na tabela `checkouts` (ou usar o `hash` da oferta existente se for da Coinzz).
+#### 3. Criar Edge Function `coinzz-webhook`
 
-### Segurança
-- Logzz NÃO será alterada — nenhuma linha do fluxo Logzz será tocada
-- O bloco `create_coinzz_order` existente será reescrito IN-PLACE
-- O novo envio automático será um bloco `else if` separado do bloco Logzz
+Nova função `supabase/functions/coinzz-webhook/index.ts` para receber callbacks:
+- Identificar pedido por `coinzz_order_hash`
+- Mapear status Coinzz → ScalaCOD
+- Atualizar pedido + inserir `order_status_history`
+- Disparar `trigger-flow` para automações
+- Rate limiting + validação do `store` query param
+
+#### 4. Migração SQL
+
+Adicionar campo `coinzz_offer_hash` na tabela `checkouts` para que o tenant configure qual oferta da Coinzz usar por checkout (opcional, pode usar o `hash` da oferta existente).
 
 ### Arquivos
 
 | Arquivo | Ação |
 |---|---|
-| `supabase/functions/checkout-api/index.ts` | Corrigir `create_coinzz_order` (linhas 412-468) + adicionar envio automático no `create_order` |
-| `supabase/functions/coinzz-webhook/index.ts` | **Criar** — webhook para receber atualizações de pedidos |
-| Migração SQL | Adicionar `coinzz_offer_hash` na tabela `checkouts` (se necessário) |
+| `supabase/functions/checkout-api/index.ts` | Corrigir `create_coinzz_order` + envio automático no `create_order` |
+| `supabase/functions/coinzz-webhook/index.ts` | **Criar** |
+| Migração SQL | Adicionar `coinzz_offer_hash` em `checkouts` |
 
-### Fluxo Final
+### Segurança
+- Logzz permanece 100% intacta
+- Validação de content-type antes de JSON.parse
+- `redirect: "manual"` para evitar HTML redirects
+- Rate limiting no webhook
 
-```text
-Cliente → Checkout → CEP sem cobertura Logzz
-  → provider = "coinzz"
-  → Pagamento via MercadoPago (PIX/Cartão)
-  → create_order (banco)
-  → POST /api/sales (Coinzz) com offer_hash + afterpay
-  → Salva coinzz_order_hash
-  → Coinzz processa → webhook → atualiza status
-```
