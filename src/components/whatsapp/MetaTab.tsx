@@ -20,7 +20,7 @@ const MetaTab = () => {
   const [instanceData, setInstanceData] = useState<any>(null);
 
   const webhookUrl = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/whatsapp-webhook?user_id=${user?.id || ""}&provider=meta`;
-  const verifyToken = `scalaninja_verify_${user?.id?.slice(0, 8) || "token"}`;
+  const verifyToken = `scalacod_verify_${user?.id?.slice(0, 8) || "token"}`;
 
   useEffect(() => {
     if (user) fetchInstance();

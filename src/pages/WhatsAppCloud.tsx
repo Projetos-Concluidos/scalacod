@@ -162,7 +162,7 @@ const WhatsAppCloud = () => {
       const { data, error } = await supabase.functions.invoke("send-whatsapp-message", {
         body: {
           phone: testPhone.trim(),
-          content: "🥷 ScalaNinja — Conexão WhatsApp testada com sucesso! ✅",
+          content: "🥷 ScalaCOD — Conexão WhatsApp testada com sucesso! ✅",
           direct: true,
         },
       });

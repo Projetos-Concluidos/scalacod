@@ -267,7 +267,7 @@ const LogzzTab = () => {
             )}
           </div>
           <p className="mt-1 text-xs text-muted-foreground">
-            Cole a URL de importação/webhook da Logzz. Usada para enviar pedidos do ScalaNinja para a Logzz.
+            Cole a URL de importação/webhook da Logzz. Usada para enviar pedidos do ScalaCOD para a Logzz.
           </p>
         </div>
 

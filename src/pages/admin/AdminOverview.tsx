@@ -76,7 +76,7 @@ const AdminOverview = () => {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Admin Overview" subtitle="Visão geral da plataforma ScalaNinja" />
+      <PageHeader title="Admin Overview" subtitle="Visão geral da plataforma ScalaCOD" />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         {cards.map((card) => (

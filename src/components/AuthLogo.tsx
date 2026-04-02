@@ -17,7 +17,7 @@ const AuthLogo = () => (
     <div className="text-center">
       <h1 className="text-2xl font-bold">
         <span className="text-foreground">Scala</span>
-        <span className="text-primary">Ninja</span>
+        <span className="text-primary">COD</span>
       </h1>
       <span className="text-[10px] font-medium uppercase tracking-[0.2em] text-muted-foreground">
         Obsidian Edition

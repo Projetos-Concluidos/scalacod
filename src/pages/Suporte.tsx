@@ -26,7 +26,7 @@ const TUTORIAL_SECTIONS: TutorialSectionData[] = [
     id: "inicio",
     icon: "🚀",
     label: "Primeiros Passos",
-    title: "Como começar com o ScalaNinja",
+    title: "Como começar com o ScalaCOD",
     steps: [
       {
         title: "1. Conecte seu WhatsApp",
@@ -60,7 +60,7 @@ const TUTORIAL_SECTIONS: TutorialSectionData[] = [
     label: "Checkouts",
     title: "Como criar e gerenciar checkouts",
     content: `## O que é um Checkout?
-Um checkout é a página onde seu cliente finaliza a compra. O ScalaNinja cria checkouts inteligentes que detectam automaticamente se a Logzz atende o CEP do cliente.
+Um checkout é a página onde seu cliente finaliza a compra. O ScalaCOD cria checkouts inteligentes que detectam automaticamente se a Logzz atende o CEP do cliente.
 
 ## Criando um Checkout
 1. Clique em **+ Novo Checkout**
@@ -141,17 +141,17 @@ Clique em "IA" ou use os templates pré-criados para configurar em segundos!`,
 ### 🟢 YCloud (Recomendado para API Oficial)
 - Crie uma conta em ycloud.com
 - Copie sua API Key em Settings → API Keys
-- Cole no ScalaNinja em WhatsApp Cloud → YCloud
+- Cole no ScalaCOD em WhatsApp Cloud → YCloud
 
 ### 🔵 Meta/Facebook (API Oficial Direta)
 - Acesse developers.facebook.com
 - Crie um app do tipo Business
 - Configure o WhatsApp e copie o Phone Number ID
-- Cole o Access Token no ScalaNinja
+- Cole o Access Token no ScalaCOD
 
 ### 🟡 Evolution API (Sem aprovação Meta)
 - Instale o Evolution API em seu servidor
-- Cole a URL e API Key no ScalaNinja
+- Cole a URL e API Key no ScalaCOD
 - Escaneie o QR Code com seu WhatsApp
 
 ## Qual escolher?
@@ -246,7 +246,7 @@ Configure as APIs necessárias:
 - **MercadoPago:** Para receber pagamentos online (Coinzz)
 
 ### API
-Gere tokens de API para integrar sistemas externos com o ScalaNinja.
+Gere tokens de API para integrar sistemas externos com o ScalaCOD.
 
 ### Webhooks
 Configure uma URL para receber notificações em tempo real sobre pedidos e pagamentos.
@@ -397,7 +397,7 @@ const Suporte = () => {
 
   return (
     <div className="py-6">
-      <PageHeader title="Central de Suporte 🥷" subtitle="Aprenda a usar todas as funcionalidades do ScalaNinja" />
+      <PageHeader title="Central de Suporte 🥷" subtitle="Aprenda a usar todas as funcionalidades do ScalaCOD" />
 
       <div className="flex gap-6 mt-6">
         {/* Side nav */}

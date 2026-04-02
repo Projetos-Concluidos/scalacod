@@ -85,7 +85,7 @@ Deno.serve(async (req) => {
       const token = url.searchParams.get("hub.verify_token");
       const challenge = url.searchParams.get("hub.challenge");
 
-      const verifyToken = Deno.env.get("META_WEBHOOK_VERIFY_TOKEN") || "scalaninja_verify";
+      const verifyToken = Deno.env.get("META_WEBHOOK_VERIFY_TOKEN") || "scalacod_verify";
       if (mode === "subscribe" && token === verifyToken) {
         return new Response(challenge || "", { status: 200, headers: corsHeaders });
       }

@@ -373,7 +373,7 @@ Deno.serve(async (req) => {
           },
           body: JSON.stringify({
             transaction_amount: order_data.amount,
-            description: order_data.description || "Pedido ScalaNinja",
+            description: order_data.description || "Pedido ScalaCOD",
             payment_method_id: "pix",
             payer: {
               email: "comprador@checkout.com",
@@ -749,8 +749,8 @@ Deno.serve(async (req) => {
 
       try {
         const testPayload = {
-          external_id: `test-scalaninja-${Date.now()}`,
-          full_name: "Teste ScalaNinja",
+          external_id: `test-scalacod-${Date.now()}`,
+          full_name: "Teste ScalaCOD",
           phone: "11999999999",
           customer_document: "00000000000",
           postal_code: "01310100",
@@ -813,7 +813,7 @@ Deno.serve(async (req) => {
       try {
         const testPayload = {
           external_id: `test-${Date.now()}`,
-          full_name: "Teste ScalaNinja",
+          full_name: "Teste ScalaCOD",
           phone: "11999999999",
           customer_document: "00000000000",
           postal_code: "01310100",
@@ -987,7 +987,7 @@ Deno.serve(async (req) => {
     if (action === "process_logzz_webhook") {
       const { order_id, logzz_order_id, status: rawStatus, payload } = body;
 
-      // Inline status mapping (Logzz → ScalaNinja)
+      // Inline status mapping (Logzz → ScalaCOD)
       const LOGZZ_MAP: Record<string, string> = {
         'Pendente': 'Aguardando', 'Em aberto': 'Aguardando', 'Aguardando': 'Aguardando', 'A enviar': 'Aguardando',
         'Confirmado': 'Confirmado', 'Agendado': 'Agendado', 'Reagendado': 'Agendado',
@@ -1202,7 +1202,7 @@ Deno.serve(async (req) => {
 
         const testPayload = {
           external_id: `test-mapping-${Date.now()}`,
-          full_name: "Teste Mapeamento ScalaNinja",
+          full_name: "Teste Mapeamento ScalaCOD",
           phone: "11999999999",
           customer_document: "00000000000",
           postal_code: "59015070",

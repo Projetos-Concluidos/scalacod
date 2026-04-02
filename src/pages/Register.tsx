@@ -86,7 +86,7 @@ const Register = () => {
           <div className="mb-8 flex items-center gap-3">
             <ShurikenLogo size={40} />
             <div>
-              <h1 className="text-2xl font-black text-white">ScalaNinja</h1>
+              <h1 className="text-2xl font-black text-white">ScalaCOD</h1>
               <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-gray-600">Obsidian Edition</span>
             </div>
           </div>
@@ -178,7 +178,7 @@ const Register = () => {
               {phrases[phraseIndex]}
             </motion.p>
           </AnimatePresence>
-          <p className="mt-2 text-sm text-gray-400">ScalaNinja — Automação COD</p>
+          <p className="mt-2 text-sm text-gray-400">ScalaCOD — Automação COD</p>
         </div>
       </div>
     </div>

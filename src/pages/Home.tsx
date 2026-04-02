@@ -27,7 +27,7 @@ const painPoints = [
     emoji: "😤",
     problem: "CEP fora da área Logzz?",
     pain: "Pedido perdido. Cliente sumiu. Você não fatura.",
-    solution: "ScalaNinja roteia automaticamente para Coinzz + Correios. Zero perda.",
+    solution: "ScalaCOD roteia automaticamente para Coinzz + Correios. Zero perda.",
   },
   {
     emoji: "📵",
@@ -81,7 +81,7 @@ const tools = [
 
 const testimonials = [
   {
-    text: "Antes eu perdia 40% dos pedidos por CEP fora da área. Hoje o ScalaNinja manda para Coinzz automaticamente. Meu faturamento subiu 60% no primeiro mês.",
+    text: "Antes eu perdia 40% dos pedidos por CEP fora da área. Hoje o ScalaCOD manda para Coinzz automaticamente. Meu faturamento subiu 60% no primeiro mês.",
     author: "Rafael M.", role: "Afiliado COD · 800 pedidos/mês", highlight: "faturamento subiu 60%",
   },
   {
@@ -95,8 +95,8 @@ const testimonials = [
 ];
 
 const faqs = [
-  { q: "O que é o checkout híbrido Logzz + Coinzz?", a: "Quando o cliente digita o CEP no checkout, a ScalaNinja verifica automaticamente se a Logzz atende aquela região. Se sim, o pedido é COD. Se não, redireciona para Coinzz + Correios. Tudo invisível para o cliente." },
-  { q: "Preciso ter conta na Logzz e Coinzz separadamente?", a: "Sim. A ScalaNinja integra com suas contas existentes via tokens de API. Você só configura uma vez e tudo funciona automaticamente." },
+  { q: "O que é o checkout híbrido Logzz + Coinzz?", a: "Quando o cliente digita o CEP no checkout, o ScalaCOD verifica automaticamente se a Logzz atende aquela região. Se sim, o pedido é COD. Se não, redireciona para Coinzz + Correios. Tudo invisível para o cliente." },
+  { q: "Preciso ter conta na Logzz e Coinzz separadamente?", a: "Sim. O ScalaCOD integra com suas contas existentes via tokens de API. Você só configura uma vez e tudo funciona automaticamente." },
   { q: "Como funciona a automação de WhatsApp?", a: "Você cria fluxos no builder visual. Quando um pedido muda de status, o WhatsApp dispara automaticamente a mensagem certa para o cliente." },
   { q: "Posso usar para vender como afiliado?", a: "Sim. Importe as ofertas direto da Logzz, crie seu checkout em minutos e comece a vender." },
   { q: "Os 7 dias de trial são realmente grátis?", a: "Sim. Nenhum cartão necessário. Teste todas as funcionalidades. Após o período, assine ou cancele — sem cobrança automática." },
@@ -158,7 +158,7 @@ export default function Home() {
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 md:px-8">
           <div className="flex items-center gap-2">
             <ShurikenLogo size={28} />
-            <span className="text-xl font-extrabold tracking-tight text-white">ScalaNinja</span>
+            <span className="text-xl font-extrabold tracking-tight text-white">ScalaCOD</span>
           </div>
           <div className="hidden items-center gap-6 md:flex">
             <a href="#features" className="text-sm font-medium text-gray-400 transition hover:text-emerald-400">Recursos</a>
@@ -213,7 +213,7 @@ export default function Home() {
               </h1>
 
               <p className="reveal mt-6 max-w-xl text-lg leading-relaxed text-gray-400">
-                A única plataforma que une Logzz + Coinzz em um checkout híbrido inteligente. Seu cliente digita o CEP — a ScalaNinja escolhe automaticamente a melhor logística.{" "}
+                A única plataforma que une Logzz + Coinzz em um checkout híbrido inteligente. Seu cliente digita o CEP — o ScalaCOD escolhe automaticamente a melhor logística.{" "}
                 <span className="text-emerald-400">Zero decisão manual.</span>
               </p>
 
@@ -304,7 +304,7 @@ export default function Home() {
             O único checkout que<br /><span className="bg-gradient-to-r from-emerald-400 to-emerald-300 bg-clip-text text-transparent">pensa antes de você.</span>
           </h2>
           <p className="reveal mx-auto mt-6 max-w-2xl text-base text-gray-400">
-            Seu cliente digita o CEP. A ScalaNinja verifica em tempo real.
+            Seu cliente digita o CEP. O ScalaCOD verifica em tempo real.
             Logzz disponível? COD. Sem cobertura? Coinzz + Correios.{" "}
             <span className="font-bold text-emerald-400">Automático. Invisível. Perfeito.</span>
           </p>
@@ -313,7 +313,7 @@ export default function Home() {
           <div className="reveal mt-14 grid gap-4 md:grid-cols-4">
             {[
               { icon: "📍", step: "1", title: "Cliente digita CEP", sub: "No checkout público" },
-              { icon: "⚡", step: "2", title: "ScalaNinja verifica", sub: "API Logzz em tempo real" },
+              { icon: "⚡", step: "2", title: "ScalaCOD verifica", sub: "API Logzz em tempo real" },
               { icon: "🚚", step: "3A", title: "Logzz disponível", sub: "COD. Paga na entrega." },
               { icon: "📦", step: "3B", title: "Sem cobertura", sub: "Coinzz Correios. Paga agora." },
             ].map((s) => (
@@ -476,7 +476,7 @@ export default function Home() {
       {/* FAQ */}
       <section className="py-20 md:py-28">
         <div className="mx-auto max-w-3xl px-4">
-          <h2 className="reveal mb-10 text-center text-3xl font-black text-white">Perguntas sobre a ScalaNinja</h2>
+          <h2 className="reveal mb-10 text-center text-3xl font-black text-white">Perguntas sobre o ScalaCOD</h2>
           {faqs.map((faq) => <FAQ key={faq.q} q={faq.q} a={faq.a} />)}
         </div>
       </section>
@@ -492,7 +492,7 @@ export default function Home() {
           </h2>
           <p className="reveal mt-6 text-base text-gray-400">
             7 dias grátis. Sem cartão. Setup em 5 minutos.<br />
-            Junte-se a +500 afiliados que já escalam com a ScalaNinja.
+            Junte-se a +500 afiliados que já escalam com o ScalaCOD.
           </p>
           <button onClick={() => navigate("/register")} className="reveal mt-8 rounded-xl bg-emerald-500 px-10 py-4 text-lg font-black text-black shadow-lg shadow-emerald-500/25 transition-all hover:bg-emerald-400 hover:-translate-y-0.5">
             Criar conta grátis 🥷
@@ -509,7 +509,7 @@ export default function Home() {
           <div>
             <div className="flex items-center gap-2">
               <ShurikenLogo size={20} />
-              <span className="text-lg font-extrabold text-white">ScalaNinja</span>
+              <span className="text-lg font-extrabold text-white">ScalaCOD</span>
             </div>
             <p className="mt-2 text-sm text-gray-500">Automação COD com checkout híbrido Logzz + Coinzz. WhatsApp automático. Escale sem parar.</p>
           </div>
@@ -531,12 +531,12 @@ export default function Home() {
           </div>
           <div>
             <h4 className="mb-3 text-sm font-bold text-gray-300">Contato</h4>
-            <p className="text-sm text-gray-500">📧 suporte@scalaninja.com</p>
+            <p className="text-sm text-gray-500">📧 suporte@scalacod.com.br</p>
             <p className="mt-1 text-sm text-gray-500">💬 WhatsApp</p>
           </div>
         </div>
         <div className="mx-auto mt-8 max-w-6xl border-t border-white/5 px-4 pt-6 text-center">
-          <p className="text-xs text-gray-600">© 2026 ScalaNinja. Todos os direitos reservados.</p>
+          <p className="text-xs text-gray-600">© 2026 ScalaCOD. Todos os direitos reservados.</p>
           <p className="mt-1 text-xs text-gray-700">Feito 🥷 para afiliados COD brasileiros</p>
         </div>
       </footer>

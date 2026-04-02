@@ -777,7 +777,7 @@ const CheckoutPublic = () => {
                     <div class="section"><p class="section-title">Endereço</p>
                     <p>📍 ${form.street}, ${form.number}</p><p>🏘️ ${form.district} - ${form.city}/${form.state}</p><p>📮 CEP: ${form.cep}</p></div>
                     ${provider === "logzz" && selectedDate ? `<div class="section"><p class="section-title">Entrega</p><p>🚚 Entrega via Logzz · Pagamento na entrega</p><p>📅 ${selectedDate.date}</p></div>` : ""}
-                    <p class="footer">Compra 100% segura • ScalaNinja</p>
+                    <p class="footer">Compra 100% segura • ScalaCOD</p>
                     </body></html>`;
                   const printWindow = window.open("", "_blank");
                   if (printWindow) {
@@ -793,7 +793,7 @@ const CheckoutPublic = () => {
             </div>
           </div>
           <p className="mt-6 text-center text-[10px] text-gray-400 flex items-center justify-center gap-1">
-            <ShieldCheck className="h-3 w-3" /> Compra 100% segura • ScalaNinja
+            <ShieldCheck className="h-3 w-3" /> Compra 100% segura • ScalaCOD
           </p>
         </motion.div>
       </div>
@@ -1516,7 +1516,7 @@ const CheckoutPublic = () => {
 
         {/* Footer */}
         <p className="mt-8 text-center text-[10px] text-gray-400 flex items-center justify-center gap-1">
-          <ShieldCheck className="h-3 w-3" /> Compra 100% segura • ScalaNinja
+          <ShieldCheck className="h-3 w-3" /> Compra 100% segura • ScalaCOD
         </p>
       </div>
     </div>

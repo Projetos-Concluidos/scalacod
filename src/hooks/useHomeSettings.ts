@@ -63,14 +63,14 @@ export interface HomeSettings {
 }
 
 const defaults: HomeSettings = {
-  navbar: { logo_text: "ScalaNinja", links: ["Recursos", "Planos", "Login"], cta_text: "Começar grátis →" },
+  navbar: { logo_text: "ScalaCOD", links: ["Recursos", "Planos", "Login"], cta_text: "Começar grátis →" },
   hero: { badge: "Plataforma COD", title_line1: "mais avançada", title_line2: "do Brasil", highlight_word: "ninja", subtitle: "Venda no COD com automação ninja.", cta_primary: "Começar trial grátis →", cta_secondary: "Ver demonstração ▶", social_proof_text: "Mais de 500 lojistas já usam", social_proof_rating: "4.9/5", screenshot_url: "" },
   logos: { title: "Integra com as melhores plataformas:", items: ["Logzz", "MercadoPago", "WhatsApp", "Meta", "ElevenLabs"] },
   features: { items: [] },
   pricing: { title: "Planos para cada fase do seu negócio", subtitle: "Comece grátis por 7 dias.", cta_text: "Começar trial de 7 dias grátis" },
   testimonials: { items: [] },
   cta_final: { title: "Pronto para escalar suas vendas?", subtitle: "Comece grátis por 7 dias.", cta_text: "Criar conta grátis →", bullets: [] },
-  footer: { logo_text: "ScalaNinja", tagline: "Automação COD", copyright: "© 2026 ScalaNinja", email: "contato@scalaninja.com", col1_title: "Produto", col1_links: [], col2_title: "Suporte", col2_links: [] },
+  footer: { logo_text: "ScalaCOD", tagline: "Automação COD", copyright: "© 2026 ScalaCOD", email: "contato@scalaninja.com", col1_title: "Produto", col1_links: [], col2_title: "Suporte", col2_links: [] },
 };
 
 export function useHomeSettings() {

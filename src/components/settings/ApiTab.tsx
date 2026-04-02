@@ -108,7 +108,7 @@ const ApiTab = () => {
                 ]}
               />
             </div>
-            <p className="text-xs text-muted-foreground">Use este token para autenticar requisições à API do ScalaNinja</p>
+            <p className="text-xs text-muted-foreground">Use este token para autenticar requisições à API do ScalaCOD</p>
           </div>
         </div>
 
