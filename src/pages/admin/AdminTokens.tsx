@@ -84,6 +84,12 @@ const AdminTokens = () => {
     is_active: true, is_popular: false, badge_type: "", badge_label: "", sort_order: 0,
   });
 
+  // Calculator state
+  const [calcApiCost, setCalcApiCost] = useState(0.030);
+  const [calcExchange, setCalcExchange] = useState(5.20);
+  const [calcGatewayFee, setCalcGatewayFee] = useState(4.99);
+  const [calcTokens, setCalcTokens] = useState(10000);
+
   useEffect(() => {
     fetchTokens();
     fetchPurchases();
