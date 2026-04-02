@@ -630,7 +630,7 @@ const Pedidos = () => {
                       )}
                     </div>
 
-                    {/* Financeiro */}
+                     {/* Financeiro */}
                     <div className="rounded-lg border border-border bg-secondary/50 p-4">
                       <h4 className="text-xs font-bold uppercase text-muted-foreground mb-3">💰 Financeiro</h4>
                       <div className="space-y-2 text-sm">
@@ -644,11 +644,53 @@ const Pedidos = () => {
                           <span className="font-bold text-foreground text-base">Total do Pedido</span>
                           <span className="font-bold text-primary text-xl">R$ {Number(o.order_final_price).toFixed(2)}</span>
                         </div>
-                        <div className="mt-3 p-2.5 rounded-md bg-muted/50 border border-border">
+
+                        {/* Forma de pagamento */}
+                        <div className="mt-3 p-2.5 rounded-md bg-muted/50 border border-border space-y-2">
                           {isLogzz
                             ? <span className="text-sm font-semibold text-amber-400">💵 PAGAMENTO NA ENTREGA</span>
-                            : <span className="text-sm font-semibold text-purple-400">💳 PAGAMENTO ONLINE — ENTREGA VIA CORREIOS</span>}
+                            : (
+                              <div className="space-y-1.5">
+                                <span className="text-sm font-semibold text-purple-400">💳 PAGAMENTO ONLINE — ENTREGA VIA CORREIOS</span>
+                                {o.payment_method && (
+                                  <div className="flex items-center gap-2 text-xs">
+                                    <span className="text-muted-foreground">Método:</span>
+                                    <Badge variant="outline" className="border-purple-500/30 text-purple-400 text-[10px] capitalize">{o.payment_method}</Badge>
+                                  </div>
+                                )}
+                                {(o as any).total_installments && (o as any).total_installments > 1 && (
+                                  <div className="flex items-center gap-2 text-xs">
+                                    <span className="text-muted-foreground">Parcelas:</span>
+                                    <span className="text-foreground font-medium">{(o as any).total_installments}x</span>
+                                  </div>
+                                )}
+                                {(o as any).gateway_fee && (
+                                  <div className="flex items-center gap-2 text-xs">
+                                    <span className="text-muted-foreground">Taxa gateway:</span>
+                                    <span className="text-foreground">R$ {Number((o as any).gateway_fee).toFixed(2)}</span>
+                                  </div>
+                                )}
+                              </div>
+                            )}
                         </div>
+
+                        {/* Coinzz statuses */}
+                        {!isLogzz && ((o as any).coinzz_payment_status || (o as any).coinzz_shipping_status) && (
+                          <div className="flex flex-wrap gap-2 mt-2">
+                            {(o as any).coinzz_payment_status && (
+                              <div className="flex items-center gap-1.5 text-xs">
+                                <span className="text-muted-foreground">Pgto:</span>
+                                <Badge variant="outline" className="text-[10px] border-border">{(o as any).coinzz_payment_status}</Badge>
+                              </div>
+                            )}
+                            {(o as any).coinzz_shipping_status && (
+                              <div className="flex items-center gap-1.5 text-xs">
+                                <span className="text-muted-foreground">Envio:</span>
+                                <Badge variant="outline" className="text-[10px] border-border">{(o as any).coinzz_shipping_status}</Badge>
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </TabsContent>
