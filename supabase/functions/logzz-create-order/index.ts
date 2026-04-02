@@ -278,6 +278,27 @@ Deno.serve(async (req) => {
       );
     } else {
       console.error("[logzz-create-order] FAILED:", resStatus, resBody.substring(0, 300));
+
+      // Record sync failure in order history for timeline visibility
+      let errorMsg = resBody.substring(0, 500);
+      try {
+        const parsed = JSON.parse(resBody);
+        errorMsg = parsed?.message || parsed?.error || errorMsg;
+      } catch { /* keep raw */ }
+
+      await admin.from("order_status_history").insert({
+        order_id: order_id,
+        from_status: order.status,
+        to_status: "logzz_error",
+        source: "logzz_create_order",
+        raw_payload: {
+          webhook_url: webhookUrl,
+          logzz_status: resStatus,
+          logzz_error: errorMsg,
+          logzz_body: resBody.substring(0, 500),
+        },
+      });
+
       return new Response(
         JSON.stringify({
           success: false,
