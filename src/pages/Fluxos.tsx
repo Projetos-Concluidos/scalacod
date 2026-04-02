@@ -244,6 +244,54 @@ const Fluxos = () => {
     fetchFlows();
   };
 
+  const exportFlow = (flow: Flow) => {
+    const exportData = {
+      _ninjacod: true,
+      v: 1,
+      name: flow.name,
+      description: flow.description || "",
+      provider: flow.is_official ? "official" : "evolution",
+      nodes: flow.nodes || [],
+      edges: flow.edges || [],
+    };
+    const code = btoa(unescape(encodeURIComponent(JSON.stringify(exportData))));
+    navigator.clipboard.writeText(code);
+    toast.success("Código do fluxo copiado para a área de transferência!");
+  };
+
+  const handleImport = async (providerOverride?: "evolution" | "official") => {
+    if (!user || !importCode.trim()) return;
+    try {
+      const jsonStr = decodeURIComponent(escape(atob(importCode.trim())));
+      const parsed = JSON.parse(jsonStr);
+      if (!parsed._ninjacod || !parsed.nodes) {
+        toast.error("Código inválido. Use um código exportado válido.");
+        return;
+      }
+      const isOfficial = providerOverride ? providerOverride === "official" : parsed.provider === "official";
+      const { error } = await supabase.from("flows").insert({
+        user_id: user.id,
+        name: parsed.name || "Fluxo importado",
+        description: parsed.description || null,
+        flow_type: "cod",
+        is_official: isOfficial,
+        nodes: parsed.nodes,
+        edges: parsed.edges || [],
+        node_count: parsed.nodes?.length || 0,
+        message_count: parsed.nodes?.filter((n: any) => n.type === "message" || n.data?.type === "message").length || 0,
+        is_active: true,
+        trigger_event: parsed.nodes?.find((n: any) => n.type === "trigger")?.data?.keyword || "pedido_criado",
+      });
+      if (error) { toast.error(error.message); return; }
+      toast.success(`Fluxo "${parsed.name}" importado com sucesso!`);
+      setImportOpen(false);
+      setImportCode("");
+      fetchFlows();
+    } catch {
+      toast.error("Código inválido. Verifique e tente novamente.");
+    }
+  };
+
   const getFlowIcon = (flow: Flow) => {
     if (flow.trigger_event === "pedido_cancelado") return <XCircle className="h-5 w-5 text-destructive" />;
     if (flow.trigger_event === "pedido_entregue") return <Star className="h-5 w-5 text-warning" />;
