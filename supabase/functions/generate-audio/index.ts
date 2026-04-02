@@ -6,6 +6,9 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// OpenAI voice names accepted directly
+const OPENAI_VOICES = ["alloy", "echo", "fable", "onyx", "nova", "shimmer"];
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -44,48 +47,100 @@ serve(async (req) => {
       );
     }
 
-    const apiKey = Deno.env.get("ELEVENLABS_API_KEY");
-    if (!apiKey) {
-      return new Response(JSON.stringify({ error: "ELEVENLABS_API_KEY não configurada" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    // Determine provider from system_config
+    const { data: configs } = await supabase
+      .from("system_config")
+      .select("key, value")
+      .in("key", ["integration_elevenlabs_api_key", "integration_openai_api_key"]);
+
+    const configMap: Record<string, string> = {};
+    for (const c of configs || []) {
+      if (c.value && typeof c.value === "string") {
+        configMap[c.key] = c.value;
+      } else if (c.value && typeof c.value === "object" && (c.value as any).value) {
+        configMap[c.key] = (c.value as any).value;
+      }
     }
 
-    // Generate audio via ElevenLabs
-    const ttsRes = await fetch(
-      `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?output_format=mp3_44100_128`,
-      {
+    // Also check Deno env as fallback for ElevenLabs
+    const elevenLabsKey = configMap["integration_elevenlabs_api_key"] || Deno.env.get("ELEVENLABS_API_KEY") || "";
+    const openaiKey = configMap["integration_openai_api_key"] || "";
+
+    let audioBuffer: ArrayBuffer;
+    let provider: string;
+
+    if (elevenLabsKey) {
+      // === ElevenLabs path ===
+      provider = "elevenlabs";
+      const ttsRes = await fetch(
+        `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?output_format=mp3_44100_128`,
+        {
+          method: "POST",
+          headers: {
+            "xi-api-key": elevenLabsKey,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            text,
+            model_id: "eleven_multilingual_v2",
+            voice_settings: { stability: 0.75, similarity_boost: 0.85 },
+          }),
+        }
+      );
+
+      if (!ttsRes.ok) {
+        const errData = await ttsRes.json().catch(() => ({}));
+        const rawMsg = errData.detail?.message || errData.detail || "";
+        let userMsg = "Erro ao gerar áudio no ElevenLabs";
+        if (typeof rawMsg === "string" && rawMsg.toLowerCase().includes("free users")) {
+          userMsg = "A chave ElevenLabs está no plano gratuito e não permite usar vozes da biblioteca. Peça ao administrador para fazer upgrade no ElevenLabs ou use uma voz clonada.";
+        } else if (rawMsg) {
+          userMsg = String(rawMsg);
+        }
+        return new Response(
+          JSON.stringify({ error: userMsg }),
+          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      audioBuffer = await ttsRes.arrayBuffer();
+    } else if (openaiKey) {
+      // === OpenAI TTS path ===
+      provider = "openai";
+      // Map voiceId: if it's an OpenAI voice name use it directly, otherwise default to "nova"
+      const openaiVoice = OPENAI_VOICES.includes(voiceId) ? voiceId : "nova";
+
+      const ttsRes = await fetch("https://api.openai.com/v1/audio/speech", {
         method: "POST",
         headers: {
-          "xi-api-key": apiKey,
+          Authorization: `Bearer ${openaiKey}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          text,
-          model_id: "eleven_multilingual_v2",
-          voice_settings: { stability: 0.75, similarity_boost: 0.85 },
+          model: "tts-1-hd",
+          voice: openaiVoice,
+          input: text,
+          response_format: "mp3",
         }),
-      }
-    );
+      });
 
-    if (!ttsRes.ok) {
-      const errData = await ttsRes.json().catch(() => ({}));
-      const rawMsg = errData.detail?.message || errData.detail || "";
-      // Translate ElevenLabs subscription errors to user-friendly Portuguese
-      let userMsg = "Erro ao gerar áudio no ElevenLabs";
-      if (typeof rawMsg === "string" && rawMsg.toLowerCase().includes("free users")) {
-        userMsg = "A chave ElevenLabs está no plano gratuito e não permite usar vozes da biblioteca. Peça ao administrador para fazer upgrade no ElevenLabs ou use uma voz clonada.";
-      } else if (rawMsg) {
-        userMsg = String(rawMsg);
+      if (!ttsRes.ok) {
+        const errData = await ttsRes.json().catch(() => ({}));
+        const errMsg = errData.error?.message || "Erro ao gerar áudio na OpenAI";
+        return new Response(
+          JSON.stringify({ error: errMsg }),
+          { status: ttsRes.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
       }
+
+      audioBuffer = await ttsRes.arrayBuffer();
+    } else {
       return new Response(
-        JSON.stringify({ error: userMsg }),
-        { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ error: "Nenhum provedor de TTS configurado. Peça ao administrador para configurar ElevenLabs ou OpenAI nas integrações." }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const audioBuffer = await ttsRes.arrayBuffer();
     const fileName = `voices/${userId}/${Date.now()}.mp3`;
 
     // Upload to Supabase Storage
@@ -115,7 +170,7 @@ serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ audioUrl: publicUrl, tokensUsed: tokensNeeded }),
+      JSON.stringify({ audioUrl: publicUrl, tokensUsed: tokensNeeded, provider }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {

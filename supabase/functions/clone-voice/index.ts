@@ -24,10 +24,33 @@ serve(async (req) => {
       });
     }
 
-    const apiKey = Deno.env.get("ELEVENLABS_API_KEY");
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, serviceKey);
+
+    // Check if ElevenLabs is active
+    const { data: configs } = await supabase
+      .from("system_config")
+      .select("key, value")
+      .in("key", ["integration_elevenlabs_api_key"]);
+
+    let apiKey = "";
+    for (const c of configs || []) {
+      if (c.value && typeof c.value === "string") {
+        apiKey = c.value;
+      } else if (c.value && typeof c.value === "object" && (c.value as any).value) {
+        apiKey = (c.value as any).value;
+      }
+    }
+
+    // Fallback to env secret
     if (!apiKey) {
-      return new Response(JSON.stringify({ error: "ELEVENLABS_API_KEY não configurada" }), {
-        status: 500,
+      apiKey = Deno.env.get("ELEVENLABS_API_KEY") || "";
+    }
+
+    if (!apiKey) {
+      return new Response(JSON.stringify({ error: "Clonagem de voz requer ElevenLabs ativo. Configure a chave ElevenLabs nas integrações." }), {
+        status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -56,10 +79,6 @@ serve(async (req) => {
     }
 
     // Save to DB
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, serviceKey);
-
     await supabase.from("voices").insert({
       user_id: userId,
       name,
