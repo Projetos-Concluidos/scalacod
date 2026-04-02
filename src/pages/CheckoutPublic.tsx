@@ -824,7 +824,7 @@ const CheckoutPublic = () => {
                 {offer.original_price && offer.original_price > offer.price && (
                   <span className="text-xs text-gray-400 line-through">R$ {Number(offer.original_price).toFixed(2)}</span>
                 )}
-                <span className="text-lg font-black text-emerald-600">R$ {Number(offer.price).toFixed(2)}</span>
+                <span className="text-base font-black text-emerald-600">R$ {Number(offer.price).toFixed(2)}</span>
               </div>
             </div>
           </div>
