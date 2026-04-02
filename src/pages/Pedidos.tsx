@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import {
   Search, SlidersHorizontal, RefreshCw, Phone, Eye, MoreHorizontal,
   Package, CalendarDays, MapPin, DollarSign, Printer, Truck, Clock,
-  Download, X, ExternalLink, MessageSquare, Copy, Edit, Trash2, XCircle,
+  Download, X, ExternalLink, MessageSquare, Copy, Edit, Trash2, XCircle, AlertTriangle,
   ChevronDown, ChevronUp,
 } from "lucide-react";
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
@@ -622,13 +622,20 @@ const Pedidos = () => {
                         {o.tracking_code && <div className="flex items-center gap-1.5"><span className="text-muted-foreground">Rastreio:</span><span className="text-primary font-mono">{o.tracking_code}</span><CopyBtn value={o.tracking_code} label="Rastreio" /></div>}
                         {o.delivery_man && <div><span className="text-muted-foreground">Entregador:</span> <span className="text-foreground">{o.delivery_man}</span></div>}
                         {o.logistic_operator && <div><span className="text-muted-foreground">Operador:</span> <span className="text-foreground">{o.logistic_operator}</span></div>}
-                        {o.logzz_order_id && (
+                        {o.logzz_order_id ? (
                           <div className="col-span-2 flex items-center gap-1.5">
                             <span className="text-muted-foreground">Pedido Logzz:</span>
                             <a href={`https://app.logzz.com.br/meu-pedido/${o.logzz_order_id}`} target="_blank" rel="noopener noreferrer" className="text-emerald-400 hover:underline font-mono font-medium inline-flex items-center gap-1">#{o.logzz_order_id}<ExternalLink className="h-3 w-3" /></a>
                             <CopyBtn value={o.logzz_order_id} label="ID Logzz" />
                           </div>
-                        )}
+                        ) : o.logistics_type === "logzz" && o.status !== "Cancelado" ? (
+                          <div className="col-span-2">
+                            <div className="flex items-center gap-2 rounded-md border border-warning/30 bg-warning/10 px-3 py-2">
+                              <AlertTriangle className="h-4 w-4 text-warning shrink-0" />
+                              <span className="text-xs text-warning font-medium">Logzz: Sincronização pendente — pedido ainda não foi aceito pela Logzz</span>
+                            </div>
+                          </div>
+                        ) : null}
                         {o.coinzz_order_hash && (
                           <div className="col-span-2 flex items-center gap-1.5">
                             <span className="text-muted-foreground">Pedido Coinzz:</span>
