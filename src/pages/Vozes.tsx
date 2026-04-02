@@ -751,26 +751,40 @@ const Vozes = () => {
               </div>
 
               {paymentMethod === "credit_card" && (
-                <div className="rounded-lg bg-warning/5 border border-warning/20 p-3">
-                  <p className="text-xs text-muted-foreground">
-                    ⚠️ Pagamento com cartão de crédito em breve. Use PIX por enquanto.
-                  </p>
+                <div className="space-y-3">
+                  {!mpPublicKey ? (
+                    <div className="rounded-lg bg-warning/5 border border-warning/20 p-3">
+                      <p className="text-xs text-muted-foreground">
+                        ⚠️ Chave pública do MercadoPago não configurada. Configure em Integrações → MercadoPago (chave: mp_public_key).
+                      </p>
+                    </div>
+                  ) : (
+                    <>
+                      <div id="tokenCardPaymentBrick" ref={cardFormRef} />
+                      {!bricksReady && (
+                        <div className="rounded-xl border border-border bg-muted/50 p-4 text-center">
+                          <Loader2 className="h-6 w-6 animate-spin text-primary mx-auto mb-2" />
+                          <p className="text-xs text-muted-foreground">Carregando formulário de cartão...</p>
+                        </div>
+                      )}
+                    </>
+                  )}
                 </div>
               )}
 
-              <Button
-                onClick={handlePurchase}
-                disabled={purchasing || paymentMethod === "credit_card"}
-                className="w-full gradient-primary text-primary-foreground"
-              >
-                {purchasing ? (
-                  <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Processando...</>
-                ) : paymentMethod === "pix" ? (
-                  <><QrCode className="h-4 w-4 mr-2" /> Gerar QR Code PIX</>
-                ) : (
-                  <><CreditCard className="h-4 w-4 mr-2" /> Pagar com Cartão</>
-                )}
-              </Button>
+              {paymentMethod === "pix" && (
+                <Button
+                  onClick={handlePurchase}
+                  disabled={purchasing}
+                  className="w-full gradient-primary text-primary-foreground"
+                >
+                  {purchasing ? (
+                    <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Processando...</>
+                  ) : (
+                    <><QrCode className="h-4 w-4 mr-2" /> Gerar QR Code PIX</>
+                  )}
+                </Button>
+              )}
             </div>
           )}
         </DialogContent>
