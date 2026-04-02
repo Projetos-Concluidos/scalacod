@@ -1,52 +1,91 @@
 
+## Plano: Exibir status do pagamento no detalhe do pedido agora
 
-## Plano: Status de Pagamento MercadoPago + Botao Coinzz no Card
+### Diagnóstico
+Pelo código e pelos dados atuais, o problema não é só visual:
 
-### Problema
+1. O detalhe do pedido em `src/pages/Pedidos.tsx` só mostra o bloco de status se `o.mp_payment_status` existir.
+2. Há pedidos antigos/legados em que o webhook já gravou `status_description` como `MP: cancelled - expired`, mas `mp_payment_status` e `mp_payment_status_detail` estão `null`.
+3. O modal usa `selectedOrder` como snapshot do card. Se o pedido atualizar depois, o detalhe pode continuar com dados antigos.
 
-1. **Falta status de pagamento do MercadoPago** no detalhe do pedido — o webhook `mp-payment-webhook` salva `status_description` com o texto "MP: approved - accredited" mas nao existe coluna dedicada nem exibicao visual da jornada de pagamento
-2. **Botao "Enviar para Coinzz"** existe ao lado do olho no card (linhas 497-509) mas o usuario relata que nao aparece — provavelmente porque a condicao `!order.coinzz_order_hash` ja e true (pedido ja tem hash) ou `logistics_type !== "coinzz"`
-3. **Financeiro nao mostra status de pagamento** para pedidos online (PIX, cartao, boleto) — so mostra "PAGAMENTO ONLINE" generico
+Resultado: o print mostra apenas “Método: PIX”, porque a UI depende de colunas que podem estar vazias, mesmo quando já existe informação suficiente no pedido.
 
-### Implementacao
+### O que vou ajustar
+#### 1. Corrigir a fonte de dados do modal
+Em vez de renderizar o detalhe só com o objeto congelado em `selectedOrder`, vou fazer o modal usar a versão mais recente do pedido da lista `orders` pelo `id`.
 
-#### 1. Migracao SQL — nova coluna `mp_payment_status`
+Assim, se o webhook atualizar o pedido, o detalhe refletirá automaticamente.
 
-Adicionar coluna para armazenar o status do pagamento MercadoPago separadamente:
-- `mp_payment_status` (text) — ex: "approved", "pending", "rejected", "cancelled", "refunded"
-- `mp_payment_status_detail` (text) — ex: "accredited", "pending_waiting_payment", "cc_rejected_other_reason"
+#### 2. Adicionar fallback seguro para status MercadoPago
+No bloco:
+`💳 PAGAMENTO ONLINE — ENTREGA VIA CORREIOS`
 
-#### 2. Atualizar `mp-payment-webhook` para salvar status detalhado
+vou exibir o status usando esta prioridade:
+1. `mp_payment_status`
+2. `status_description` quando vier no formato `MP: status - detail`
+3. se não houver detalhe, mostrar ao menos um badge de “Status não informado”
 
-Alem de `status_description`, salvar:
-- `mp_payment_status` = payment.status
-- `mp_payment_status_detail` = payment.status_detail
-- `total_installments` = payment.installments
-- `gateway_fee` = payment.fee_details[0].amount (se existir)
-- Inserir `order_status_history` com source "mp-payment-webhook"
+Exemplo do fallback:
+```text
+status_description = "MP: cancelled - expired"
+-> status = cancelled
+-> detalhe = expired
+```
 
-#### 3. UI — Secao Financeiro aprimorada
+#### 3. Garantir tradução e cores dos badges
+Vou manter exatamente o padrão pedido:
 
-No detalhe do pedido, mostrar:
-- **Badge de status do pagamento** com cores: verde (approved), amarelo (pending/in_process), vermelho (rejected/cancelled), azul (refunded)
-- **Status detail** traduzido: "accredited" → "Pagamento acreditado", "pending_waiting_payment" → "Aguardando pagamento", etc.
-- Metodo (PIX/Cartao/Boleto) ja exibido
-- Parcelas e taxa gateway ja exibidos (quando existem)
+- Verde = Aprovado
+- Amarelo = Pendente
+- Vermelho = Rejeitado/Cancelado
+- Azul = Reembolsado
 
-#### 4. Botao Coinzz no card — garantir visibilidade
+E traduzir os detalhes, por exemplo:
+- `accredited` → Pagamento aprovado
+- `pending_waiting_payment` → Aguardando pagamento
+- `cc_rejected_insufficient_amount` → Saldo insuficiente
+- `expired` → Pagamento expirado
 
-O botao ja existe no codigo (linha 497), verificar a condicao. Adicionar tambem um botao para pedidos que JA tem hash (para reenvio/retry). Atualmente so aparece quando `!coinzz_order_hash` — ajustar para mostrar tambem quando o usuario precisa reenviar.
+#### 4. Exibir a jornada abaixo de “Método”
+No detalhe ficará assim, abaixo do cabeçalho financeiro:
 
-### Arquivos
+```text
+💳 PAGAMENTO ONLINE — ENTREGA VIA CORREIOS
+Método: PIX
+Status: Pagamento Cancelado
+Detalhe: Pagamento expirado
+```
 
-| Arquivo | Acao |
+Ou, quando aprovado:
+```text
+Método: PIX
+Status: Pagamento Aprovado
+Detalhe: Pagamento aprovado
+```
+
+#### 5. Manter tudo isolado
+Não vou mexer na lógica da Logzz.
+Não vou alterar fluxo crítico de criação de pedido.
+O ajuste é focado em:
+- leitura do dado no modal
+- fallback visual para pedidos que já existem
+
+### Arquivos que serão ajustados
+| Arquivo | Ação |
 |---|---|
-| Migracao SQL | Adicionar `mp_payment_status`, `mp_payment_status_detail` em `orders` |
-| `supabase/functions/mp-payment-webhook/index.ts` | Salvar status detalhado + history |
-| `src/pages/Pedidos.tsx` | Badge de status pagamento no Financeiro + ajustar botao Coinzz |
+| `src/pages/Pedidos.tsx` | Corrigir detalhe do pedido para usar dados atualizados + fallback de status MercadoPago |
 
-### Seguranca
-- Logzz intacta
-- Coinzz intacta
-- Apenas adiciona informacao visual e colunas opcionais
+### Observação importante
+Como já existe pedido com `status_description` preenchido e colunas `mp_*` vazias, este ajuste é o caminho mais seguro para fazer o status aparecer imediatamente sem depender de novo pagamento ou novo webhook.
 
+### Resultado esperado
+Ao abrir o detalhamento do pedido, abaixo de:
+
+`💳 PAGAMENTO ONLINE — ENTREGA VIA CORREIOS`
+
+vão aparecer:
+- método traduzido
+- badge colorido do status
+- detalhe traduzido do pagamento
+
+mesmo nos pedidos em que o webhook antigo salvou só `status_description`.
