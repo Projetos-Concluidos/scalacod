@@ -332,6 +332,31 @@ const Pedidos = () => {
                 <Input value={filterCity} onChange={(e) => setFilterCity(e.target.value)} placeholder="Ex: São Paulo" className="bg-input border-border h-9 w-[160px] text-xs" />
               </div>
 
+              {/* Método de Pagamento */}
+              <div>
+                <span className="text-xs font-medium text-muted-foreground mb-1.5 block">Pagamento</span>
+                <div className="flex gap-1.5">
+                  {[
+                    { value: "", label: "Todos" },
+                    { value: "pix", label: "PIX" },
+                    { value: "credit_card", label: "Cartão" },
+                    { value: "boleto", label: "Boleto" },
+                  ].map((p) => (
+                    <button
+                      key={p.value}
+                      onClick={() => setFilterPayment(filterPayment === p.value ? "" : p.value)}
+                      className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors border ${
+                        (filterPayment === p.value || (p.value === "" && !filterPayment))
+                          ? "border-primary bg-primary/15 text-primary"
+                          : "border-border bg-secondary text-muted-foreground hover:bg-muted"
+                      }`}
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               {/* Limpar */}
               {hasAdvancedFilters && (
                 <Button
