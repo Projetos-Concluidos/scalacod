@@ -204,8 +204,9 @@ const Pedidos = () => {
     if (filterDateTo) result = result.filter((o) => o.created_at && o.created_at <= filterDateTo + "T23:59:59");
     if (filterProvider && filterProvider !== "all") result = result.filter((o) => o.logistics_type === filterProvider);
     if (filterCity) result = result.filter((o) => o.client_address_city.toLowerCase().includes(filterCity.toLowerCase()));
+    if (filterPayment) result = result.filter((o) => o.payment_method?.toLowerCase() === filterPayment.toLowerCase());
     return result;
-  }, [orders, search, activeFilter, filterDateFrom, filterDateTo, filterProvider, filterCity]);
+  }, [orders, search, activeFilter, filterDateFrom, filterDateTo, filterProvider, filterCity, filterPayment]);
 
   const columns = useMemo(() => {
     const map: Record<string, Order[]> = {};
