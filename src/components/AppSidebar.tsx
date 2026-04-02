@@ -20,18 +20,7 @@ const mainNav = [
   { label: "WhatsApp Cloud", icon: Cloud, path: "/whatsapp-cloud" },
 ];
 
-const ShurikenLogo = () => (
-  <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-    <defs>
-      <linearGradient id="shuriken-grad-sb" x1="0" y1="0" x2="32" y2="32">
-        <stop offset="0%" stopColor="#10B981" />
-        <stop offset="100%" stopColor="#059669" />
-      </linearGradient>
-    </defs>
-    <path d="M16 2L20 12L30 16L20 20L16 30L12 20L2 16L12 12Z" fill="url(#shuriken-grad-sb)" />
-    <circle cx="16" cy="16" r="3" fill="#0F1923" />
-  </svg>
-);
+// Logo imported from shared component
 
 const AppSidebar = () => {
   const location = useLocation();
