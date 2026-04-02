@@ -480,7 +480,7 @@ const Pedidos = () => {
                                     <Eye className="h-3.5 w-3.5" />
                                   </Button>
                                   {order.logistics_type === "logzz" && !order.logzz_order_id && (
-                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-primary" title="Enviar para Logzz" onClick={async (e) => {
+                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-emerald-500" title="Enviar para Logzz" onClick={async (e) => {
                                       e.stopPropagation();
                                       toast.loading("Enviando para Logzz...", { id: `logzz-${order.id}` });
                                       try {
@@ -491,6 +491,21 @@ const Pedidos = () => {
                                       } catch (err: any) { toast.error(`Erro: ${err.message}`, { id: `logzz-${order.id}` }); }
                                     }}>
                                       <Truck className="h-3.5 w-3.5" />
+                                    </Button>
+                                  )}
+                                  {/* Botão Enviar para Coinzz */}
+                                  {order.logistics_type === "coinzz" && !order.coinzz_order_hash && (
+                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-purple-500" title="Enviar para Coinzz" onClick={async (e) => {
+                                      e.stopPropagation();
+                                      toast.loading("Enviando para Coinzz...", { id: `coinzz-${order.id}` });
+                                      try {
+                                        const { data, error } = await supabase.functions.invoke("checkout-api", { body: { action: "create_coinzz_order", order_id: order.id, user_id: user?.id } });
+                                        if (error) throw error;
+                                        if (data?.success) { toast.success(`Pedido enviado! Hash: ${data.coinzz_order_hash || "OK"}`, { id: `coinzz-${order.id}` }); refetch(); }
+                                        else toast.error(`Erro Coinzz: ${(data?.error || "falha").slice(0, 100)}`, { id: `coinzz-${order.id}` });
+                                      } catch (err: any) { toast.error(`Erro: ${err.message}`, { id: `coinzz-${order.id}` }); }
+                                    }}>
+                                      <Truck className="h-3.5 w-3.5 text-purple-400" />
                                     </Button>
                                   )}
                                   {/* ─── Dropdown "..." ─── */}
