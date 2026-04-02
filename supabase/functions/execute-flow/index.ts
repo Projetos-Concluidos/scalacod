@@ -106,7 +106,7 @@ Deno.serve(async (req) => {
       ...(variables || {}),
     };
 
-    const targetPhone = ctx.cliente_telefone || order?.client_phone;
+    const targetPhone = directPhone || ctx.cliente_telefone || order?.client_phone;
     if (!targetPhone) {
       console.warn("[execute-flow] No target phone available");
       return new Response(
