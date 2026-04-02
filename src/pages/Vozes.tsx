@@ -288,7 +288,10 @@ const Vozes = () => {
     if (!user) return;
     const exists = voices.find(v => v.elevenlabs_voice_id === libVoice.id);
     if (exists) {
-      toast.info("Voz já adicionada às suas vozes");
+      // Unfavorite — remove from voices
+      await supabase.from("voices").delete().eq("id", exists.id);
+      toast.success(`${libVoice.name} removida das suas vozes`);
+      fetchData();
       return;
     }
     await supabase.from("voices").insert({
