@@ -19,7 +19,7 @@ function getParam(name: string): string | null {
   }
 }
 
-// ── Internal Pixel (ScalaNinja analytics) ──
+// ── Internal Pixel (ScalaCOD analytics) ──
 export function trackPixelEvent(
   storeId: string,
   checkoutId: string,

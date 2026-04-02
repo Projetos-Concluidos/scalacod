@@ -1202,7 +1202,7 @@ Deno.serve(async (req) => {
 
         const testPayload = {
           external_id: `test-mapping-${Date.now()}`,
-          full_name: "Teste Mapeamento ScalaNinja",
+          full_name: "Teste Mapeamento ScalaCOD",
           phone: "11999999999",
           customer_document: "00000000000",
           postal_code: "59015070",

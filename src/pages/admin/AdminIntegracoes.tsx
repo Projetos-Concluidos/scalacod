@@ -45,7 +45,7 @@ const sections: IntegrationSection[] = [
   },
   {
     title: "MercadoPago (Plataforma)",
-    description: "Credenciais para cobrar as assinaturas do ScalaNinja",
+    description: "Credenciais para cobrar as assinaturas do ScalaCOD",
     provider: "mercadopago",
     fields: [
       { label: "Access Token Produção", key: "mp_access_token", placeholder: "APP_USR-...", description: "Token de produção do MercadoPago para processar pagamentos reais de assinaturas" },

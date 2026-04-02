@@ -57,7 +57,7 @@ serve(async (req) => {
 
     const paymentPayload: Record<string, unknown> = {
       transaction_amount: Number(pack.price),
-      description: `ScalaNinja — ${pack.name} (${pack.tokens.toLocaleString("pt-BR")} tokens)`,
+      description: `ScalaCOD — ${pack.name} (${pack.tokens.toLocaleString("pt-BR")} tokens)`,
       external_reference: `tokens-${user.id}-${pack.slug}-${Date.now()}`,
       notification_url: `${Deno.env.get("SUPABASE_URL")}/functions/v1/mp-token-webhook`,
       payer: { email },

@@ -121,7 +121,7 @@ Deno.serve(async (req) => {
             currency_id: "BRL",
           }],
           payer: {
-            email: payerEmail || order.client_email || "comprador@scalaninja.com",
+            email: payerEmail || order.client_email || "comprador@scalacod.com.br",
             name: payerName || order.client_name || "",
           },
           external_reference: orderId,
