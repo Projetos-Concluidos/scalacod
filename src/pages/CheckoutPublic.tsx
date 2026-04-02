@@ -1498,6 +1498,7 @@ const CheckoutPublic = () => {
           {/* RIGHT: Order Summary (desktop) */}
           <OrderSummary className="hidden lg:block w-[340px] flex-shrink-0" />
         </div>
+        )}  {/* end express ternary */}
 
         {/* Mobile: Collapsible summary */}
         <div className="lg:hidden mt-4">
