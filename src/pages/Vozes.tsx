@@ -582,87 +582,122 @@ const Vozes = () => {
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-40 rounded-xl" />)}
           </div>
-        ) : voices.length === 0 ? (
-          <EmptyState
-            icon={<Mic className="h-12 w-12" />}
-            title="Nenhuma voz ainda"
-            description="Clone sua primeira voz ou explore a biblioteca e favorite as que mais gostar"
-            action={
-              <div className="flex items-center gap-3">
-                {ttsProvider === "elevenlabs" && (
-                  <button onClick={() => { resetClone(); setCloneOpen(true); }} className="gradient-primary flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-primary-foreground">
-                    <Upload className="h-4 w-4" /> Clonar Voz
-                  </button>
-                )}
-                <button onClick={() => setTab("library")} className="flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm text-foreground hover:bg-muted">
-                  <Globe className="h-4 w-4" /> Explorar Biblioteca
-                </button>
-              </div>
-            }
-          />
         ) : (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {voices.map(voice => (
-              <div key={voice.id} className="ninja-card flex flex-col">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-bold text-foreground">{voice.name}</h3>
-                  <NinjaBadge variant={voice.is_cloned ? "warning" : "info"}>
-                    {voice.is_cloned ? "Clonada" : "Biblioteca"}
-                  </NinjaBadge>
-                </div>
-
-                {/* Preview player */}
-                <div className="flex items-center gap-2 mb-3">
-                  <button onClick={() => handlePlay(voice.preview_url, voice.id)} className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 hover:bg-primary/20 transition-colors shrink-0">
-                    {playingId === voice.id ? <Pause className="h-4 w-4 text-primary" /> : <Play className="h-4 w-4 text-primary" />}
-                  </button>
-                  <div className="flex-1 h-1 rounded-full bg-muted">
-                    <div className={`h-1 rounded-full bg-primary transition-all ${playingId === voice.id ? "w-1/2 animate-pulse" : "w-0"}`} />
-                  </div>
-                </div>
-
-                {/* Audio generation */}
-                {voice.elevenlabs_voice_id && (
-                  <div className="mb-3 space-y-2">
-                    <Textarea
-                      value={generateText[voice.id] ?? "Olá! Esta é minha voz no ScalaNinja."}
-                      onChange={e => setGenerateText(t => ({ ...t, [voice.id]: e.target.value }))}
-                      placeholder="Digite o texto para gerar áudio..."
-                      rows={2}
-                      className="text-xs resize-none"
-                    />
-                    <div className="flex items-center gap-2">
-                      <Button
-                        size="sm"
-                        onClick={() => handleGenerateAudio(voice)}
-                        disabled={generating[voice.id]}
-                        className="flex-1 gradient-primary text-primary-foreground text-xs"
-                      >
-                        {generating[voice.id] ? (
-                          <><Loader2 className="h-3 w-3 animate-spin mr-1" /> Gerando...</>
-                        ) : (
-                          <><Volume2 className="h-3 w-3 mr-1" /> Gerar Áudio</>
-                        )}
-                      </Button>
-                      <span className="text-[10px] text-muted-foreground whitespace-nowrap">
-                        {(generateText[voice.id] ?? "Olá! Esta é minha voz no ScalaNinja.").length} tokens
-                      </span>
-                    </div>
-                    {generatedAudio[voice.id] && (
-                      <audio controls src={generatedAudio[voice.id]} className="w-full h-8" />
-                    )}
-                  </div>
-                )}
-
-                {/* Actions */}
-                <div className="flex items-center gap-2 pt-3 border-t border-border mt-auto">
-                  <button className="flex-1 rounded-lg border border-border px-3 py-1.5 text-xs text-foreground hover:bg-muted transition-colors">Usar nos fluxos</button>
-                  <button onClick={() => handleDeleteVoice(voice.id)} className="text-muted-foreground hover:text-destructive transition-colors">
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </div>
+          <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
+            {/* Vozes Clonadas */}
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-base font-bold text-foreground">🎙 Vozes Clonadas <span className="text-muted-foreground font-normal text-sm">({voices.filter(v => v.is_cloned).length} vozes)</span></h3>
               </div>
-            ))}
+              <div className="grid grid-cols-1 gap-3">
+                {voices.filter(v => v.is_cloned).map(voice => (
+                  <div key={voice.id} className="ninja-card flex flex-col">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-sm font-bold text-foreground">{voice.name}</h3>
+                      <NinjaBadge variant="warning">Clonada</NinjaBadge>
+                    </div>
+                    <div className="flex items-center gap-2 mb-3">
+                      <button onClick={() => handlePlay(voice.preview_url, voice.id)} className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 hover:bg-primary/20 transition-colors shrink-0">
+                        {playingId === voice.id ? <Pause className="h-4 w-4 text-primary" /> : <Play className="h-4 w-4 text-primary" />}
+                      </button>
+                      <div className="flex-1 h-1 rounded-full bg-muted">
+                        <div className={`h-1 rounded-full bg-primary transition-all ${playingId === voice.id ? "w-1/2 animate-pulse" : "w-0"}`} />
+                      </div>
+                    </div>
+                    {voice.elevenlabs_voice_id && (
+                      <div className="mb-3 space-y-2">
+                        <Textarea
+                          value={generateText[voice.id] ?? "Olá! Esta é minha voz no ScalaNinja."}
+                          onChange={e => setGenerateText(t => ({ ...t, [voice.id]: e.target.value }))}
+                          placeholder="Digite o texto para gerar áudio..."
+                          rows={2}
+                          className="text-xs resize-none"
+                        />
+                        <div className="flex items-center gap-2">
+                          <Button size="sm" onClick={() => handleGenerateAudio(voice)} disabled={generating[voice.id]} className="flex-1 gradient-primary text-primary-foreground text-xs">
+                            {generating[voice.id] ? <><Loader2 className="h-3 w-3 animate-spin mr-1" /> Gerando...</> : <><Volume2 className="h-3 w-3 mr-1" /> Gerar Áudio</>}
+                          </Button>
+                          <span className="text-[10px] text-muted-foreground whitespace-nowrap">{(generateText[voice.id] ?? "Olá! Esta é minha voz no ScalaNinja.").length} tokens</span>
+                        </div>
+                        {generatedAudio[voice.id] && <audio controls src={generatedAudio[voice.id]} className="w-full h-8" />}
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2 pt-3 border-t border-border mt-auto">
+                      <button className="flex-1 rounded-lg border border-border px-3 py-1.5 text-xs text-foreground hover:bg-muted transition-colors">Usar nos fluxos</button>
+                      <button onClick={() => handleDeleteVoice(voice.id)} className="text-muted-foreground hover:text-destructive transition-colors">
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                {/* New clone slot */}
+                {ttsProvider === "elevenlabs" && (
+                  <button
+                    onClick={() => { resetClone(); setCloneOpen(true); }}
+                    className="ninja-card flex flex-col items-center justify-center gap-2 border-2 border-dashed border-border hover:border-primary/50 transition-colors min-h-[120px] cursor-pointer"
+                  >
+                    <Plus className="h-8 w-8 text-muted-foreground" />
+                    <span className="text-sm font-medium text-muted-foreground">Novo slot de clonagem</span>
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Vozes Escolhidas (Favoritas) */}
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-base font-bold text-foreground">💜 Vozes Escolhidas <span className="text-muted-foreground font-normal text-sm">({voices.filter(v => !v.is_cloned).length} vozes)</span></h3>
+                <button onClick={() => setTab("library")} className="text-xs text-primary hover:underline font-medium">Ver Biblioteca →</button>
+              </div>
+              <div className="grid grid-cols-1 gap-3">
+                {voices.filter(v => !v.is_cloned).length === 0 ? (
+                  <div className="ninja-card flex flex-col items-center justify-center gap-2 min-h-[120px] text-center">
+                    <Heart className="h-8 w-8 text-muted-foreground" />
+                    <p className="text-sm text-muted-foreground">Nenhuma voz favoritada ainda</p>
+                    <button onClick={() => setTab("library")} className="text-xs text-primary hover:underline font-medium">Explorar Biblioteca</button>
+                  </div>
+                ) : voices.filter(v => !v.is_cloned).map(voice => (
+                  <div key={voice.id} className="ninja-card flex flex-col">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-sm font-bold text-foreground">{voice.name}</h3>
+                      <NinjaBadge variant="info">Favorita</NinjaBadge>
+                    </div>
+                    <div className="flex items-center gap-2 mb-3">
+                      <button onClick={() => handlePlay(voice.preview_url, voice.id)} className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 hover:bg-primary/20 transition-colors shrink-0">
+                        {playingId === voice.id ? <Pause className="h-4 w-4 text-primary" /> : <Play className="h-4 w-4 text-primary" />}
+                      </button>
+                      <div className="flex-1 h-1 rounded-full bg-muted">
+                        <div className={`h-1 rounded-full bg-primary transition-all ${playingId === voice.id ? "w-1/2 animate-pulse" : "w-0"}`} />
+                      </div>
+                    </div>
+                    {voice.elevenlabs_voice_id && (
+                      <div className="mb-3 space-y-2">
+                        <Textarea
+                          value={generateText[voice.id] ?? "Olá! Esta é minha voz no ScalaNinja."}
+                          onChange={e => setGenerateText(t => ({ ...t, [voice.id]: e.target.value }))}
+                          placeholder="Digite o texto para gerar áudio..."
+                          rows={2}
+                          className="text-xs resize-none"
+                        />
+                        <div className="flex items-center gap-2">
+                          <Button size="sm" onClick={() => handleGenerateAudio(voice)} disabled={generating[voice.id]} className="flex-1 gradient-primary text-primary-foreground text-xs">
+                            {generating[voice.id] ? <><Loader2 className="h-3 w-3 animate-spin mr-1" /> Gerando...</> : <><Volume2 className="h-3 w-3 mr-1" /> Gerar Áudio</>}
+                          </Button>
+                          <span className="text-[10px] text-muted-foreground whitespace-nowrap">{(generateText[voice.id] ?? "Olá! Esta é minha voz no ScalaNinja.").length} tokens</span>
+                        </div>
+                        {generatedAudio[voice.id] && <audio controls src={generatedAudio[voice.id]} className="w-full h-8" />}
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2 pt-3 border-t border-border mt-auto">
+                      <button className="flex-1 rounded-lg border border-border px-3 py-1.5 text-xs text-foreground hover:bg-muted transition-colors">Usar nos fluxos</button>
+                      <button onClick={() => handleDeleteVoice(voice.id)} className="text-muted-foreground hover:text-destructive transition-colors" title="Desfavoritar">
+                        <HeartOff className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         )
       )}
