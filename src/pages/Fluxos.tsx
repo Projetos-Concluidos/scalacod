@@ -438,6 +438,9 @@ const Fluxos = () => {
                             <button className="text-muted-foreground hover:text-foreground"><MoreHorizontal className="h-4 w-4" /></button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => exportFlow(flow)}>
+                              <Download className="h-4 w-4 mr-2" /> Exportar
+                            </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => toggleFlowActive(flow)}>
                               {flow.is_active ? <><PowerOff className="h-4 w-4 mr-2" /> Desativar</> : <><Power className="h-4 w-4 mr-2" /> Ativar</>}
                             </DropdownMenuItem>
