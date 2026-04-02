@@ -1,39 +1,71 @@
+## Plano: Melhorias Funcionais na Página de Vozes (ElevenLabs API)
 
+### Análise: O que o concorrente tem que falta
 
-## Plano: Calculadora de Custo Justo de Tokens no Admin
+Baseado nos prints, identifiquei **6 diferenças funcionais** (não visuais):
 
-### Contexto
+---
 
-Atualmente o admin não tem visibilidade do custo real da plataforma por token. O provedor ativo é OpenAI TTS (`tts-1-hd`), que custa **US$ 0,030 por 1.000 caracteres** (1 token = 1 caractere). Com câmbio ~R$ 5,20, isso dá **R$ 0,000156 por token**.
+### 1. Separar "Minhas Vozes" em 2 seções
 
-Os packs atuais cobram ~R$ 0,00398/token, gerando margem de ~96%. A calculadora ajudará o admin a entender o custo real e definir preços justos.
+**Atual**: Grid flat misturando clonadas e favoritadas.
+**Melhoria**: Dividir em **"Vozes Clonadas"** (esquerda, com contador "0 vozes") e **"Vozes Escolhidas"** (direita, com link "Ver Biblioteca").
 
-### Funcionalidade: Nova aba "🧮 Calculadora" no AdminTokens
+- Vozes clonadas: cards com badge "CLONADA", botão de deletar
+- Vozes escolhidas: cards com badge "FAVORITA", botão "Desfavoritar" (remove dos favoritos)
+- Slot "Novo slot de clonagem" sempre visível na seção de clonadas (abre modal de clone)
 
-Adicionar uma **4a aba** na página `/admin/tokens`:
+---
 
-**Seção 1 — Parâmetros de custo**:
-- Campo "Custo API por 1.000 tokens (USD)": default 0.030 (OpenAI tts-1-hd) — editável
-- Campo "Câmbio USD/BRL": default 5.20 — editável
-- Campo "Taxa gateway (%)": default 4.99 (MercadoPago) — editável
-- Custo real por token calculado automaticamente em BRL
+### 2. Busca + filtro de categoria na Biblioteca
 
-**Seção 2 — Simulador de Pack**:
-- Campo "Quantidade de tokens" (input numérico)
-- Exibe automaticamente:
-  - Custo da plataforma (API + gateway)
-  - Preço sugerido com margens de 30%, 50%, 80%, 100%
-  - Lucro estimado por venda
-- Tabela comparativa com as 4 margens lado a lado
+**Atual**: Só filtros de idioma e gênero.
+**Melhoria**: Adicionar:
+- **Campo de busca** por nome da voz (text input com ícone de lupa)
+- **Filtro de categoria/use_case** (Todas, Narração, Conversacional, Formal, etc.)
+- Busca local nos dados já carregados (sem nova chamada à API)
 
-**Seção 3 — Análise dos Packs Atuais**:
-- Lista os packs existentes da tabela `token_packs`
-- Para cada pack mostra: custo real, preço atual, margem real (%), lucro por venda
-- Indicador visual: verde (margem saudável >50%), amarelo (30-50%), vermelho (<30%)
-- Mostra se o pack tem desconto por volume comparado ao menor pack
+---
+
+### 3. Descrição nos cards da Biblioteca
+
+**Atual**: Cards mostram só nome, idioma, gênero e use_case como tags.
+**Melhoria**: Exibir o campo `labels.description` ou construir uma descrição a partir dos labels disponíveis da API ElevenLabs. A edge function `list-voice-library` já retorna `labels` — basta mapear `labels.description` e passar ao frontend.
+
+Alteração na edge function `list-voice-library`: adicionar campo `description` ao mapeamento (já disponível em `v.description` da API ElevenLabs).
+
+---
+
+### 4. Modal de clonagem melhorado
+
+**Atual**: 2 steps (nome → upload), aceita .mp3/.wav, limite "30 min".
+**Melhoria**:
+- Adicionar campo **"Descrição (opcional)"** no step 1
+- Aceitar **.m4a** além de .mp3/.wav
+- Mudar texto para "Máx 25 amostras" (limite real da API ElevenLabs)
+- Enviar `description` junto ao FormData para a edge function `clone-voice`
+- Atualizar `clone-voice` para incluir `description` no payload à API ElevenLabs
+
+---
+
+### 5. Botão Desfavoritar funcional
+
+**Atual**: Coração na biblioteca apenas adiciona, sem opção de remover no "Minhas Vozes".
+**Melhoria**:
+- Na seção "Vozes Escolhidas", cada card terá botão **"Desfavoritar"** que remove a voz da tabela `voices`
+- Na Biblioteca, vozes já favoritadas mostram botão **"Favoritada"** (com estilo diferente) que permite desfavoritar com um clique
+
+---
+
+### 6. Passar `description` da API ElevenLabs
+
+**Edge function `list-voice-library`**: Adicionar `description: v.description || ""` ao mapeamento de vozes retornado.
+
+**Interface `LibraryVoice`**: Adicionar campo `description: string`.
+
+---
 
 ### Escopo
-- **1 arquivo editado**: `src/pages/admin/AdminTokens.tsx` (nova aba "Calculadora")
-- Sem migrações, sem edge functions
-- Tudo calculado no frontend com os dados já disponíveis
-
+- **2 edge functions editadas**: `list-voice-library` (campo description), `clone-voice` (campo description)
+- **1 arquivo frontend editado**: `src/pages/Vozes.tsx` (layout, busca, filtros, modal)
+- Sem migrações
