@@ -75,6 +75,10 @@ const Vozes = () => {
   const [purchasing, setPurchasing] = useState(false);
   const [pixData, setPixData] = useState<{ qrCode: string; copyPaste: string } | null>(null);
   const [purchaseSuccess, setPurchaseSuccess] = useState(false);
+  const [mpPublicKey, setMpPublicKey] = useState<string | null>(null);
+  const [bricksReady, setBricksReady] = useState(false);
+  const bricksControllerRef = useRef<any>(null);
+  const cardFormRef = useRef<HTMLDivElement>(null);
 
   // Audio generation state per voice
   const [generateText, setGenerateText] = useState<Record<string, string>>({});
