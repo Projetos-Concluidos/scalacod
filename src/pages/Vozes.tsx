@@ -34,6 +34,7 @@ interface LibraryVoice {
   language: string | null;
   gender: string | null;
   useCase: string | null;
+  description?: string;
 }
 
 interface TokenPack {
