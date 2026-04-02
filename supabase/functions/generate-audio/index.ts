@@ -161,15 +161,16 @@ serve(async (req) => {
     const { data: urlData } = supabase.storage.from("audio").getPublicUrl(fileName);
     const publicUrl = urlData.publicUrl;
 
-    // Debit tokens
-    if (tokenData) {
-      await supabase
-        .from("voice_tokens")
-        .update({
-          balance: currentBalance - tokensNeeded,
-          total_used: (tokenData.total_used || 0) + tokensNeeded,
-        })
-        .eq("id", tokenData.id);
+    // Debit tokens atomically
+    const { data: debited, error: debitError } = await supabase.rpc("debit_voice_tokens", {
+      p_user_id: userId,
+      p_amount: tokensNeeded,
+    });
+    if (debitError || !debited) {
+      return new Response(
+        JSON.stringify({ error: "Tokens insuficientes ou erro ao debitar." }),
+        { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     return new Response(
