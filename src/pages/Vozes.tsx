@@ -442,6 +442,7 @@ const Vozes = () => {
     setCloneOpen(false);
     setCloneStep(1);
     setCloneName("");
+    setCloneDescription("");
     setCloneFiles([]);
   };
 
