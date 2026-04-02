@@ -926,6 +926,10 @@ const Vozes = () => {
                 <Label>Nome da Voz</Label>
                 <Input value={cloneName} onChange={e => setCloneName(e.target.value)} placeholder="Ex: Minha Voz Comercial" />
               </div>
+              <div className="space-y-2">
+                <Label>Descrição <span className="text-muted-foreground font-normal">(opcional)</span></Label>
+                <Textarea value={cloneDescription} onChange={e => setCloneDescription(e.target.value)} placeholder="Ex: Voz suave para narração de vídeos comerciais" rows={2} className="resize-none" />
+              </div>
               <div className="rounded-lg border border-primary/10 bg-primary/5 p-3">
                 <p className="text-xs text-muted-foreground">
                   <strong className="text-foreground">Dica:</strong> Use áudios de pelo menos 1 minuto, sem ruído de fundo, com fala clara e natural. Quanto mais amostras, melhor a qualidade da clonagem.
