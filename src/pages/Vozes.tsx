@@ -383,7 +383,7 @@ const Vozes = () => {
     try {
       const { data, error } = await supabase.functions.invoke("purchase-tokens", {
         body: {
-          packId: selectedPack.id,
+          packId: selectedPack.slug,
           paymentMethod,
           payerEmail: user.email,
         },
