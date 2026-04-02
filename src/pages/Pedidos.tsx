@@ -658,7 +658,7 @@ const Pedidos = () => {
                                     refetch();
                                     supabase.from("orders").select("*").eq("id", o.id).single().then(({ data: refreshed }) => { if (refreshed) setSelectedOrder(refreshed as Order); });
                                   } else {
-                                    toast.error(`Erro: ${(data?.logzz_response || "falha").slice(0, 150)}`, { id: `logzz-retry-${o.id}` });
+                                    toast.error(`Erro: ${(data?.logzz_error || data?.logzz_response || "falha").slice(0, 150)}`, { id: `logzz-retry-${o.id}` });
                                     supabase.from("order_status_history").select("*").eq("order_id", o.id).order("created_at", { ascending: true }).then(({ data: tl }) => setDetailTimeline(tl || []));
                                   }
                                 } catch (err: any) { toast.error(`Erro: ${err.message}`, { id: `logzz-retry-${o.id}` }); }
