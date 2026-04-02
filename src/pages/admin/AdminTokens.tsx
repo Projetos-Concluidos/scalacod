@@ -131,7 +131,7 @@ const AdminTokens = () => {
     switch (status) {
       case "paid": return <NinjaBadge variant="success">✅ Pago</NinjaBadge>;
       case "pending": return <NinjaBadge variant="warning">⏳ Pendente</NinjaBadge>;
-      case "failed": return <NinjaBadge variant="destructive">❌ Falhou</NinjaBadge>;
+      case "failed": return <NinjaBadge variant="danger">❌ Falhou</NinjaBadge>;
       case "refunded": return <NinjaBadge variant="info">↩️ Estornado</NinjaBadge>;
       default: return <NinjaBadge variant="default">{status || "—"}</NinjaBadge>;
     }
