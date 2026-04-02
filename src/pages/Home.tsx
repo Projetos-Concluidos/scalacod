@@ -304,7 +304,7 @@ export default function Home() {
             O único checkout que<br /><span className="bg-gradient-to-r from-emerald-400 to-emerald-300 bg-clip-text text-transparent">pensa antes de você.</span>
           </h2>
           <p className="reveal mx-auto mt-6 max-w-2xl text-base text-gray-400">
-            Seu cliente digita o CEP. A ScalaNinja verifica em tempo real.
+            Seu cliente digita o CEP. O ScalaCOD verifica em tempo real.
             Logzz disponível? COD. Sem cobertura? Coinzz + Correios.{" "}
             <span className="font-bold text-emerald-400">Automático. Invisível. Perfeito.</span>
           </p>
