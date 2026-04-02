@@ -34,6 +34,7 @@ const Fluxos = () => {
   const [creatingTemplate, setCreatingTemplate] = useState<number | null>(null);
   const [importOpen, setImportOpen] = useState(false);
   const [importCode, setImportCode] = useState("");
+  const [flowFilter, setFlowFilter] = useState<"all" | "cod" | "coinzz">("all");
 
   const openGallery = async () => {
     setGalleryOpen(true);
