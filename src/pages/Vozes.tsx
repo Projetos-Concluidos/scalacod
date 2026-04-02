@@ -222,7 +222,7 @@ const Vozes = () => {
               try {
                 const { data, error } = await supabase.functions.invoke("purchase-tokens", {
                   body: {
-                    packId: selectedPack.id,
+                    packId: selectedPack.slug,
                     paymentMethod: "credit_card",
                     cardToken: cardFormData.token,
                     payerEmail: user?.email,
