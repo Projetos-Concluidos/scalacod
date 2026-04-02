@@ -5,6 +5,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
+import ScalaCODLogo from "@/components/ScalaCODLogo";
 import { useMobileSidebar } from "@/contexts/MobileSidebarContext";
 import { useEffect } from "react";
 
