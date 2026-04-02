@@ -1,87 +1,60 @@
 
 
-## Relatório Completo: Diagnóstico do Erro 422 Logzz
+## Relatório: Análise Comparativa e Correção do Payload Logzz
 
 ---
 
-### Teste Real — CEP 51030050
+### O que entendi do projeto que funciona (ScalaCOD)
 
-Chamei a API da Logzz diretamente agora e ela retornou 3 datas disponíveis:
+O projeto ScalaCOD que funciona envia para o webhook da Logzz um payload **simples** com apenas `delivery_date` (YYYY-MM-DD). Ele **não** envia `delivery_type_code`, `local_operation_code` nem `local_operation_name` no payload do webhook.
 
-```text
-1. 2026-04-04 (sáb) — type_code: det1pgz5, price: 24.98
-2. 2026-04-06 (seg) — type_code: det1pgz5, price: 24.98
-3. 2026-04-07 (ter) — type_code: det1pgz5, price: 24.98
-```
-
-Cada data inclui também: `local_operation_code: "loo9d006"`, `local_operation_name: "Recife"`.
-
-### O que nosso sistema enviou (pedido WL20H5LQ)
+### O que nosso sistema envia (e falha)
 
 ```text
-delivery_date: "2026-04-06"     ← está na lista de datas válidas ✓
-delivery_type_code: "det1pgz5"  ← correto ✓
+Nosso payload atual:
+  delivery_date: "2026-04-06"        ← correto
+  delivery_type_code: "det1pgz5"     ← EXTRA - não existe no projeto que funciona
+  local_operation_code: "loo9d006"    ← EXTRA - não existe no projeto que funciona
+  local_operation_name: "Recife"     ← EXTRA - não existe no projeto que funciona
 ```
-
-**Resultado**: Logzz retornou 422 — "A data de entrega não corresponde ao mapeamento."
 
 ### Diagnóstico
 
-A data `2026-04-06` **está** na lista `dates_available` da API da Logzz. O `delivery_type_code` **está** correto. Mesmo assim, o webhook rejeita.
+O mapeamento no painel da Logzz para o webhook `ori1odgj` foi configurado usando o `test_logzz_mapping`, que envia **apenas** `delivery_date` (sem `delivery_type_code`). Quando enviamos campos extras no payload real, a Logzz pode estar interpretando `delivery_type_code` como um campo mapeado conflitante, gerando o erro 422 "A data de entrega não corresponde ao mapeamento."
 
-**Conclusão**: O webhook de importação (`ori1odgj` — "Scala Ninja Nova Integração") tem sua **própria configuração de mapeamento** que é diferente da API pública de datas. Isso é uma configuração no painel da Logzz que precisa ser verificada com o suporte deles.
-
-No entanto, identifiquei **2 melhorias** que podemos fazer:
-
-1. **Campo `local_operation_code` ausente**: A API retorna esse campo por data, mas não o enviamos no payload do webhook. Isso pode ser necessário para o mapeamento.
-2. **Sem re-validação**: O pedido pode ser criado com uma data que já expirou entre o momento que o cliente viu e confirmou.
+A solução é **alinhar** nosso payload real com o padrão do projeto que funciona: enviar apenas `delivery_date` no webhook, sem campos extras de tipo/operação.
 
 ---
 
-### Plano de Correção + Melhorias UI
+### Plano de Correção
 
-#### 1. `supabase/functions/logzz-create-order/index.ts` — Re-validar data e enviar `local_operation_code`
+#### 1. `supabase/functions/logzz-create-order/index.ts`
+- **Remover** `delivery_type_code` do payload enviado ao webhook
+- **Remover** `local_operation_code` e `local_operation_name` do payload
+- Manter apenas `delivery_date` como campo de entrega (formato YYYY-MM-DD)
+- Manter a re-validação da data (garantir que está disponível), mas usar o resultado apenas para atualizar o banco local, não enviar ao webhook
+- Manter os campos `delivery_type_code` e `local_operation_code` salvos no banco (para referência interna)
 
-Antes de enviar ao webhook, chamar a API `delivery-day/options/zip-code/{cep}` para:
-- Verificar que a data selecionada ainda está disponível
-- Capturar o `local_operation_code` correspondente
-- Se a data original não estiver mais disponível, selecionar automaticamente a data mais próxima
-
-Adicionar ao payload: `local_operation_code` e `local_operation_name`.
-
-#### 2. `supabase/functions/checkout-api/index.ts` — Salvar `local_operation_code` no check_cep
-
-No mapeamento de `dates_available`, incluir `local_operation_code` e `local_operation_name` para cada data.
-
-#### 3. `src/pages/CheckoutPublic.tsx` — Enviar `local_operation_code` no pedido
-
-Atualizar `DeliveryDate` interface para incluir `local_operation_code`. Enviar no payload de criação.
-
-#### 4. `src/pages/Pedidos.tsx` — UI de erro detalhado + botão Reenviar
-
-- No alerta de "Sincronização pendente", mostrar o erro específico da Logzz (ex: "Data de entrega não corresponde ao mapeamento")
-- Adicionar botão "🔄 Reenviar para Logzz" no alerta
-- Buscar o erro do `order_status_history` quando `logzz_order_id` é null
-
-#### 5. Migração — Coluna `local_operation_code`
-
-Adicionar coluna `local_operation_code text` na tabela `orders` (nullable).
+#### 2. Sem outras alterações
+- O checkout já funciona corretamente capturando `type_code` e salvando no banco
+- A página de Pedidos não precisa de mudanças
+- Sem migração necessária
 
 ---
 
-### Arquivos alterados
+### Resultado esperado
 
-1. `supabase/functions/logzz-create-order/index.ts` — Re-validação de data + local_operation_code no payload
-2. `supabase/functions/checkout-api/index.ts` — Preservar local_operation_code no check_cep e create_order
-3. `src/pages/CheckoutPublic.tsx` — Interface DeliveryDate + payload atualizado
-4. `src/pages/Pedidos.tsx` — Erro detalhado + botão reenviar
-5. Migração SQL — Coluna `local_operation_code`
+O payload enviado à Logzz ficará idêntico ao do projeto ScalaCOD que funciona:
+```json
+{
+  "external_id": "...",
+  "full_name": "...",
+  "phone": "...",
+  "delivery_date": "2026-04-06",
+  "offer": "...",
+  ...
+}
+```
 
-### Nota importante
-
-Mesmo com essas melhorias, se o webhook da Logzz continuar rejeitando datas que a própria API dela disponibiliza, o problema é na configuração do webhook no painel Logzz. Recomendo abrir um chamado com o suporte deles informando:
-- Webhook: `ori1odgj`
-- Data enviada: `2026-04-06` com `type_code: det1pgz5`
-- API retorna essa data como disponível para CEP `51030050`
-- Erro: "A data de entrega não corresponde ao mapeamento"
+Sem `delivery_type_code`, sem `local_operation_code`.
 
