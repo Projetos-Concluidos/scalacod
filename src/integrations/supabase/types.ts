@@ -150,6 +150,7 @@ export type Database = {
       }
       checkouts: {
         Row: {
+          coinzz_offer_hash: string | null
           config: Json | null
           created_at: string | null
           custom_css: string | null
@@ -173,6 +174,7 @@ export type Database = {
           whatsapp_support: string | null
         }
         Insert: {
+          coinzz_offer_hash?: string | null
           config?: Json | null
           created_at?: string | null
           custom_css?: string | null
@@ -196,6 +198,7 @@ export type Database = {
           whatsapp_support?: string | null
         }
         Update: {
+          coinzz_offer_hash?: string | null
           config?: Json | null
           created_at?: string | null
           custom_css?: string | null
