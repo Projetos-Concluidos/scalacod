@@ -987,7 +987,7 @@ Deno.serve(async (req) => {
     if (action === "process_logzz_webhook") {
       const { order_id, logzz_order_id, status: rawStatus, payload } = body;
 
-      // Inline status mapping (Logzz → ScalaNinja)
+      // Inline status mapping (Logzz → ScalaCOD)
       const LOGZZ_MAP: Record<string, string> = {
         'Pendente': 'Aguardando', 'Em aberto': 'Aguardando', 'Aguardando': 'Aguardando', 'A enviar': 'Aguardando',
         'Confirmado': 'Confirmado', 'Agendado': 'Agendado', 'Reagendado': 'Agendado',
