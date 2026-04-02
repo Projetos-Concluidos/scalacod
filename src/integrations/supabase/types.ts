@@ -1949,6 +1949,10 @@ export type Database = {
         Returns: boolean
       }
       cleanup_rate_limits: { Args: never; Returns: undefined }
+      debit_voice_tokens: {
+        Args: { p_amount: number; p_user_id: string }
+        Returns: boolean
+      }
       get_user_plan_limit: { Args: { feature: string }; Returns: number }
       has_active_subscription: { Args: never; Returns: boolean }
       has_role: {
