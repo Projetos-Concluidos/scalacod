@@ -157,8 +157,8 @@ export default function Home() {
       <nav className="fixed top-0 z-50 w-full border-b border-emerald-900/30 bg-black/60 backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 md:px-8">
           <div className="flex items-center gap-2">
-            <ShurikenLogo size={28} />
-            <span className="text-xl font-extrabold tracking-tight text-white">ScalaCOD</span>
+            <ScalaCODLogo size={28} />
+            <ScalaCODBrandName className="text-xl font-extrabold tracking-tight" />
           </div>
           <div className="hidden items-center gap-6 md:flex">
             <a href="#features" className="text-sm font-medium text-gray-400 transition hover:text-emerald-400">Recursos</a>
