@@ -531,7 +531,7 @@ export default function Home() {
           </div>
           <div>
             <h4 className="mb-3 text-sm font-bold text-gray-300">Contato</h4>
-            <p className="text-sm text-gray-500">📧 suporte@scalaninja.com</p>
+            <p className="text-sm text-gray-500">📧 suporte@scalacod.com.br</p>
             <p className="mt-1 text-sm text-gray-500">💬 WhatsApp</p>
           </div>
         </div>
