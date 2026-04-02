@@ -632,6 +632,8 @@ const CheckoutPublic = () => {
     );
   }
 
+  const quantity = extractQty(checkout.name);
+
   // ── STEP 4: CONFIRMATION PAGE ──
   if (step === 4) {
     return (
