@@ -1,8 +1,8 @@
 /**
- * Mapeamento bidirecional de status entre Logzz e ScalaNinja.
+ * Mapeamento bidirecional de status entre Logzz e ScalaCOD.
  */
 
-export const LOGZZ_TO_SCALANINJA: Record<string, string> = {
+export const LOGZZ_TO_SCALACOD: Record<string, string> = {
   // Pendente / Inicial
   'Pendente': 'Aguardando',
   'Em aberto': 'Aguardando',
@@ -61,17 +61,20 @@ export const LOGZZ_TO_SCALANINJA: Record<string, string> = {
   'rescheduled': 'Reagendar',
 };
 
-export function mapLogzzToScalaNinja(logzzStatus: string): string {
+/** @deprecated Use LOGZZ_TO_SCALACOD */
+export const LOGZZ_TO_SCALANINJA = LOGZZ_TO_SCALACOD;
+
+export function mapLogzzToScalaCOD(logzzStatus: string): string {
   if (!logzzStatus) return 'Aguardando';
   
   // Busca exata
-  if (LOGZZ_TO_SCALANINJA[logzzStatus]) {
-    return LOGZZ_TO_SCALANINJA[logzzStatus];
+  if (LOGZZ_TO_SCALACOD[logzzStatus]) {
+    return LOGZZ_TO_SCALACOD[logzzStatus];
   }
   
   // Busca case-insensitive
   const lower = logzzStatus.toLowerCase();
-  for (const [key, value] of Object.entries(LOGZZ_TO_SCALANINJA)) {
+  for (const [key, value] of Object.entries(LOGZZ_TO_SCALACOD)) {
     if (key.toLowerCase() === lower) return value;
   }
   
@@ -88,7 +91,10 @@ export function mapLogzzToScalaNinja(logzzStatus: string): string {
   return logzzStatus;
 }
 
-export const SCALANINJA_TO_LOGZZ: Record<string, string> = {
+/** @deprecated Use mapLogzzToScalaCOD */
+export const mapLogzzToScalaNinja = mapLogzzToScalaCOD;
+
+export const SCALACOD_TO_LOGZZ: Record<string, string> = {
   'Aguardando': 'pending',
   'Confirmado': 'confirmed',
   'Aprovado': 'confirmed',
@@ -101,15 +107,21 @@ export const SCALANINJA_TO_LOGZZ: Record<string, string> = {
   'Reagendar': 'rescheduled',
   'Cancelado': 'canceled',
   'Reembolsado': 'refunded',
-  'Coinzz Enviado': 'in_route', // pedidos Coinzz
+  'Coinzz Enviado': 'in_route',
 };
 
-export function mapScalaNinjaToLogzz(scalaNinjaStatus: string): string {
-  return SCALANINJA_TO_LOGZZ[scalaNinjaStatus] || 'pending';
+/** @deprecated Use SCALACOD_TO_LOGZZ */
+export const SCALANINJA_TO_LOGZZ = SCALACOD_TO_LOGZZ;
+
+export function mapScalaCODToLogzz(status: string): string {
+  return SCALACOD_TO_LOGZZ[status] || 'pending';
 }
 
-/** All valid ScalaNinja statuses for UI display */
-export const SCALANINJA_STATUSES = [
+/** @deprecated Use mapScalaCODToLogzz */
+export const mapScalaNinjaToLogzz = mapScalaCODToLogzz;
+
+/** All valid ScalaCOD statuses for UI display */
+export const SCALACOD_STATUSES = [
   'Aguardando',
   'Confirmado',
   'Agendado',
@@ -123,7 +135,12 @@ export const SCALANINJA_STATUSES = [
   'Reembolsado',
 ] as const;
 
-export type ScalaNinjaStatus = typeof SCALANINJA_STATUSES[number];
+/** @deprecated Use SCALACOD_STATUSES */
+export const SCALANINJA_STATUSES = SCALACOD_STATUSES;
+
+export type ScalaCODStatus = typeof SCALACOD_STATUSES[number];
+/** @deprecated Use ScalaCODStatus */
+export type ScalaNinjaStatus = ScalaCODStatus;
 
 /** Status color mapping for UI badges */
 export const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
