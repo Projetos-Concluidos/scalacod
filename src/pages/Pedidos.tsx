@@ -754,13 +754,42 @@ const Pedidos = () => {
                             </Button>
                           </div>
                         ) : null}
-                        {o.coinzz_order_hash && (
+                        {/* Coinzz section */}
+                        {o.coinzz_order_hash ? (
                           <div className="col-span-2 flex items-center gap-1.5">
                             <span className="text-muted-foreground">Pedido Coinzz:</span>
                             <a href={`https://app.coinzz.com.br/pedido/${o.coinzz_order_hash}`} target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:underline font-mono font-medium inline-flex items-center gap-1">#{o.coinzz_order_hash}<ExternalLink className="h-3 w-3" /></a>
                             <CopyBtn value={o.coinzz_order_hash} label="Hash Coinzz" />
                           </div>
-                        )}
+                        ) : o.logistics_type === "coinzz" && o.status !== "Frustrado" ? (
+                          <div className="col-span-2 space-y-2">
+                            <div className="flex items-center gap-2 rounded-md border border-purple-500/30 bg-purple-500/10 px-3 py-2">
+                              <AlertTriangle className="h-4 w-4 text-purple-400 shrink-0" />
+                              <span className="text-xs text-purple-400 font-medium">Coinzz: Sincronização pendente</span>
+                            </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="border-purple-500/30 text-purple-400 hover:bg-purple-500/10 w-full"
+                              onClick={async () => {
+                                toast.loading("Enviando para Coinzz...", { id: `coinzz-retry-${o.id}` });
+                                try {
+                                  const { data, error } = await supabase.functions.invoke("checkout-api", { body: { action: "create_coinzz_order", order_id: o.id, user_id: user?.id } });
+                                  if (error) throw error;
+                                  if (data?.success) {
+                                    toast.success(`Pedido enviado! Hash: ${data.coinzz_order_hash || "OK"}`, { id: `coinzz-retry-${o.id}` });
+                                    refetch();
+                                    supabase.from("orders").select("*").eq("id", o.id).single().then(({ data: refreshed }) => { if (refreshed) setSelectedOrder(refreshed as Order); });
+                                  } else {
+                                    toast.error(`Erro: ${(data?.error || "falha").slice(0, 150)}`, { id: `coinzz-retry-${o.id}` });
+                                  }
+                                } catch (err: any) { toast.error(`Erro: ${err.message}`, { id: `coinzz-retry-${o.id}` }); }
+                              }}
+                            >
+                              <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Enviar para Coinzz
+                            </Button>
+                          </div>
+                        ) : null}
                       </div>
                     </div>
                     {/* Labels */}
