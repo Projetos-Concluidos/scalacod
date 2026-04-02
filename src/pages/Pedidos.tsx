@@ -439,21 +439,38 @@ const Pedidos = () => {
                           <Draggable key={order.id} draggableId={order.id} index={index}>
                             {(provided, snapshot) => (
                               <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps} className={`rounded-lg border bg-card p-3 transition-shadow cursor-grab active:cursor-grabbing ${snapshot.isDragging ? "shadow-lg shadow-primary/10 border-primary/30" : "border-border hover:border-primary/20"}`}>
-                                <div className="flex items-center justify-between mb-2">
+                                {/* ── Card Header: Order # + platform + link ── */}
+                                <div className="flex items-center justify-between mb-1.5">
                                   <div className="flex items-center gap-1.5">
-                                    <span className="text-xs font-mono text-primary font-semibold">#{order.order_number || order.id.slice(0, 8)}</span>
+                                    {order.logistics_type === "coinzz" && order.coinzz_order_hash ? (
+                                      <a href={`https://app.coinzz.com.br/pedido/${order.coinzz_order_hash}`} target="_blank" rel="noopener noreferrer" className="text-xs font-mono text-purple-400 font-semibold hover:underline" onClick={(e) => e.stopPropagation()}>#{order.order_number || order.coinzz_order_hash}</a>
+                                    ) : order.logistics_type === "logzz" && order.logzz_order_id ? (
+                                      <a href={`https://app.logzz.com.br/meu-pedido/${order.logzz_order_id}`} target="_blank" rel="noopener noreferrer" className="text-xs font-mono text-emerald-400 font-semibold hover:underline" onClick={(e) => e.stopPropagation()}>#{order.order_number || order.logzz_order_id}</a>
+                                    ) : (
+                                      <span className="text-xs font-mono text-primary font-semibold">#{order.order_number || order.id.slice(0, 8)}</span>
+                                    )}
                                     <PlatformBadge type={order.logistics_type} />
                                   </div>
                                   <Badge className={`text-[10px] ${meta.color} text-white border-0 px-1.5 py-0`}>{order.status}</Badge>
                                 </div>
-                                <p className="text-sm font-semibold text-foreground truncate mb-1.5">{order.client_name}</p>
+                                {/* Nome cliente MAIÚSCULO */}
+                                <p className="text-sm font-bold text-foreground truncate mb-0.5 uppercase">{order.client_name}</p>
+                                {/* Nome do produto (checkout name) */}
+                                {order.checkout_id && checkoutsMap?.[order.checkout_id] && (
+                                  <p className="text-[11px] text-muted-foreground truncate mb-1.5">{checkoutsMap[order.checkout_id]}</p>
+                                )}
                                 <div className="space-y-1 text-xs text-muted-foreground">
-                                  <div className="flex items-center gap-1.5"><Package className="h-3 w-3 shrink-0" /><span>x{order.order_quantity || 1}</span></div>
-                                  {order.delivery_date && (
-                                    <div className="flex items-center gap-1.5"><CalendarDays className="h-3 w-3 shrink-0" /><span>{new Date(order.delivery_date).toLocaleDateString("pt-BR")}</span></div>
-                                  )}
                                   <div className="flex items-center gap-1.5"><DollarSign className="h-3 w-3 shrink-0" /><span className="font-semibold text-foreground">R$ {Number(order.order_final_price).toFixed(2)}</span></div>
-                                  <div className="flex items-center gap-1.5"><MapPin className="h-3 w-3 shrink-0" /><span className="truncate">{order.client_address_city} - {order.client_address_state}</span></div>
+                                  {/* Data agendamento — APENAS Logzz */}
+                                  {order.logistics_type === "logzz" && order.delivery_date && (
+                                    <div className="flex items-center gap-1.5"><CalendarDays className="h-3 w-3 shrink-0 text-amber-400" /><span className="text-amber-400 font-medium">{new Date(order.delivery_date).toLocaleDateString("pt-BR")}</span></div>
+                                  )}
+                                  {/* Forma de pagamento — APENAS Coinzz */}
+                                  {order.logistics_type === "coinzz" && order.payment_method && (
+                                    <div className="flex items-center gap-1.5"><span className="text-[10px]">💳</span><span className="text-purple-400 font-medium capitalize">{order.payment_method}</span></div>
+                                  )}
+                                  <div className="flex items-center gap-1.5"><MapPin className="h-3 w-3 shrink-0" /><span className="truncate">{order.client_address_city}/{order.client_address_state}</span></div>
+                                  <div className="flex items-center gap-1.5"><Clock className="h-3 w-3 shrink-0" /><span>{order.created_at ? new Date(order.created_at).toLocaleDateString("pt-BR") + " " + new Date(order.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) : "—"}</span></div>
                                 </div>
                                 <div className="flex items-center gap-1 mt-3 pt-2 border-t border-border">
                                   <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-emerald-500" onClick={(e) => { e.stopPropagation(); window.open(`https://wa.me/${order.client_phone.replace(/\D/g, "")}`, "_blank"); }}>
