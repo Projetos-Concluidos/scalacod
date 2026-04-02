@@ -502,26 +502,45 @@ const Vozes = () => {
       {/* Token packs */}
       <h2 className="text-xl font-bold text-foreground mb-4">Comprar Tokens</h2>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-8">
-        {packs.map((pack) => (
-          <div key={pack.name} className={`ninja-card relative text-center ${pack.is_popular ? "border-primary" : ""}`}>
-            {pack.is_popular && (
-              <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-success px-3 py-0.5 text-[10px] font-bold uppercase text-success-foreground">
-                <Star className="inline h-3 w-3 mr-0.5" /> Mais Popular
-              </span>
-            )}
-            <p className="text-xs text-muted-foreground mb-2">{pack.name}</p>
-            <p className="text-3xl font-bold text-foreground">{pack.tokens.toLocaleString("pt-BR")}</p>
-            <p className="text-xs font-semibold text-primary mb-1">Tokens</p>
-            <p className="text-lg font-bold text-foreground mb-4">{`R$ ${pack.price.toFixed(2).replace(".", ",")}`}</p>
-            <button onClick={() => openPurchaseModal(pack)} className={`w-full rounded-lg py-2.5 text-sm font-semibold transition-all ${
-              pack.is_popular
-                ? "gradient-primary text-primary-foreground hover:opacity-90"
-                : "border border-border text-foreground hover:bg-muted"
-            }`}>
-              Comprar
-            </button>
-          </div>
-        ))}
+        {packsLoading ? (
+          Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-48 rounded-xl" />)
+        ) : packs.map((pack) => {
+          const badgeStyle = pack.badge_type ? BADGE_STYLES[pack.badge_type] : null;
+          return (
+            <div key={pack.slug} className={`ninja-card relative text-center ${pack.is_popular ? "border-primary" : ""}`}>
+              {/* Promotional badge */}
+              {badgeStyle && (
+                <span className={`absolute -top-3 right-3 rounded-full ${badgeStyle.bg} ${badgeStyle.text} px-3 py-0.5 text-[10px] font-bold`}>
+                  {pack.badge_label || badgeStyle.fallback}
+                </span>
+              )}
+              {/* Popular badge */}
+              {pack.is_popular && !badgeStyle && (
+                <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-success px-3 py-0.5 text-[10px] font-bold uppercase text-success-foreground">
+                  <Star className="inline h-3 w-3 mr-0.5" /> Mais Popular
+                </span>
+              )}
+              <p className="text-xs text-muted-foreground mb-2">{pack.name}</p>
+              <p className="text-3xl font-bold text-foreground">{pack.tokens.toLocaleString("pt-BR")}</p>
+              <p className="text-xs font-semibold text-primary mb-1">Tokens</p>
+              {pack.original_price && (
+                <p className="text-sm text-muted-foreground line-through mb-0.5">
+                  R$ {Number(pack.original_price).toFixed(2).replace(".", ",")}
+                </p>
+              )}
+              <p className="text-lg font-bold text-foreground mb-4">
+                R$ {Number(pack.price).toFixed(2).replace(".", ",")}
+              </p>
+              <button onClick={() => openPurchaseModal(pack)} className={`w-full rounded-lg py-2.5 text-sm font-semibold transition-all ${
+                pack.is_popular
+                  ? "gradient-primary text-primary-foreground hover:opacity-90"
+                  : "border border-border text-foreground hover:bg-muted"
+              }`}>
+                Comprar
+              </button>
+            </div>
+          );
+        })}
       </div>
 
       {/* Warning */}
