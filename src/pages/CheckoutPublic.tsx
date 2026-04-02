@@ -47,6 +47,11 @@ const validateCpf = (cpf: string) => {
   return rest === parseInt(digits[10]);
 };
 
+const extractQty = (name: string): number => {
+  const match = name.match(/kit\s*(\d+)/i) || name.match(/^(\d+)\s/);
+  return parseInt(match?.[1] || "1", 10);
+};
+
 const generateOrderNumber = () => {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
   let result = "";
