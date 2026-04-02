@@ -66,6 +66,7 @@ const Vozes = () => {
   const [libFilter, setLibFilter] = useState({ lang: "", gender: "" });
   const [libraryVoices, setLibraryVoices] = useState<LibraryVoice[]>(FALLBACK_LIBRARY);
   const [libLoading, setLibLoading] = useState(false);
+  const [ttsProvider, setTtsProvider] = useState<"elevenlabs" | "openai" | "none">("elevenlabs");
 
   // Purchase modal state
   const [purchaseOpen, setPurchaseOpen] = useState(false);
@@ -99,6 +100,9 @@ const Vozes = () => {
       if (!error && data?.voices?.length > 0) {
         setLibraryVoices(data.voices);
       }
+      if (data?.provider) {
+        setTtsProvider(data.provider as "elevenlabs" | "openai" | "none");
+      }
     } catch {
       // fallback already set
     } finally {
@@ -107,7 +111,7 @@ const Vozes = () => {
   };
 
   useEffect(() => { fetchData(); }, [user]);
-  useEffect(() => { if (tab === "library") fetchLibrary(); }, [tab]);
+  useEffect(() => { fetchLibrary(); }, [tab]);
 
   const balance = tokenData?.balance || 0;
   const totalUsed = tokenData?.total_used || 0;
@@ -296,9 +300,16 @@ const Vozes = () => {
         title="Vozes"
         subtitle="Gerencie suas vozes, explore a biblioteca e clone novas vozes"
         actions={
-          <button onClick={() => { resetClone(); setCloneOpen(true); }} className="gradient-primary flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold text-primary-foreground hover:opacity-90">
-            <Upload className="h-4 w-4" /> Clonar Voz
-          </button>
+          <div className="flex items-center gap-3">
+            <NinjaBadge variant={ttsProvider === "openai" ? "info" : ttsProvider === "elevenlabs" ? "success" : "default"}>
+              {ttsProvider === "openai" ? "🤖 OpenAI TTS" : ttsProvider === "elevenlabs" ? "🎤 ElevenLabs" : "⚠️ Sem provedor"}
+            </NinjaBadge>
+            {ttsProvider === "elevenlabs" && (
+              <button onClick={() => { resetClone(); setCloneOpen(true); }} className="gradient-primary flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold text-primary-foreground hover:opacity-90">
+                <Upload className="h-4 w-4" /> Clonar Voz
+              </button>
+            )}
+          </div>
         }
       />
 
@@ -398,9 +409,11 @@ const Vozes = () => {
             description="Clone sua primeira voz ou explore a biblioteca e favorite as que mais gostar"
             action={
               <div className="flex items-center gap-3">
-                <button onClick={() => { resetClone(); setCloneOpen(true); }} className="gradient-primary flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-primary-foreground">
-                  <Upload className="h-4 w-4" /> Clonar Voz
-                </button>
+                {ttsProvider === "elevenlabs" && (
+                  <button onClick={() => { resetClone(); setCloneOpen(true); }} className="gradient-primary flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-primary-foreground">
+                    <Upload className="h-4 w-4" /> Clonar Voz
+                  </button>
+                )}
                 <button onClick={() => setTab("library")} className="flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm text-foreground hover:bg-muted">
                   <Globe className="h-4 w-4" /> Explorar Biblioteca
                 </button>
@@ -488,7 +501,10 @@ const Vozes = () => {
               <option value="male">Masculino</option>
               <option value="female">Feminino</option>
             </select>
-            {libLoading && <Loader2 className="h-4 w-4 text-primary animate-spin" />}
+           {libLoading && <Loader2 className="h-4 w-4 text-primary animate-spin" />}
+            {ttsProvider === "openai" && (
+              <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">OpenAI TTS — vozes multilíngue</span>
+            )}
           </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {filteredLibrary.map(voice => {
@@ -705,7 +721,7 @@ const Vozes = () => {
           {cloneStep === 3 && (
             <div className="text-center py-8 space-y-4">
               <Loader2 className="h-12 w-12 mx-auto text-primary animate-spin" />
-              <p className="text-sm font-medium text-foreground">Processando voz no ElevenLabs...</p>
+              <p className="text-sm font-medium text-foreground">Processando voz...</p>
               <p className="text-xs text-muted-foreground">Isso pode levar alguns segundos</p>
             </div>
           )}
