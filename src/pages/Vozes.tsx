@@ -718,7 +718,7 @@ const Vozes = () => {
           {cloneStep === 3 && (
             <div className="text-center py-8 space-y-4">
               <Loader2 className="h-12 w-12 mx-auto text-primary animate-spin" />
-              <p className="text-sm font-medium text-foreground">Processando voz no ElevenLabs...</p>
+              <p className="text-sm font-medium text-foreground">Processando voz...</p>
               <p className="text-xs text-muted-foreground">Isso pode levar alguns segundos</p>
             </div>
           )}
