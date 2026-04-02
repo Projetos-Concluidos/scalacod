@@ -360,7 +360,7 @@ Deno.serve(async (req) => {
             description: order_data.description || "Pedido ScalaNinja",
             payment_method_id: "pix",
             payer: {
-              email: order_data.email || "cliente@scalaninja.com",
+              email: "comprador@checkout.com",
               first_name: order_data.name?.split(" ")[0] || "Cliente",
               last_name: order_data.name?.split(" ").slice(1).join(" ") || "",
               identification: order_data.document

@@ -110,7 +110,7 @@ const CheckoutPublic = () => {
   const gAdsRef = useRef<GoogleAds | null>(null);
 
   const [form, setForm] = useState({
-    name: "", cpf: "", email: "", phone: "",
+    name: "", cpf: "", phone: "",
     cep: "", street: "", number: "", complement: "", district: "", city: "", state: "",
   });
 
@@ -348,7 +348,7 @@ const CheckoutPublic = () => {
           initialization: {
             amount: totalPrice,
             payer: {
-              email: form.email || "",
+              email: "comprador@checkout.com",
               firstName: form.name.split(" ")[0] || "",
               lastName: form.name.split(" ").slice(1).join(" ") || "",
               identification: { type: "CPF", number: form.cpf.replace(/\D/g, "") },
@@ -438,7 +438,7 @@ const CheckoutPublic = () => {
             checkout_id: checkout.id,
             offer_id: offer.id,
             client_name: form.name,
-            client_email: form.email || null,
+            client_email: null,
             client_document: form.cpf.replace(/\D/g, "") || null,
             client_phone: form.phone.replace(/\D/g, ""),
             client_zip_code: form.cep.replace(/\D/g, ""),
@@ -484,7 +484,7 @@ const CheckoutPublic = () => {
             capiToken: checkout.meta_capi_token,
             eventSourceUrl: window.location.href,
             userData: {
-              email: form.email, phone: form.phone,
+              phone: form.phone,
               firstName: form.name.split(" ")[0],
               lastName: form.name.split(" ").slice(1).join(" "),
               fbp: getCookie("_fbp"), fbc: getCookie("_fbc"),
@@ -539,7 +539,7 @@ const CheckoutPublic = () => {
           method: paymentMethod,
           cardToken: paymentMethod === "credit_card" ? bricksCardToken : undefined,
           installments: bricksInstallments || 1,
-          payerEmail: form.email || "comprador@scalaninja.com",
+          payerEmail: "comprador@checkout.com",
           payerDocument: form.cpf,
           payerName: form.name,
         }),
@@ -1156,10 +1156,6 @@ const CheckoutPublic = () => {
                           )}
                         </AnimatePresence>
                       </div>
-                    </div>
-                    <div>
-                      <Label className="text-xs text-gray-600">E-mail</Label>
-                      <Input value={form.email} onChange={(e) => updateField("email", e.target.value)} type="email" placeholder="seu@email.com" className="mt-1 border-gray-200 bg-white focus:border-emerald-500 focus:ring-emerald-500" />
                     </div>
                   </div>
                   <button
