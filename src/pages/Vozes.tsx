@@ -87,10 +87,12 @@ const Vozes = () => {
   const [libraryVoices, setLibraryVoices] = useState<LibraryVoice[]>(FALLBACK_LIBRARY);
   const [libLoading, setLibLoading] = useState(false);
   const [ttsProvider, setTtsProvider] = useState<"elevenlabs" | "openai" | "none">("elevenlabs");
+  const [packs, setPacks] = useState<TokenPack[]>([]);
+  const [packsLoading, setPacksLoading] = useState(true);
 
   // Purchase modal state
   const [purchaseOpen, setPurchaseOpen] = useState(false);
-  const [selectedPack, setSelectedPack] = useState<typeof packs[0] | null>(null);
+  const [selectedPack, setSelectedPack] = useState<TokenPack | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<"pix" | "credit_card">("pix");
   const [purchasing, setPurchasing] = useState(false);
   const [pixData, setPixData] = useState<{ qrCode: string; copyPaste: string } | null>(null);
