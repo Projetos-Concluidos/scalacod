@@ -66,6 +66,7 @@ const Checkouts = () => {
   const [formName, setFormName] = useState("");
   const [formType, setFormType] = useState("hybrid");
   const [formOfferId, setFormOfferId] = useState("");
+  const [formCoinzzOfferHash, setFormCoinzzOfferHash] = useState("");
   
   const [formOrderBump, setFormOrderBump] = useState(false);
   const [formUpsell, setFormUpsell] = useState(false);
@@ -216,7 +217,7 @@ const Checkouts = () => {
     setFormName("");
     setFormType("hybrid");
     setFormOfferId("");
-    
+    setFormCoinzzOfferHash("");
     setFormOrderBump(false);
     setFormUpsell(false);
     setFormCustomCss("");
@@ -236,7 +237,7 @@ const Checkouts = () => {
     setFormName(c.name);
     setFormType(c.type || "hybrid");
     setFormOfferId(c.offer_id || "");
-    
+    setFormCoinzzOfferHash((c as any).coinzz_offer_hash || "");
     setFormOrderBump(c.order_bump_enabled || false);
     setFormUpsell(c.upsell_enabled || false);
     setFormCustomCss(c.custom_css || "");
@@ -283,6 +284,7 @@ const Checkouts = () => {
       google_analytics_id: formGoogleAnalyticsId || null,
       thank_you_page_url: formThankYouUrl || null,
       whatsapp_support: formWhatsappSupport || null,
+      coinzz_offer_hash: formCoinzzOfferHash || null,
     };
     if (editingCheckout) {
       updateMutation.mutate({ id: editingCheckout.id, ...payload });
@@ -823,6 +825,24 @@ const Checkouts = () => {
               <div className="flex items-center justify-between p-3 rounded-xl bg-secondary/50 border border-border">
                 <div><Label>Upsell</Label><p className="text-xs text-muted-foreground">Oferta pós-compra</p></div>
                 <Switch checked={formUpsell} onCheckedChange={setFormUpsell} />
+              </div>
+
+              {/* Coinzz Offer Hash */}
+              <div className="rounded-xl border border-purple-500/20 bg-purple-500/5 p-4 space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] bg-purple-500/15 text-purple-400 px-2 py-0.5 rounded-full font-bold">COINZZ</span>
+                  <Label className="text-sm">Hash da Oferta Coinzz</Label>
+                </div>
+                <Input
+                  value={formCoinzzOfferHash}
+                  onChange={(e) => setFormCoinzzOfferHash(e.target.value)}
+                  placeholder="Ex: abc123xyz"
+                  className="bg-input border-border font-mono text-sm"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Para pedidos fora da cobertura Logzz (Correios), o sistema envia automaticamente para a Coinzz usando este hash.
+                  Deixe em branco se este checkout não usa Coinzz.
+                </p>
               </div>
             </div>
           )}

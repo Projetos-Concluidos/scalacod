@@ -224,12 +224,14 @@ Deno.serve(async (req) => {
       console.log(`[create-payment] Boleto generated: url=${!!response.boletoUrl}`);
     }
 
-    // Update order with payment info
+    // Update order with payment info (DO NOT overwrite coinzz_order_hash — that is for Coinzz only)
     const updateStatus = payment.status === "approved" ? "Aprovado" : "Aguardando";
     await supabase.from("orders").update({
-      coinzz_order_hash: payment.id?.toString(),
       payment_method: method,
       status: updateStatus,
+      mp_payment_status: payment.status || null,
+      mp_payment_status_detail: payment.status_detail || null,
+      status_description: `MP: ${payment.status} - ${payment.status_detail || ""}`,
     }).eq("id", orderId);
 
     console.log(`[create-payment] Order updated: status=${updateStatus}, paymentId=${payment.id}`);

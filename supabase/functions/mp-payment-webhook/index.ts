@@ -77,7 +77,6 @@ serve(async (req) => {
 
     const updateData: Record<string, any> = {
       status: newStatus,
-      coinzz_order_hash: paymentId.toString(),
       payment_method: payment.payment_method_id || payment.payment_type_id,
       status_description: `MP: ${payment.status} - ${payment.status_detail || ""}`,
       mp_payment_status: payment.status || null,

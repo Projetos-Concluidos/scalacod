@@ -34,6 +34,7 @@ const Fluxos = () => {
   const [creatingTemplate, setCreatingTemplate] = useState<number | null>(null);
   const [importOpen, setImportOpen] = useState(false);
   const [importCode, setImportCode] = useState("");
+  const [flowFilter, setFlowFilter] = useState<"all" | "cod" | "coinzz">("all");
 
   const openGallery = async () => {
     setGalleryOpen(true);
@@ -117,6 +118,7 @@ const Fluxos = () => {
   }, [subTab, user]);
 
   const activeFlows = flows.filter(f => f.is_active);
+  const filteredFlows = flowFilter === "all" ? flows : flows.filter(f => f.flow_type === flowFilter);
 
   const handleSaveFlow = async (data: any) => {
     if (!user) return;
@@ -351,8 +353,23 @@ const Fluxos = () => {
 
       {/* Tabs */}
       <div className="flex items-center gap-3 mb-6">
-        <button className="gradient-primary flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-primary-foreground">
+        <button
+          onClick={() => setFlowFilter("all")}
+          className={flowFilter === "all" ? "gradient-primary flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-primary-foreground" : "flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground"}
+        >
           <GitBranch className="h-4 w-4" /> Todos
+        </button>
+        <button
+          onClick={() => setFlowFilter("cod")}
+          className={flowFilter === "cod" ? "flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold bg-emerald-500/15 text-emerald-500 border border-emerald-500/30" : "flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground"}
+        >
+          🟢 Logzz
+        </button>
+        <button
+          onClick={() => setFlowFilter("coinzz")}
+          className={flowFilter === "coinzz" ? "flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold bg-purple-500/15 text-purple-400 border border-purple-500/30" : "flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground"}
+        >
+          🟣 Coinzz
         </button>
         <button className="flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground">
           <Folder className="h-4 w-4" /> Nova pasta
@@ -384,7 +401,7 @@ const Fluxos = () => {
               <div className="flex items-center gap-2 text-sm font-medium text-foreground">
                 <Zap className="h-4 w-4 text-primary" />
                 Atribuição de Fluxos por Etapa
-                <NinjaBadge variant="info">{flows.length}</NinjaBadge>
+                <NinjaBadge variant="info">{filteredFlows.length}</NinjaBadge>
               </div>
               {expanded ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
             </button>
@@ -393,14 +410,14 @@ const Fluxos = () => {
               <div className="space-y-2">
                 {loading ? (
                   Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-20 rounded-xl" />)
-                ) : flows.length === 0 ? (
+                ) : filteredFlows.length === 0 ? (
                   <div className="text-center py-12">
                     <GitBranch className="h-12 w-12 mx-auto text-muted-foreground/30 mb-3" />
-                    <p className="text-sm text-muted-foreground">Nenhum fluxo criado ainda</p>
+                    <p className="text-sm text-muted-foreground">{flowFilter !== "all" ? `Nenhum fluxo ${flowFilter === "cod" ? "Logzz" : "Coinzz"} encontrado` : "Nenhum fluxo criado ainda"}</p>
                     <button onClick={() => setBuilderOpen(true)} className="mt-3 text-sm text-primary hover:underline">Criar primeiro fluxo</button>
                   </div>
                 ) : (
-                  flows.map((flow) => (
+                  filteredFlows.map((flow) => (
                     <div key={flow.id} className="flex items-center justify-between rounded-xl border border-border bg-background/50 px-4 py-4 transition-colors hover:bg-muted/30">
                       <div className="flex items-center gap-3">
                         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted">
