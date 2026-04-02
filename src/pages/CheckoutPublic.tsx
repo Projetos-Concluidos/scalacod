@@ -808,9 +808,9 @@ const CheckoutPublic = () => {
         {offer && (
           <div className="flex items-start gap-4 mb-4 pb-4 border-b border-gray-100">
             {product?.main_image_url ? (
-              <img src={product.main_image_url} alt={product.name} className="h-20 w-20 rounded-xl object-cover flex-shrink-0" />
+              <img src={product.main_image_url} alt={product.name} className="h-24 w-24 rounded-xl object-cover flex-shrink-0" />
             ) : (
-              <div className="flex h-20 w-20 items-center justify-center rounded-xl bg-gray-100 flex-shrink-0"><Package className="h-8 w-8 text-gray-400" /></div>
+              <div className="flex h-24 w-24 items-center justify-center rounded-xl bg-gray-100 flex-shrink-0"><Package className="h-10 w-10 text-gray-400" /></div>
             )}
             <div className="flex-1 min-w-0">
               <p className="text-sm font-bold text-gray-900 leading-tight">{product?.name}</p>
