@@ -107,12 +107,13 @@ serve(async (req) => {
           testResult = { success: false, message: "API Key é obrigatória" };
           break;
         }
-        const res = await fetch("https://api.elevenlabs.io/v1/user", {
+        const res = await fetch("https://api.elevenlabs.io/v1/voices", {
           headers: { "xi-api-key": apiKey },
         });
         if (res.ok) {
           const data = await res.json();
-          testResult = { success: true, message: `Conectado! Conta: ${data.subscription?.tier || "ativa"}` };
+          const count = Array.isArray(data.voices) ? data.voices.length : 0;
+          testResult = { success: true, message: `Conectado! ${count} voz(es) disponível(is).` };
         } else {
           const text = await res.text();
           testResult = { success: false, message: `Erro ${res.status}: ${text.slice(0, 200)}` };
@@ -126,11 +127,11 @@ serve(async (req) => {
           testResult = { success: false, message: "API Key é obrigatória" };
           break;
         }
-        const res = await fetch("https://api.openai.com/v1/models?limit=1", {
+        const res = await fetch("https://api.openai.com/v1/models/tts-1", {
           headers: { Authorization: `Bearer ${apiKey}` },
         });
         if (res.ok) {
-          testResult = { success: true, message: "Conectado! API Key válida." };
+          testResult = { success: true, message: "Conectado! Modelo TTS-1 acessível." };
           await res.text();
         } else {
           const text = await res.text();
