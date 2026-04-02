@@ -261,6 +261,7 @@ const AdminTokens = () => {
           <TabsTrigger value="vendas">💰 Vendas</TabsTrigger>
           <TabsTrigger value="consumo">📊 Consumo</TabsTrigger>
           <TabsTrigger value="packs">📦 Packs</TabsTrigger>
+          <TabsTrigger value="calculadora">🧮 Calculadora</TabsTrigger>
         </TabsList>
 
         {/* ══════ VENDAS TAB ══════ */}
