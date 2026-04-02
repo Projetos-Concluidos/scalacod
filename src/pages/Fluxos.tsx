@@ -400,7 +400,7 @@ const Fluxos = () => {
               <div className="flex items-center gap-2 text-sm font-medium text-foreground">
                 <Zap className="h-4 w-4 text-primary" />
                 Atribuição de Fluxos por Etapa
-                <NinjaBadge variant="info">{flows.length}</NinjaBadge>
+                <NinjaBadge variant="info">{filteredFlows.length}</NinjaBadge>
               </div>
               {expanded ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
             </button>
