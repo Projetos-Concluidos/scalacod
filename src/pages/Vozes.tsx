@@ -300,9 +300,16 @@ const Vozes = () => {
         title="Vozes"
         subtitle="Gerencie suas vozes, explore a biblioteca e clone novas vozes"
         actions={
-          <button onClick={() => { resetClone(); setCloneOpen(true); }} className="gradient-primary flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold text-primary-foreground hover:opacity-90">
-            <Upload className="h-4 w-4" /> Clonar Voz
-          </button>
+          <div className="flex items-center gap-3">
+            <NinjaBadge variant={ttsProvider === "openai" ? "info" : ttsProvider === "elevenlabs" ? "success" : "default"}>
+              {ttsProvider === "openai" ? "🤖 OpenAI TTS" : ttsProvider === "elevenlabs" ? "🎤 ElevenLabs" : "⚠️ Sem provedor"}
+            </NinjaBadge>
+            {ttsProvider === "elevenlabs" && (
+              <button onClick={() => { resetClone(); setCloneOpen(true); }} className="gradient-primary flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold text-primary-foreground hover:opacity-90">
+                <Upload className="h-4 w-4" /> Clonar Voz
+              </button>
+            )}
+          </div>
         }
       />
 
