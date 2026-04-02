@@ -1,88 +1,98 @@
 
 
-## Plano: Integração Coinzz — POST /api/sales
+## Plano: Coinzz Webhook + Kanban Cards + Detalhes Financeiros
 
-### Problema Atual
+### Problema
 
-O bloco `create_coinzz_order` no `checkout-api/index.ts` (linhas 412-468) está **completamente errado**:
+1. **Webhook `coinzz-webhook` nao entende o payload real da Coinzz** — espera `body.order_hash` / `body.status`, mas a Coinzz envia `{ client: {...}, order: {"order.order_number": "...", "order.order_status": "..."}, utms: {...} }`
+2. **Kanban cards nao mostram dados diferenciados** por plataforma (data agendamento so Logzz, forma pagamento so Coinzz, nome do produto, etc.)
+3. **Detalhes financeiros incompletos** — nao mostra forma de pagamento, parcelas, taxa gateway
+4. **Falta botao "Enviar para Coinzz"** no card/detalhe para retry manual
+5. **Falta link do pedido Coinzz** similar ao link Logzz
+6. **Nao salva `shipping_status` separado do `order_status`** (Coinzz envia ambos)
 
-| Item | Atual (quebrado) | Correto (API Coinzz) |
-|---|---|---|
-| Endpoint | `POST /api/orders` | `POST /api/sales` |
-| Payload | `{ customer, shipping, items, total }` | `{ offer_hash, payment_method, customer: { name, email, document, phone, address: {...} } }` |
-| Proteção HTML | Nenhuma | `redirect: "manual"` + validação content-type |
-| Envio automático | Não acontece | Após `create_order` quando `logistics_type === "coinzz"` |
+### Implementacao
 
-Além disso, **não existe webhook** para receber atualizações de pedidos da Coinzz.
+#### 1. Reescrever `supabase/functions/coinzz-webhook/index.ts`
 
-### Implementação
-
-#### 1. Corrigir `create_coinzz_order` no checkout-api (linhas 412-468)
-
-Reescrever o bloco para usar `POST https://app.coinzz.com.br/api/sales` com o payload correto:
+Parsear o payload real da Coinzz com chaves dotadas:
 
 ```typescript
-// Payload conforme documentação oficial
-{
-  offer_hash: order_data.coinzz_offer_hash,
-  payment_method: "afterpay", // COD
-  customer: {
-    name: order_data.name,
-    email: order_data.email || "cliente@scalacod.com",
-    document: order_data.document,
-    phone: order_data.phone,
-    address: {
-      zip_code: order_data.cep,
-      street: order_data.address,
-      number: order_data.address_number,
-      complement: order_data.complement || "",
-      neighborhood: order_data.district,
-      city: order_data.city,
-      state: order_data.state,
-    }
-  },
-  shipping_value: order_data.shipping_value || 0,
-  order_bumps: order_data.coinzz_bumps || [],
-}
+// Coinzz envia: { client: { "client.client_name": "..." }, order: { "order.order_status": "..." }, utms: {...} }
+const clientData = body.client || {};
+const orderData = body.order || {};
+const utmsData = body.utms || {};
+
+const orderNumber = orderData["order.order_number"];
+const orderStatus = orderData["order.order_status"];
+const shippingStatus = orderData["order.shipping_status"];
+const trackingCode = orderData["order.tracking_code"];
+const courierName = orderData["order.courier_name"];
 ```
 
-Incluir `redirect: "manual"` e validação de content-type antes de parsear JSON.
+Buscar pedido por `order_number` (nao por `coinzz_order_hash` que pode nao existir ainda):
+- Primeiro tenta `coinzz_order_hash`
+- Fallback para `order_number` + `user_id`
 
-#### 2. Envio automático no `create_order` (após linha 297)
+Mapear `order_status` E `shipping_status` separadamente para o status do Kanban:
+- Status de pagamento: "Aprovado" -> "Confirmado", "Cancelado" -> "Cancelado", etc.
+- Status de envio: "Enviado" -> "Em Transito", "Recebido" -> "Entregue", etc.
 
-Adicionar bloco `else if (logistics_type === "coinzz")` que:
-1. Busca a integração Coinzz do tenant
-2. Busca o `offer_hash` da oferta (campo `hash` na tabela `offers`)
-3. Chama `POST /api/sales` com os dados do pedido
-4. Salva `coinzz_order_hash` da resposta no pedido
-5. Log de sucesso/erro
+Salvar dados adicionais no pedido: `tracking_code`, `delivery_man`, `payment_method`, UTMs.
 
-**SEGURANÇA**: O bloco Logzz (linhas 274-297) NÃO será tocado. O novo bloco será um `else if` separado.
+#### 2. Migracao SQL
 
-#### 3. Criar Edge Function `coinzz-webhook`
+Adicionar colunas para dados financeiros e status separados:
+- `coinzz_payment_status` (text) — status de pagamento da Coinzz
+- `coinzz_shipping_status` (text) — status de envio da Coinzz  
+- `total_installments` (integer) — parcelas
+- `gateway_fee` (numeric) — taxa do gateway
 
-Nova função `supabase/functions/coinzz-webhook/index.ts` para receber callbacks:
-- Identificar pedido por `coinzz_order_hash`
-- Mapear status Coinzz → ScalaCOD
-- Atualizar pedido + inserir `order_status_history`
-- Disparar `trigger-flow` para automações
-- Rate limiting + validação do `store` query param
+#### 3. Redesenhar Kanban Cards em `src/pages/Pedidos.tsx`
 
-#### 4. Migração SQL
+Card mostrara:
+- **Nº pedido** com link (Logzz ou Coinzz)
+- **Nome cliente** em MAIUSCULO
+- **Nome do produto** (do checkout name)
+- **Valor do pedido**
+- **Data agendamento** — SO para Logzz
+- **Forma de pagamento** — SO para Coinzz (PIX, Cartao, Boleto)
+- **Cidade/Estado**
+- **Data/hora do pedido**
 
-Adicionar campo `coinzz_offer_hash` na tabela `checkouts` para que o tenant configure qual oferta da Coinzz usar por checkout (opcional, pode usar o `hash` da oferta existente).
+Buscar nome do checkout para exibir no card (join com checkouts via `checkout_id`).
+
+#### 4. Botao "Enviar para Coinzz" no Kanban + Detalhe
+
+Similar ao botao "Enviar para Logzz" existente:
+- Aparece quando `logistics_type === "coinzz"` E `!coinzz_order_hash`
+- Chama `checkout-api` com `action: "create_coinzz_order"`
+- Icone de truck roxo no card
+
+#### 5. Detalhes Financeiros aprimorados
+
+Na aba "Informacoes" > secao "Financeiro":
+- Forma de pagamento (PIX / Cartao / Boleto / Saldo MP / Na Entrega)
+- Se parcelado, mostrar quantidade de parcelas
+- Taxa do gateway (se existir)
+- Status de pagamento da Coinzz (badge)
+- Status de envio da Coinzz (badge)
+
+#### 6. Link do pedido Coinzz
+
+Na aba "Logistica", exibir link clicavel `https://app.coinzz.com.br/pedido/{hash}` (ja existe parcialmente, garantir que funciona).
 
 ### Arquivos
 
-| Arquivo | Ação |
+| Arquivo | Acao |
 |---|---|
-| `supabase/functions/checkout-api/index.ts` | Corrigir `create_coinzz_order` + envio automático no `create_order` |
-| `supabase/functions/coinzz-webhook/index.ts` | **Criar** |
-| Migração SQL | Adicionar `coinzz_offer_hash` em `checkouts` |
+| `supabase/functions/coinzz-webhook/index.ts` | **Reescrever** — parsear payload real |
+| `src/pages/Pedidos.tsx` | **Editar** — cards, financeiro, botao Coinzz |
+| Migracao SQL | Adicionar colunas `coinzz_payment_status`, `coinzz_shipping_status`, `total_installments`, `gateway_fee` |
 
-### Segurança
-- Logzz permanece 100% intacta
-- Validação de content-type antes de JSON.parse
-- `redirect: "manual"` para evitar HTML redirects
-- Rate limiting no webhook
+### Seguranca
+- Logzz permanece 100% intacta — nenhum codigo Logzz sera tocado
+- Webhook continua com rate limiting (200/min)
+- Validacao do `store` query param mantida
+- Status history registrado para todas as mudancas
 
