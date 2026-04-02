@@ -295,6 +295,100 @@ Deno.serve(async (req) => {
             console.error("[create_order] Logzz sync error:", logzzErr.message);
           }
         }
+        // If logistics_type is coinzz, auto-send to Coinzz via POST /api/sales
+        else if (order_data.logistics_type === "coinzz") {
+          try {
+            console.log("[create_order] Auto-sending to Coinzz for order:", inserted?.id);
+            const coinzzInt = getIntegration("coinzz");
+            const coinzzToken = (coinzzInt?.config as any)?.bearer_token;
+
+            if (coinzzInt?.is_active && coinzzToken) {
+              // Get offer_hash: first from checkout's coinzz_offer_hash, then from offer's hash
+              let offerHash: string | null = null;
+
+              if (order_data.checkout_id) {
+                const { data: checkout } = await supabase
+                  .from("checkouts")
+                  .select("coinzz_offer_hash, offer_id")
+                  .eq("id", order_data.checkout_id)
+                  .maybeSingle();
+                offerHash = (checkout as any)?.coinzz_offer_hash || null;
+
+                // Fallback: use offer.hash
+                if (!offerHash && (checkout?.offer_id || order_data.offer_id)) {
+                  const oid = checkout?.offer_id || order_data.offer_id;
+                  const { data: offer } = await supabase
+                    .from("offers")
+                    .select("hash")
+                    .eq("id", oid)
+                    .maybeSingle();
+                  offerHash = offer?.hash || null;
+                }
+              }
+
+              if (offerHash) {
+                const coinzzPayload: any = {
+                  offer_hash: offerHash,
+                  payment_method: "afterpay",
+                  customer: {
+                    name: order_data.client_name,
+                    email: order_data.client_email || "cliente@scalacod.com",
+                    document: (order_data.client_document || "").replace(/\D/g, ""),
+                    phone: order_data.client_phone,
+                    address: {
+                      zip_code: (order_data.client_zip_code || "").replace(/\D/g, ""),
+                      street: order_data.client_address,
+                      number: order_data.client_address_number,
+                      complement: order_data.client_address_comp || "",
+                      neighborhood: order_data.client_address_district,
+                      city: order_data.client_address_city,
+                      state: order_data.client_address_state,
+                    },
+                  },
+                  shipping_value: order_data.shipping_value || 0,
+                };
+
+                console.log("[coinzz-auto] Payload:", JSON.stringify(coinzzPayload));
+
+                const coinzzRes = await fetch("https://app.coinzz.com.br/api/sales", {
+                  method: "POST",
+                  redirect: "manual",
+                  headers: {
+                    Authorization: `Bearer ${coinzzToken}`,
+                    "Content-Type": "application/json",
+                    Accept: "application/json",
+                  },
+                  body: JSON.stringify(coinzzPayload),
+                });
+
+                const ct = coinzzRes.headers.get("content-type") || "";
+                if (coinzzRes.status >= 300 && coinzzRes.status < 400) {
+                  console.error("[coinzz-auto] Redirect detected:", coinzzRes.headers.get("location"));
+                } else if (!ct.includes("application/json")) {
+                  const raw = await coinzzRes.text();
+                  console.error("[coinzz-auto] Non-JSON response:", raw.substring(0, 500));
+                } else {
+                  const coinzzData = await coinzzRes.json();
+                  console.log("[coinzz-auto] Response:", JSON.stringify(coinzzData));
+
+                  const orderHash = coinzzData?.data?.[0]?.order_hash || coinzzData?.order_hash || null;
+                  if (orderHash && inserted?.id) {
+                    await supabase.from("orders").update({
+                      coinzz_order_hash: orderHash,
+                    }).eq("id", inserted.id);
+                    console.log("[coinzz-auto] Saved coinzz_order_hash:", orderHash);
+                  }
+                }
+              } else {
+                console.warn("[coinzz-auto] No offer_hash found for checkout/offer — skipping Coinzz send");
+              }
+            } else {
+              console.warn("[coinzz-auto] Coinzz integration not active — skipping");
+            }
+          } catch (coinzzErr: any) {
+            console.error("[coinzz-auto] Error:", coinzzErr.message);
+          }
+        }
 
         // Trigger automation flows for new order
         try {
