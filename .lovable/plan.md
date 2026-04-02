@@ -1,86 +1,90 @@
-## Plano: Detalhamento Completo de Pedidos + Ações no Kanban
 
-### Visão Geral
 
-Reescrever o modal de detalhes do pedido e o card do kanban em `src/pages/Pedidos.tsx` para incluir todas as informações solicitadas, com funcionalidades de copiar, editar, cancelar e apagar.
+## Plano: Mega Melhoria — Detalhes do Pedido + Ações no Kanban
 
-### Alterações (arquivo único: `src/pages/Pedidos.tsx`)
+### O que muda
 
-#### 1. Badge de Plataforma no Kanban Card
+Reescrever completamente `src/pages/Pedidos.tsx` para incluir todas as informações solicitadas, funcionalidades de ação e melhorias visuais.
 
-- Badge **LOGZZ** (verde esmeralda `bg-emerald-500`) ou **COINZZ** (roxo `bg-purple-500`) baseado em `logistics_type`
-- Visível no topo de cada card ao lado do número do pedido
+---
 
-#### 2. Menu de Ações no "..." do Kanban Card
+### 1. Badge de Plataforma no Kanban Card
 
-O botão `MoreHorizontal` ganha um `DropdownMenu` com:
-- 👁️ Ver Detalhes → abre modal
-- ✏️ Editar Pedido → abre modal de edição (nome, telefone, endereço)
-- ❌ Cancelar Pedido → muda status para "Frustrado" + confirmação
-- 🗑️ Apagar Pedido → deleta do banco + confirmação
+Cada card exibirá um badge colorido ao lado do número:
+- **LOGZZ** → verde esmeralda (`bg-emerald-500`)
+- **COINZZ** → roxo (`bg-purple-600`)
 
-#### 3. Tab "Informações" — Detalhes Completos
+Baseado no campo `logistics_type` do pedido.
 
-**Seção CLIENTE** (com ícone 📋 copiar ao lado de cada dado):
-- Nome, Telefone (link WhatsApp), Email, CPF/CNPJ
+### 2. Menu "..." Funcional (DropdownMenu)
 
-**Seção ENDEREÇO** (com botão copiar endereço completo):
+O botão `MoreHorizontal` ganha um `DropdownMenu` com 4 opções:
+- 👁️ **Ver Detalhes** → abre modal
+- ✏️ **Editar Pedido** → abre modal de edição
+- ❌ **Cancelar Pedido** → muda status para "Frustrado" com confirmação (AlertDialog)
+- 🗑️ **Apagar Pedido** → deleta permanentemente com confirmação (AlertDialog)
+
+### 3. Tab "Informações" — Completa
+
+**CLIENTE** (com 📋 botão copiar ao lado de cada dado):
+- Nome, Telefone (link WhatsApp), Email, CPF/CNPJ — cada um com ícone de copiar sutil
+
+**ENDEREÇO** (com botão copiar endereço completo):
 - Rua, número, complemento, bairro, cidade/UF, CEP
 
-**Seção OFERTA / PRODUTOS** (NOVA):
-- Buscar oferta via `offer_id` → nome, preço, quantidade
-- Buscar order bumps via `order_bumps` table filtrado por `offer_id`
-- Exibir cada bump: nome, preço, qtd
-- Subtotal do pedido discriminado
+**DATA DE AGENDAMENTO** (destaque visual):
+- Borda dourada, texto grande (2xl), dia da semana por extenso
+- Ex: `📅 sábado, 05 de abril de 2026`
 
-**Seção FINANCEIRO** (melhorada):
-- Valor do produto principal
-- Valor dos order bumps (se houver)
-- Frete: valor ou badge "🟢 FRETE GRÁTIS!" se R$0
-- Total do pedido (destaque grande)
-- Pagamento: "💵 PAGAMENTO NA ENTREGA" (logzz) ou "💳 PAGAMENTO ONLINE — ENTREGA VIA CORREIOS" (coinzz)
+**PRODUTOS DO PEDIDO** (NOVA seção — busca `offers` + `order_bumps` via `offer_id`):
+- Produto principal: nome, qtd, preço
+- Order Bumps: cada um com nome, label, hash, preço — borda emerald
 
-**Seção AGENDAMENTO** (NOVA — destaque):
-- Data de entrega em fonte grande e visível
-- Badge colorido com a data
+**FINANCEIRO** (discriminado):
+- Produto principal: R$ XX
+- Order Bumps (N): R$ XX
+- Frete: valor ou badge `🟢 FRETE GRÁTIS!`
+- **Total** em destaque grande
+- Pagamento:
+  - Logzz → `💵 PAGAMENTO NA ENTREGA`
+  - Coinzz → `💳 PAGAMENTO ONLINE — ENTREGA VIA CORREIOS`
 
-#### 4. Tab "Logística" — Links Externos
+### 4. Tab "Logística" — Links Externos
 
-- Badge plataforma (LOGZZ verde / COINZZ roxo)
-- **Logzz**: link `https://app.logzz.com.br/meu-pedido/{logzz_order_id}` (já existe)
-- **Coinzz**: link `https://app.coinzz.com.br/pedido/{coinzz_order_hash}` (NOVO)
-- Rastreio, entregador, operador logístico, etiquetas
+- Badge da plataforma (LOGZZ/COINZZ)
+- **Logzz**: link clicável `https://app.logzz.com.br/meu-pedido/{logzz_order_id}` + copiar
+- **Coinzz**: link clicável `https://app.coinzz.com.br/pedido/{coinzz_order_hash}` + copiar (NOVO)
+- Rastreio, entregador, operador, etiquetas
 
-#### 5. Tab "Timeline" — Histórico Real
+### 5. Tab "Timeline" — Histórico Real
 
-- Query `order_status_history` filtrado por `order_id`
-- Exibir cada transição: de → para, data/hora, fonte (kanban_drag, logzz_webhook, etc.)
-- Se não houver histórico, mostrar pelo menos criação + última atualização
+Busca `order_status_history` filtrado por `order_id`:
+- Evento de criação (primeiro item fixo)
+- Cada transição: `from_status → to_status` com badges coloridos
+- Data/hora + fonte (Kanban manual, Logzz Webhook, Cancelamento manual, etc.)
+- Se vazio: "Nenhuma movimentação registrada ainda"
 
-#### 6. Funcionalidade de Copiar
+### 6. Modal de Edição
 
-- Componente inline `CopyButton`: ícone `Copy` (lucide) sutil ao lado do texto
-- Ao clicar: `navigator.clipboard.writeText(valor)` + toast "Copiado!"
-- Aplicado em: nome, telefone, email, documento, endereço completo, número do pedido
+Dialog com form para editar: nome, telefone, endereço completo, data de entrega.
+Salva via `supabase.from("orders").update(...)`.
 
-#### 7. Editar Pedido (modal simples)
+### 7. Copiar Dados (CopyBtn)
 
-- Dialog com form para editar: nome, telefone, endereço, data de entrega
-- Salva via `supabase.from("orders").update(...)` 
+Componente inline com ícone `Copy` (lucide) sutil ao lado de cada dado.
+Ao clicar: `navigator.clipboard.writeText()` + toast "Copiado!".
+Aplicado em: nome, telefone, email, documento, endereço, número do pedido, rastreio, IDs externos.
 
-#### 8. Cancelar / Apagar
+---
 
-- **Cancelar**: `AlertDialog` de confirmação → muda status para "Frustrado" + registra em `order_status_history`
-- **Apagar**: `AlertDialog` de confirmação → deleta o pedido do banco
+### Queries adicionais (ao abrir modal)
 
-### Dados Necessários (queries adicionais no modal)
-
-Ao abrir o modal, buscar:
-1. `offers` (via `offer_id`) → nome e preço da oferta
-2. `order_bumps` (via `offer_id`) → bumps vinculados
-3. `order_status_history` (via `order_id`) → timeline completa
+1. `offers` via `offer_id` → nome e preço
+2. `order_bumps` via `offer_id` + `is_active=true` → bumps vinculados
+3. `order_status_history` via `order_id` → timeline completa
 
 ### Escopo
-- 1 arquivo: `src/pages/Pedidos.tsx`
+- **1 arquivo**: `src/pages/Pedidos.tsx` (reescrita completa)
 - Sem migrações, sem edge functions novas
-- Todas as tabelas e colunas já existem no banco
+- Todas as tabelas e colunas já existem
+
