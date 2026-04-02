@@ -29,7 +29,7 @@ const NotificacoesTab = () => {
     if ("Notification" in window) {
       Notification.requestPermission().then((perm) => {
         if (perm === "granted") {
-          new Notification("ScalaNinja 🥷", { body: "Notificação push funcionando!" });
+          new Notification("ScalaCOD 🥷", { body: "Notificação push funcionando!" });
           toast.success("Notificação enviada!");
         } else {
           toast.error("Permissão de notificação negada pelo navegador.");

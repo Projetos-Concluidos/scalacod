@@ -420,7 +420,7 @@ export default function AdminHome() {
     <div>
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-foreground">Gerenciar Home Page</h1>
-        <p className="text-sm text-muted-foreground">Edite todos os textos, imagens e seções da página inicial do ScalaNinja.</p>
+        <p className="text-sm text-muted-foreground">Edite todos os textos, imagens e seções da página inicial do ScalaCOD.</p>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>

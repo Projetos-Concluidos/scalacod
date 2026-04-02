@@ -441,7 +441,7 @@ const Dashboard = () => {
                 <path d="M16 2L20 12L30 16L20 20L16 30L12 20L2 16L12 12Z" fill="url(#shuriken-tip)" />
                 <circle cx="16" cy="16" r="3" fill="#F8FFFE" />
               </svg>
-              <span className="text-sm font-bold text-foreground">Dica da ScalaNinja</span>
+              <span className="text-sm font-bold text-foreground">Dica da ScalaCOD</span>
             </div>
             <p className="text-xs text-muted-foreground leading-relaxed">
               O tráfego mobile sobe 15% após as 20h. Considere agendar seus disparos para esse horário.
