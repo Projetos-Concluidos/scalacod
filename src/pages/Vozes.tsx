@@ -430,6 +430,11 @@ const Vozes = () => {
       if (libFilter.gender === "male" && g !== "male") return false;
       if (libFilter.gender === "female" && g !== "female") return false;
     }
+    if (libFilter.useCase && v.useCase?.toLowerCase() !== libFilter.useCase.toLowerCase()) return false;
+    if (libFilter.search) {
+      const s = libFilter.search.toLowerCase();
+      if (!v.name.toLowerCase().includes(s) && !(v.description || "").toLowerCase().includes(s)) return false;
+    }
     return true;
   });
 
