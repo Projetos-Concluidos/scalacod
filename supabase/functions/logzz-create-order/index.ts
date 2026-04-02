@@ -132,6 +132,67 @@ Deno.serve(async (req) => {
     const webhookUrl = logzzCfg?.logzz_webhook_url || DEFAULT_LOGZZ_WEBHOOK_URL;
     console.log("[logzz-create-order] Webhook URL:", webhookUrl);
 
+    // 4.5 Re-validate delivery date & fetch local_operation_code from Logzz API
+    let finalDeliveryDate = order.delivery_date || "";
+    let finalTypeCode = order.delivery_type_code || "";
+    let localOperationCode = order.local_operation_code || "";
+    let localOperationName = "";
+
+    if (order.client_zip_code) {
+      const cleanCep = (order.client_zip_code || "").replace(/\D/g, "");
+      try {
+        const logzzUrl = `https://app.logzz.com.br/api/delivery-day/options/zip-code/${cleanCep}`;
+        console.log("[logzz-create-order] Re-validating dates for CEP:", cleanCep);
+        const dateRes = await fetch(logzzUrl, {
+          headers: { Authorization: `Bearer ${bearerToken}`, Accept: "application/json", "User-Agent": "Mozilla/5.0 Chrome/120" },
+        });
+        const dateText = await dateRes.text();
+        if (dateRes.ok) {
+          const dateData = JSON.parse(dateText);
+          // Extract dates_available from various response structures
+          let datesAvail: any[] = [];
+          if (dateData?.data?.response?.dates_available?.length > 0) datesAvail = dateData.data.response.dates_available;
+          else if (dateData?.response?.dates_available?.length > 0) datesAvail = dateData.response.dates_available;
+          else if (dateData?.data?.dates_available?.length > 0) datesAvail = dateData.data.dates_available;
+          else if (dateData?.dates_available?.length > 0) datesAvail = dateData.dates_available;
+          else if (Array.isArray(dateData) && dateData[0]?.date) datesAvail = dateData;
+          else if (Array.isArray(dateData?.data) && dateData.data[0]?.date) datesAvail = dateData.data;
+
+          console.log("[logzz-create-order] Available dates:", datesAvail.length);
+
+          if (datesAvail.length > 0) {
+            // Try to find the originally selected date
+            const match = datesAvail.find((d: any) => d.date === finalDeliveryDate);
+            if (match) {
+              finalTypeCode = match.type_code || finalTypeCode;
+              localOperationCode = match.local_operation_code || "";
+              localOperationName = match.local_operation_name || "";
+              console.log("[logzz-create-order] Date validated OK:", finalDeliveryDate, "op_code:", localOperationCode);
+            } else {
+              // Date no longer available — use closest available
+              const first = datesAvail[0];
+              finalDeliveryDate = first.date;
+              finalTypeCode = first.type_code || finalTypeCode;
+              localOperationCode = first.local_operation_code || "";
+              localOperationName = first.local_operation_name || "";
+              console.log("[logzz-create-order] Date re-assigned to:", finalDeliveryDate, "op_code:", localOperationCode);
+
+              // Update order with new date
+              await admin.from("orders").update({
+                delivery_date: finalDeliveryDate,
+                delivery_type_code: finalTypeCode,
+                local_operation_code: localOperationCode,
+              }).eq("id", order_id);
+            }
+          }
+        } else {
+          console.warn("[logzz-create-order] Date re-validation failed:", dateRes.status);
+        }
+      } catch (dateErr: any) {
+        console.warn("[logzz-create-order] Date re-validation error:", dateErr.message);
+      }
+    }
+
     // 5. Get offer hash
     let offerHash = "";
     if (order.offer_id) {
@@ -156,11 +217,19 @@ Deno.serve(async (req) => {
       state: (order.client_address_state || "").toLowerCase(),
       house_number: order.client_address_number || "",
       complement: order.client_address_comp || "",
-      delivery_date: order.delivery_date || "",
-      delivery_type_code: order.delivery_type_code || "",
+      delivery_date: finalDeliveryDate,
+      delivery_type_code: finalTypeCode,
       offer: offerHash,
       affiliate_email: order.affiliate_email || "",
     };
+
+    // Include local_operation_code if available
+    if (localOperationCode) {
+      logzzPayload.local_operation_code = localOperationCode;
+    }
+    if (localOperationName) {
+      logzzPayload.local_operation_name = localOperationName;
+    }
 
     // 7. Fetch order bumps — FIX 3: filter out bumps with null/empty hash
     if (order.offer_id) {
