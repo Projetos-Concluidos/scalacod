@@ -1,57 +1,93 @@
+## Plano: Upgrade Completo do Sistema de Fluxos
 
-
-## Plano: Melhorias no Menu Conversas (Teste + Filtros Avançados)
-
-Baseado nos prints do concorrente, identifiquei 2 funcionalidades ausentes:
+Baseado na análise do concorrente (formato exportado decodificado + prints), o sistema deles tem funcionalidades avançadas que faltam no nosso. Este plano implementa as melhorias em 4 blocos.
 
 ---
 
-### 1. Botão "Teste" + Modal "Enviar Teste"
+### 1. Exportar/Importar Fluxos (Base64)
 
-**O que faz**: Botão com ícone de frasco (flask) no header das Conversas que abre um modal para enviar mensagem ou disparar fluxo para **qualquer número**, sem precisar ter uma conversa existente.
+**O que faz**: O concorrente exporta fluxos como string Base64 (JSON codificado) para compartilhar entre contas. Ao importar, o usuário pode escolher manter o provider original ou converter para Evolution/Oficial.
 
-**Modal com 2 abas**:
-- **Mensagem Avulsa**: Campo "Número (com DDD)" + campo "Mensagem" + botão "Enviar Mensagem"
-- **Disparar Fluxo**: Campo "Número (com DDD)" + Select "Escolha um fluxo..." (lista flows do usuário com contagem de msgs) + botão "Disparar Fluxo"
-
-O envio usa as edge functions já existentes (`send-whatsapp-message` e `trigger-flow`).
+**Implementação**:
+- **Exportar**: No dropdown "Mais opções" de cada fluxo, botão "Exportar" que serializa `{ _ninjacod: true, v: 1, name, description, provider, nodes, edges }` → `btoa()` → copia para clipboard
+- **Importar**: Modal com textarea para colar o código, 3 botões ("Manter original", "Evolution", "API Oficial"), valida o JSON, cria o fluxo na conta do usuário
+- Arquivo: `src/pages/Fluxos.tsx` (modal de importação + handler de exportação)
 
 ---
 
-### 2. Filtros Avançados (estilo concorrente)
+### 2. Novos Tipos de Nó no Builder
 
-Substituir os filtros atuais (simples demais) por um painel completo com 4 grupos de filtros em chip toggle:
+O concorrente tem tipos que não temos:
 
-**Grupo 1 — Leitura**: `Todas` | `Não lidas` | `Lidas`
-**Grupo 2 — Janela WhatsApp**: `Todos` | `Pode responder` | `Janela expirada`
-**Grupo 3 — Tipo de conteúdo**: `Todos` | `Com mídia` | `Só texto`
-**Grupo 4 — Período**: `Qualquer data` | `Hoje` | `7 dias` | `30 dias`
+| Tipo | Descrição |
+|------|-----------|
+| **trigger** | Nó de início com keyword/evento (substitui o "start" genérico) |
+| **action** | Atualizar status do pedido (ex: CONFIRMED_BY_CUSTOMER) |
+| **remarketing** | Sequência de follow-ups com delays (2h, 6h, 1 dia) |
+| **template** | Mensagem tipo template oficial Meta |
+| **video** | Mensagem de vídeo |
+| **document** | Mensagem de documento |
 
-- Badge com contagem de filtros ativos no ícone de filtro
-- Botão "Limpar todos" no topo do painel
-- Remover o filtro antigo (status Abertas/Fechadas/Aguardando + checkbox não lidas)
+**Implementação**:
+- Expandir `NODE_TYPES_CONFIG` no `FlowBuilderModal.tsx` com os novos tipos
+- Cada tipo terá configuração específica no painel lateral direito
 
-A filtragem de "Janela expirada" verifica se `last_message_at` tem mais de 24h (regra da Meta). "Com mídia" filtra conversas cujo `last_message` contém marcadores de mídia.
+---
+
+### 3. Painel de Configuração Rico (Sidebar Direita)
+
+O concorrente tem um painel lateral completo ao clicar num nó (prints image-64, image-65):
+
+- **Rótulo** (nome editável do nó)
+- **Tipo de mensagem** com grid de ícones: Texto, Imagem, Vídeo, Documento, Áudio, Botões, Lista, Template
+- **Cabeçalho** (opcional) com emoji picker
+- **Texto da mensagem** com variáveis clicáveis e botão "Gerar áudio"
+- **Rodapé** (opcional)
+- **Aguardar resposta do cliente**: Padrão (1 resposta), Smart (campos específicos), Nenhum
+- **Continuar se não responder** (toggle com timeout)
+- **Pré-visualização WhatsApp** em tempo real
+- **Botão "Concluído"** para salvar configuração do nó
+
+**Implementação**:
+- Reescrever o painel direito do `FlowBuilderModal.tsx` (step 2) com todas essas seções
+- Os dados editados atualizam o `node.data` em tempo real via `setNodes`
+- A pré-visualização mostra bubble WhatsApp com header, body, footer, botões
+
+---
+
+### 4. Melhoria do Agente IA para Fluxos
+
+O concorrente tem um modal IA mais completo (print image-59):
+- Seletor de provedor WhatsApp (Oficial/Evolution)
+- Dicas para melhores resultados
+- Aceita colar fluxos de outras plataformas (ManyChat, Botpress) para adaptar
+
+**Implementação**:
+- Atualizar `AIFlowModal.tsx`: adicionar seletor de provedor, seção de dicas, suporte a importação de fluxos de outras plataformas no prompt
+- Atualizar `ai-flow-generator` edge function: expandir o system prompt para gerar os novos tipos de nó (action, remarketing, buttons com connections, waitForResponse)
+- A IA continuará usando Lovable AI (já configurado)
 
 ---
 
 ### Detalhes Técnicos
 
-**Arquivo editado**: `src/pages/Conversas.tsx`
+**Arquivos editados**:
+1. `src/pages/Fluxos.tsx` — Export handler, Import modal, botão exportar no dropdown de cada fluxo
+2. `src/components/fluxos/FlowBuilderModal.tsx` — Novos tipos de nó, painel de configuração rico, pré-visualização WhatsApp
+3. `src/components/fluxos/AIFlowModal.tsx` — Seletor de provedor, dicas, suporte a importação
+4. `supabase/functions/ai-flow-generator/index.ts` — System prompt expandido para novos tipos de nó
 
-- Novos estados: `testModalOpen`, `testMode` ("message" | "flow"), `testPhone`, `testMessage`, `testFlowId`, `readFilter`, `windowFilter`, `mediaFilter`, `dateFilter`
-- Import `Flask` de lucide-react para o ícone do botão Teste
-- O modal usa `Dialog` existente com toggle entre as 2 abas
-- A lógica de filtro no `useMemo` `filtered` será expandida para aplicar todos os 4 grupos
-- Para "Disparar Fluxo", reutiliza a edge function `trigger-flow` passando o número e flowId
+**Sem migrações** — a estrutura de `flows.nodes` (JSONB) já suporta qualquer formato de nó.
 
-**Sem migrações, sem edge functions novas.**
-
----
-
-### Escopo
-- **1 arquivo editado**: `src/pages/Conversas.tsx`
-- Botão "Teste" + modal com 2 abas
-- 4 grupos de filtros avançados com chips
-- Badge de contagem no ícone de filtro
-
+**Formato de exportação**:
+```
+Base64( JSON.stringify({
+  _ninjacod: true,
+  v: 1,
+  name: "Pedido Feito",
+  description: "...",
+  provider: "official" | "evolution",
+  nodes: [...],
+  edges: [...]
+}) )
+```
