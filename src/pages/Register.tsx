@@ -3,19 +3,7 @@ import { Link, Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Loader2, Eye, EyeOff } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-
-const ShurikenLogo = ({ size = 32 }: { size?: number }) => (
-  <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
-    <defs>
-      <linearGradient id="shuriken-reg" x1="0" y1="0" x2="32" y2="32">
-        <stop offset="0%" stopColor="#34D399" />
-        <stop offset="100%" stopColor="#10B981" />
-      </linearGradient>
-    </defs>
-    <path d="M16 2L20 12L30 16L20 20L16 30L12 20L2 16L12 12Z" fill="url(#shuriken-reg)" />
-    <circle cx="16" cy="16" r="3" fill="#030712" />
-  </svg>
-);
+import ScalaCODLogo, { ScalaCODBrandName } from "@/components/ScalaCODLogo";
 
 const phrases = [
   "Comece em 5 minutos.",
