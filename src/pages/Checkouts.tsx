@@ -283,7 +283,8 @@ const Checkouts = () => {
 
   function handleSave() {
     if (!formName.trim()) return toast.error("Nome é obrigatório");
-    const slug = formName.trim().toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "").replace(/-+/g, "-").replace(/^-|-$/g, "");
+    const offerSuffix = selectedLogzzOffer?.offer_hash || formOfferId?.slice(0, 7) || Math.random().toString(36).slice(2, 9);
+    const slug = `${formName.trim()}-${offerSuffix}`.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "").replace(/-+/g, "-").replace(/^-|-$/g, "").slice(0, 80);
     const payload: any = {
       name: formName.trim(),
       slug,
