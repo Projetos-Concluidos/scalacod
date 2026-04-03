@@ -30,6 +30,7 @@ const defaults: Prefs = {
   email_weekly_report: false,
   push_enabled: false,
   push_new_order: true,
+  push_payment_approved: true,
   push_delivered: true,
   push_frustrated: true,
   push_new_lead: true,
