@@ -270,6 +270,9 @@ const Configuracoes = () => {
         <TabsContent value="fila">
           <FilaWhatsAppTab />
         </TabsContent>
+        <TabsContent value="equipe">
+          <EquipeTab />
+        </TabsContent>
       </Tabs>
     </div>
   );
