@@ -2,7 +2,7 @@ import { useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 
-const AUDIO_TYPES = ["new_order"];
+const AUDIO_TYPES = ["new_order", "payment_approved"];
 
 export function useNotificationPush() {
   const { user } = useAuth();
@@ -56,6 +56,7 @@ export function useNotificationPush() {
           // Check per-type preference
           const typeMap: Record<string, string> = {
             new_order: "push_new_order",
+            payment_approved: "push_payment_approved",
             delivered: "push_delivered",
             frustrated: "push_frustrated",
             new_lead: "push_new_lead",

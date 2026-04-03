@@ -14,6 +14,7 @@ interface Prefs {
   email_weekly_report: boolean;
   push_enabled: boolean;
   push_new_order: boolean;
+  push_payment_approved: boolean;
   push_delivered: boolean;
   push_frustrated: boolean;
   push_new_lead: boolean;
@@ -29,6 +30,7 @@ const defaults: Prefs = {
   email_weekly_report: false,
   push_enabled: false,
   push_new_order: true,
+  push_payment_approved: true,
   push_delivered: true,
   push_frustrated: true,
   push_new_lead: true,
@@ -60,6 +62,7 @@ const NotificacoesTab = () => {
           email_weekly_report: d.email_weekly_report ?? false,
           push_enabled: d.push_enabled ?? false,
           push_new_order: d.push_new_order ?? true,
+          push_payment_approved: d.push_payment_approved ?? true,
           push_delivered: d.push_delivered ?? true,
           push_frustrated: d.push_frustrated ?? true,
           push_new_lead: d.push_new_lead ?? true,
@@ -125,6 +128,7 @@ const NotificacoesTab = () => {
 
   const pushItems = [
     { key: "push_new_order" as const, label: "Novo pedido recebido 🔊", hint: "Toca áudio de alerta" },
+    { key: "push_payment_approved" as const, label: "Pagamento aprovado 💰", hint: "Toca áudio quando pagamento é confirmado" },
     { key: "push_delivered" as const, label: "Pedido entregue" },
     { key: "push_frustrated" as const, label: "Pedido frustrado / não entregue" },
     { key: "push_new_lead" as const, label: "Novo lead" },

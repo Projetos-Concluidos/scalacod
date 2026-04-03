@@ -738,6 +738,7 @@ export type Database = {
           push_frustrated: boolean | null
           push_new_lead: boolean | null
           push_new_order: boolean | null
+          push_payment_approved: boolean
           updated_at: string | null
           user_id: string
         }
@@ -756,6 +757,7 @@ export type Database = {
           push_frustrated?: boolean | null
           push_new_lead?: boolean | null
           push_new_order?: boolean | null
+          push_payment_approved?: boolean
           updated_at?: string | null
           user_id: string
         }
@@ -774,6 +776,7 @@ export type Database = {
           push_frustrated?: boolean | null
           push_new_lead?: boolean | null
           push_new_order?: boolean | null
+          push_payment_approved?: boolean
           updated_at?: string | null
           user_id?: string
         }

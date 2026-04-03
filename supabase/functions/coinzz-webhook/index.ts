@@ -240,7 +240,7 @@ Deno.serve(async (req) => {
             user_id: order.user_id,
             title: "Pagamento aprovado! 💰",
             body: `Pedido #${orderNumber}${valorFormatado ? ` — ${valorFormatado}` : ""} foi confirmado via Coinzz.`,
-            type: "new_order",
+            type: "payment_approved",
             metadata: { order_id: order.id, source: "coinzz" },
           });
           console.log("[coinzz-webhook] Push notification created for approved payment");
