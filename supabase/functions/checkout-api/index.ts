@@ -522,9 +522,47 @@ Deno.serve(async (req) => {
         );
       }
 
-      if (!order_data?.offer_hash) {
+      // Auto-resolve offer_hash and order data from order_id if not provided inline
+      const orderId = body.order_id;
+      let resolvedOrderData = order_data || {};
+
+      if (orderId && !resolvedOrderData?.offer_hash) {
+        console.log("[coinzz] Resolving offer_hash from order_id:", orderId);
+        const { data: orderRow } = await supabase
+          .from("orders")
+          .select("*, checkouts:checkout_id(coinzz_offer_hash, offer_id), offers:offer_id(hash)")
+          .eq("id", orderId)
+          .maybeSingle();
+
+        if (orderRow) {
+          const checkout = orderRow.checkouts as any;
+          const offer = orderRow.offers as any;
+          const offerHash = checkout?.coinzz_offer_hash || offer?.hash || null;
+
+          resolvedOrderData = {
+            ...resolvedOrderData,
+            offer_hash: offerHash,
+            client_name: orderRow.client_name,
+            client_email: orderRow.client_email,
+            client_document: orderRow.client_document,
+            client_phone: orderRow.client_phone,
+            client_zip_code: orderRow.client_zip_code,
+            client_address: orderRow.client_address,
+            client_address_number: orderRow.client_address_number,
+            client_address_comp: orderRow.client_address_comp,
+            client_address_district: orderRow.client_address_district,
+            client_address_city: orderRow.client_address_city,
+            client_address_state: orderRow.client_address_state,
+            shipping_value: orderRow.shipping_value,
+            payment_method: orderRow.payment_method,
+          };
+          console.log("[coinzz] Resolved offer_hash:", offerHash);
+        }
+      }
+
+      if (!resolvedOrderData?.offer_hash) {
         return new Response(
-          JSON.stringify({ error: "offer_hash é obrigatório para criar venda na Coinzz" }),
+          JSON.stringify({ error: "offer_hash não encontrado. Configure o hash da oferta Coinzz no checkout ou na oferta." }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
@@ -532,44 +570,44 @@ Deno.serve(async (req) => {
       try {
         console.log("[coinzz] Creating sale via POST /api/sales");
         const coinzzPayload: any = {
-          offer_hash: order_data.offer_hash,
-          payment_method: order_data.payment_method || "afterpay",
+          offer_hash: resolvedOrderData.offer_hash,
+          payment_method: resolvedOrderData.payment_method || "afterpay",
           customer: {
-            name: order_data.name || order_data.client_name,
-            email: order_data.email || order_data.client_email || "cliente@scalacod.com",
-            document: (order_data.document || order_data.client_document || "").replace(/\D/g, ""),
-            phone: order_data.phone || order_data.client_phone,
+            name: resolvedOrderData.name || resolvedOrderData.client_name,
+            email: resolvedOrderData.email || resolvedOrderData.client_email || "cliente@scalacod.com",
+            document: (resolvedOrderData.document || resolvedOrderData.client_document || "").replace(/\D/g, ""),
+            phone: resolvedOrderData.phone || resolvedOrderData.client_phone,
             address: {
-              zip_code: (order_data.cep || order_data.client_zip_code || "").replace(/\D/g, ""),
-              street: order_data.address || order_data.client_address,
-              number: order_data.address_number || order_data.client_address_number,
-              complement: order_data.complement || order_data.client_address_comp || "",
-              neighborhood: order_data.district || order_data.client_address_district,
-              city: order_data.city || order_data.client_address_city,
-              state: order_data.state || order_data.client_address_state,
+              zip_code: (resolvedOrderData.cep || resolvedOrderData.client_zip_code || "").replace(/\D/g, ""),
+              street: resolvedOrderData.address || resolvedOrderData.client_address,
+              number: resolvedOrderData.address_number || resolvedOrderData.client_address_number,
+              complement: resolvedOrderData.complement || resolvedOrderData.client_address_comp || "",
+              neighborhood: resolvedOrderData.district || resolvedOrderData.client_address_district,
+              city: resolvedOrderData.city || resolvedOrderData.client_address_city,
+              state: resolvedOrderData.state || resolvedOrderData.client_address_state,
             },
           },
-          shipping_value: order_data.shipping_value || 0,
+          shipping_value: resolvedOrderData.shipping_value || 0,
         };
 
         // Add variations if present
-        if (order_data.variations?.length) {
-          coinzzPayload.variations = order_data.variations;
+        if (resolvedOrderData.variations?.length) {
+          coinzzPayload.variations = resolvedOrderData.variations;
         }
 
         // Add order_bumps if present
-        if (order_data.order_bumps?.length) {
-          coinzzPayload.order_bumps = order_data.order_bumps;
+        if (resolvedOrderData.order_bumps?.length) {
+          coinzzPayload.order_bumps = resolvedOrderData.order_bumps;
         }
 
         // Add affiliate if present
-        if (order_data.affiliate_email) {
-          coinzzPayload.affiliate_email = order_data.affiliate_email;
+        if (resolvedOrderData.affiliate_email) {
+          coinzzPayload.affiliate_email = resolvedOrderData.affiliate_email;
         }
 
         // Add discount coupon if present
-        if (order_data.discount_coupon) {
-          coinzzPayload.discount_coupon = order_data.discount_coupon;
+        if (resolvedOrderData.discount_coupon) {
+          coinzzPayload.discount_coupon = resolvedOrderData.discount_coupon;
         }
 
         console.log("[coinzz] Payload:", JSON.stringify(coinzzPayload));
@@ -619,6 +657,12 @@ Deno.serve(async (req) => {
 
         // Extract order_hash from response
         const orderHash = data?.data?.[0]?.order_hash || data?.order_hash || null;
+
+        // If called with order_id, save coinzz_order_hash back to the order
+        if (orderId && orderHash) {
+          await supabase.from("orders").update({ coinzz_order_hash: orderHash }).eq("id", orderId);
+          console.log("[coinzz] Saved coinzz_order_hash to order:", orderId, orderHash);
+        }
 
         return new Response(JSON.stringify({
           success: true,
