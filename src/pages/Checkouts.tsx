@@ -86,10 +86,6 @@ const Checkouts = () => {
   const [formBumps, setFormBumps] = useState<Array<{ offer_id: string; name: string; price: number; label_bump: string; description: string; hash: string | null; image_url: string | null; role?: string }>>([]);
   const [bumpSearchQuery, setBumpSearchQuery] = useState("");
   const [bumpLogzzPopoverOpen, setBumpLogzzPopoverOpen] = useState(false);
-  const [coinzzOffers, setCoinzzOffers] = useState<LogzzOffer[]>([]);
-  const [syncingCoinzz, setSyncingCoinzz] = useState(false);
-  const [coinzzPopoverOpen, setCoinzzPopoverOpen] = useState(false);
-  const [selectedCoinzzOffer, setSelectedCoinzzOffer] = useState<LogzzOffer | null>(null);
 
   const { data: checkouts = [], isLoading } = useQuery({
     queryKey: ["checkouts"],
