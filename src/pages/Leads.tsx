@@ -47,7 +47,7 @@ const Leads = () => {
   const fetchLeads = async () => {
     if (!user) return;
     setLoading(true);
-    const { data } = await supabase.from("leads").select("*").eq("user_id", user.id).order("created_at", { ascending: false });
+    const { data } = await supabase.from("leads").select("*").order("created_at", { ascending: false });
     setLeads(data || []);
     setLoading(false);
   };

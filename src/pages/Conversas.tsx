@@ -144,7 +144,6 @@ const Conversas = () => {
     const { data } = await supabase
       .from("conversations")
       .select("*")
-      .eq("user_id", user.id)
       .order("last_message_at", { ascending: false });
     setConversations(data || []);
     setLoading(false);
