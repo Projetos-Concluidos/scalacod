@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import type { Tables } from "@/integrations/supabase/types";
+import { useTeamContext } from "@/hooks/useTeamContext";
 
 type Order = Tables<"orders">;
 
