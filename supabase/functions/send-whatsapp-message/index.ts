@@ -307,7 +307,8 @@ Deno.serve(async (req) => {
         if (res.ok) {
           messageIdWhatsapp = data.key?.id || data.id || null;
         } else {
-          sendError = data.message || data.error || `Evolution error: ${res.status}`;
+          console.error("[send-whatsapp-message] Evolution error body:", JSON.stringify(data));
+          sendError = data.message || data.error || JSON.stringify(data) || `Evolution error: ${res.status}`;
         }
       } catch (e) {
         sendError = `Evolution: ${e.message}`;
