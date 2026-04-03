@@ -119,7 +119,13 @@ Deno.serve(async (req) => {
       );
     }
 
-    const cleanPhone = targetPhone.replace(/\D/g, "");
+    // Format phone: ensure Brazilian numbers have 55 prefix
+    let cleanPhone = targetPhone.replace(/\D/g, "");
+    if (cleanPhone.length >= 10 && cleanPhone.length <= 11 && !cleanPhone.startsWith("55")) {
+      cleanPhone = "55" + cleanPhone;
+    }
+    console.log(`[send-whatsapp-message] Formatted phone: ${targetPhone} → ${cleanPhone}`);
+
     let messageIdWhatsapp: string | null = null;
     let sendError: string | null = null;
 
