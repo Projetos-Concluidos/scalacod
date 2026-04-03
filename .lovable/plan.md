@@ -1,32 +1,37 @@
 
 
-## Plano: Corrigir Endpoint da API Coinzz para Listagem de Produtos
+## Plano: Corrigir exclusao de checkout + Melhorar notificacoes toast
 
-### Diagnostico
+### Problema 1: Erro ao excluir checkout
+O erro `update or delete on table "checkouts" violates foreign key constraint "orders_checkout_id_fkey"` ocorre porque existem pedidos (orders) vinculados ao checkout. Nao e possivel excluir um checkout que possui pedidos associados.
 
-Os logs da Edge Function mostram claramente:
-- `[coinzz-list-products] Status: 200` (HTTP 200 mas...)
-- `[coinzz-list-products] Non-JSON: <!doctype html>... <title>Not Found | Coinzz</title>`
+**Solucao**: Antes de tentar excluir, verificar se existem pedidos vinculados. Se existirem, exibir mensagem clara explicando que o checkout possui pedidos e nao pode ser excluido — oferecer a opcao de **desativar** em vez de excluir.
 
-A Coinzz retorna uma pagina HTML de "Not Found" para o endpoint `/api/v1/products`. Enquanto isso, o endpoint de vendas usa `/api/sales` (sem `/v1/`). O padrao correto e **sem** o prefixo `/v1/`.
+### Problema 2: Notificacoes toast sem informacao clara
+As mensagens de erro mostram textos tecnicos do banco de dados. As notificacoes precisam ser mais descritivas, bonitas e com botao X para fechar.
 
-### Correcao
+**Solucao**: Configurar o Sonner com `closeButton: true`, `richColors: true` e `duration` adequado. Criar helper `notify` que traduz erros comuns do banco para mensagens amigaveis em portugues.
 
-| Arquivo | Acao |
-|---|---|
-| `supabase/functions/coinzz-list-products/index.ts` | Trocar URL de `https://app.coinzz.com.br/api/v1/products` para `https://app.coinzz.com.br/api/products` |
-| `supabase/functions/test-integration/index.ts` | Mesma correcao no teste de integracao Coinzz |
+### Alteracoes
 
-### Detalhe tecnico
-Linha 55 do `coinzz-list-products/index.ts`:
-```
-// DE:
-"https://app.coinzz.com.br/api/v1/products"
-// PARA:
-"https://app.coinzz.com.br/api/products"
-```
+#### 1. `src/pages/Checkouts.tsx`
+- No `deleteMutation`, antes de excluir verificar se existem orders vinculadas (`select count from orders where checkout_id = id`)
+- Se houver pedidos: mostrar toast de aviso "Este checkout possui X pedidos e nao pode ser excluido. Desative-o em vez disso."
+- Se nao houver: proceder com a exclusao normal
+- Melhorar a mensagem de `onError` para traduzir o erro de FK para texto amigavel
 
-Mesma mudanca na linha 174 do `test-integration/index.ts`.
+#### 2. `src/components/ui/sonner.tsx`
+- Adicionar `closeButton={true}` para exibir o X de fechar
+- Adicionar `richColors={true}` para cores diferenciadas (verde sucesso, vermelho erro, amarelo aviso)
+- Ajustar `duration` para 5000ms
+- Melhorar estilos com bordas arredondadas e sombra premium
 
-Apos corrigir, redesplegar a edge function e testar o botao "Sincronizar Coinzz" novamente.
+#### 3. `src/lib/notify.ts`
+- Atualizar helper com traducao de erros comuns do Supabase (FK violation, RLS, etc.)
+- Adicionar funcao `notifyError(error)` que detecta tipo de erro e traduz automaticamente
+
+### Resultado
+- Checkout com pedidos: toast amarelo "Este checkout possui pedidos vinculados e nao pode ser excluido. Use o botao de desativar."
+- Checkout sem pedidos: exclui normalmente com toast verde
+- Todas as notificacoes do sistema ganham botao X, cores diferenciadas e mensagens em portugues
 
