@@ -265,6 +265,9 @@ const Configuracoes = () => {
         <TabsContent value="notificacoes">
           <NotificacoesTab />
         </TabsContent>
+        <TabsContent value="fila">
+          <FilaWhatsAppTab />
+        </TabsContent>
       </Tabs>
     </div>
   );
