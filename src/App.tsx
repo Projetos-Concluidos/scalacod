@@ -41,6 +41,7 @@ const AjudaPage = lazyWithRetry(() => import("@/pages/Ajuda"));
 const StatusPage = lazyWithRetry(() => import("@/pages/StatusPage"));
 const TermosPage = lazyWithRetry(() => import("@/pages/Termos"));
 const NotFound = lazyWithRetry(() => import("@/pages/NotFound"));
+const AcceptInvite = lazyWithRetry(() => import("@/pages/AcceptInvite"));
 
 // Admin — separate chunk
 const AdminOverview = lazyWithRetry(() => import("@/pages/admin/AdminOverview"));
