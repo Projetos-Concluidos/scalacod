@@ -153,7 +153,7 @@ const EvolutionTab = () => {
     setHealthChecking(true);
     setHealthStatus("checking");
     try {
-      const data = await callEvolutionFunction("health");
+      const data = await callEvolutionFunction("health", { test_phone: connectedPhone });
       if (data.sessionHealthy === true) {
         setHealthStatus("healthy");
         toast.success("Sessão Baileys operacional ✓");
