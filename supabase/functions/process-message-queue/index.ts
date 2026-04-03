@@ -62,6 +62,20 @@ Deno.serve(async (req) => {
     let failed = 0;
 
     for (const msg of messages) {
+      // Check for invalid/fake phone numbers first
+      if (isInvalidPhone(msg.phone)) {
+        console.log(`[process-message-queue] SKIP invalid phone="${msg.phone}" msg=${msg.id}`);
+        await supabase
+          .from("message_queue")
+          .update({
+            status: "failed",
+            error_message: "Número inválido/fictício detectado",
+          })
+          .eq("id", msg.id);
+        failed++;
+        continue;
+      }
+
       // Mark as processing
       await supabase
         .from("message_queue")

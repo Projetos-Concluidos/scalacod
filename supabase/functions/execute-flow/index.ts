@@ -114,6 +114,12 @@ Deno.serve(async (req) => {
     }
 
     // Build variable context
+    // Format currency — strip "R$" prefix so templates can use "R$ {{valor}}" without duplication
+    const valorNumerico = order ? Number(order.order_final_price) : 0;
+    const valorFormatado = order
+      ? new Intl.NumberFormat("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(valorNumerico)
+      : "";
+
     const ctx: Record<string, string> = {
       cliente_nome: order?.client_name || "",
       cliente_telefone: order?.client_phone || "",
@@ -121,7 +127,8 @@ Deno.serve(async (req) => {
       produto_nome: productName,
       endereco_completo: endereco,
       data_entrega: order?.delivery_date ? formatDate(order.delivery_date) : "",
-      valor_total: order ? formatCurrency(Number(order.order_final_price)) : "",
+      valor: valorFormatado,
+      valor_total: order ? formatCurrency(valorNumerico) : "",
       codigo_rastreio: order?.tracking_code || "",
       loja_nome: storeName,
       status_pedido: order?.status || "",
