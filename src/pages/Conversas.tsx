@@ -50,6 +50,7 @@ const labelColors = [
 
 const Conversas = () => {
   const { user } = useAuth();
+  const { effectiveUserId, isViewer } = useTeamContext();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [selectedConv, setSelectedConv] = useState<Conversation | null>(null);
