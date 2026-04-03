@@ -138,13 +138,14 @@ const Dashboard = () => {
   // Realtime subscription for pixel events
   useEffect(() => {
     if (!user) return;
+    const filterUserId = effectiveUserId || user.id;
     const channel = supabase
       .channel("pixel-realtime")
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "pixel_events", filter: `user_id=eq.${user.id}` }, () => loadData())
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "orders", filter: `user_id=eq.${user.id}` }, () => loadData())
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "pixel_events", filter: `user_id=eq.${filterUserId}` }, () => loadData())
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "orders", filter: `user_id=eq.${filterUserId}` }, () => loadData())
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [user, loadData]);
+  }, [user, loadData, effectiveUserId]);
 
   const hasPixelData = metrics.pixelTotal > 0;
 
