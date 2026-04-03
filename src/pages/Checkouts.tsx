@@ -191,14 +191,31 @@ const Checkouts = () => {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
+      // Check for linked orders first
+      const { count } = await supabase
+        .from("orders")
+        .select("id", { count: "exact", head: true })
+        .eq("checkout_id", id);
+      if (count && count > 0) {
+        throw new Error(`LINKED_ORDERS:${count}`);
+      }
       const { error } = await supabase.from("checkouts").delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["checkouts"] });
-      toast.success("Checkout excluído!");
+      toast.success("Checkout excluído com sucesso!");
     },
-    onError: (e: any) => toast.error(e.message),
+    onError: (e: any) => {
+      if (e.message?.startsWith("LINKED_ORDERS:")) {
+        const count = e.message.split(":")[1];
+        toast.warning(`Este checkout possui ${count} pedido(s) vinculado(s) e não pode ser excluído. Desative-o em vez disso.`, { duration: 7000 });
+      } else if (e.message?.includes("foreign key")) {
+        toast.warning("Não é possível excluir: existem pedidos vinculados a este checkout. Desative-o em vez disso.", { duration: 7000 });
+      } else {
+        toast.error(`Erro ao excluir checkout: ${e.message}`);
+      }
+    },
   });
 
   const toggleMutation = useMutation({
