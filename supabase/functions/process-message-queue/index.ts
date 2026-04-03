@@ -19,6 +19,32 @@ function isInvalidPhone(phone: string): boolean {
   return INVALID_PATTERNS.some((p) => p.test(local));
 }
 
+// Non-retryable error patterns — fail immediately
+const NON_RETRYABLE_PATTERNS = [
+  "não encontrado no WhatsApp",
+  "Número inválido",
+  "not found on WhatsApp",
+];
+
+// Session-related error patterns — treat as provider issue, not contact issue
+const SESSION_ERROR_PATTERNS = [
+  "exists.*false",
+  "Bad Request",
+  "session",
+  "ECONNREFUSED",
+  "ECONNRESET",
+];
+
+function isNonRetryableError(msg: string): boolean {
+  return NON_RETRYABLE_PATTERNS.some((s) => msg.includes(s));
+}
+
+function isSessionError(msg: string): boolean {
+  return SESSION_ERROR_PATTERNS.some((s) => {
+    try { return new RegExp(s, "i").test(msg); } catch { return msg.toLowerCase().includes(s.toLowerCase()); }
+  });
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -60,8 +86,27 @@ Deno.serve(async (req) => {
 
     let sent = 0;
     let failed = 0;
+    let consecutiveExistsFalse = 0; // Track consecutive "exists:false" failures
+    const MAX_CONSECUTIVE_SESSION_FAILURES = 3; // If 3+ in a row fail with session errors, pause
+    let sessionPaused = false;
 
     for (const msg of messages) {
+      // If we detected a session problem, re-queue remaining messages instead of failing them
+      if (sessionPaused) {
+        const backoffMinutes = 10;
+        const processAfter = new Date(Date.now() + backoffMinutes * 60 * 1000).toISOString();
+        await supabase
+          .from("message_queue")
+          .update({
+            status: "pending",
+            process_after: processAfter,
+            error_message: "Sessão Evolution instável — reagendado automaticamente",
+          })
+          .eq("id", msg.id);
+        console.log(`[process-message-queue] SESSION_PAUSED re-queued msg=${msg.id}`);
+        continue;
+      }
+
       // Check for invalid/fake phone numbers first
       if (isInvalidPhone(msg.phone)) {
         console.log(`[process-message-queue] SKIP invalid phone="${msg.phone}" msg=${msg.id}`);
@@ -93,7 +138,6 @@ Deno.serve(async (req) => {
           .maybeSingle();
 
         if (!instance) {
-          // Still no instance — re-queue with backoff
           const newRetry = msg.retry_count + 1;
           if (newRetry >= msg.max_retries) {
             await supabase
@@ -107,7 +151,6 @@ Deno.serve(async (req) => {
             failed++;
             console.log(`[process-message-queue] FAILED (max retries) msg=${msg.id}`);
           } else {
-            // Exponential backoff: 5min, 15min, 45min
             const backoffMinutes = 5 * Math.pow(3, newRetry - 1);
             const processAfter = new Date(
               Date.now() + backoffMinutes * 60 * 1000
@@ -149,7 +192,9 @@ Deno.serve(async (req) => {
           throw new Error(err.error || `Send failed: ${res.status}`);
         }
 
-        // Success
+        // Success — reset consecutive failure counter
+        consecutiveExistsFalse = 0;
+
         await supabase
           .from("message_queue")
           .update({
@@ -164,53 +209,76 @@ Deno.serve(async (req) => {
         // Delay between sends to avoid rate limits
         await new Promise((r) => setTimeout(r, 1500));
       } catch (e) {
-        // Non-retryable errors — fail immediately
-        const nonRetryable = [
-          "não encontrado no WhatsApp",
-          "Número inválido",
-          "not found on WhatsApp",
-        ];
-        const isNonRetryable = nonRetryable.some((s) => e.message?.includes(s));
+        const errorMsg = e.message || "";
 
-        if (isNonRetryable) {
+        // Non-retryable errors — fail immediately
+        if (isNonRetryableError(errorMsg)) {
           await supabase
             .from("message_queue")
             .update({
               status: "failed",
-              error_message: e.message,
+              error_message: errorMsg,
             })
             .eq("id", msg.id);
           failed++;
-          console.log(`[process-message-queue] NON-RETRYABLE msg=${msg.id}: ${e.message}`);
-        } else {
-          const newRetry = msg.retry_count + 1;
-          if (newRetry >= msg.max_retries) {
-            await supabase
-              .from("message_queue")
-              .update({
-                status: "failed",
-                retry_count: newRetry,
-                error_message: e.message,
-              })
-              .eq("id", msg.id);
-            failed++;
-          } else {
-            const backoffMinutes = 5 * Math.pow(3, newRetry - 1);
-            const processAfter = new Date(
-              Date.now() + backoffMinutes * 60 * 1000
-            ).toISOString();
+          // Don't count non-retryable as session errors
+          consecutiveExistsFalse = 0;
+          console.log(`[process-message-queue] NON-RETRYABLE msg=${msg.id}: ${errorMsg}`);
+          continue;
+        }
+
+        // Check if this looks like a session/provider problem
+        if (isSessionError(errorMsg)) {
+          consecutiveExistsFalse++;
+          console.warn(`[process-message-queue] SESSION_ERROR #${consecutiveExistsFalse} msg=${msg.id}: ${errorMsg}`);
+
+          if (consecutiveExistsFalse >= MAX_CONSECUTIVE_SESSION_FAILURES) {
+            // This is likely a session problem, not individual contacts
+            sessionPaused = true;
+            console.error(`[process-message-queue] SESSION DEGRADED — pausing remaining sends. ${consecutiveExistsFalse} consecutive failures.`);
+
+            // Re-queue this message instead of failing it
+            const processAfter = new Date(Date.now() + 10 * 60 * 1000).toISOString();
             await supabase
               .from("message_queue")
               .update({
                 status: "pending",
-                retry_count: newRetry,
                 process_after: processAfter,
-                error_message: e.message,
+                error_message: `Sessão Evolution degradada — reagendado. Erro: ${errorMsg}`,
               })
               .eq("id", msg.id);
+            continue;
           }
-          console.error(`[process-message-queue] Error msg=${msg.id}:`, e.message);
         }
+
+        // Standard retry logic
+        const newRetry = msg.retry_count + 1;
+        if (newRetry >= msg.max_retries) {
+          await supabase
+            .from("message_queue")
+            .update({
+              status: "failed",
+              retry_count: newRetry,
+              error_message: errorMsg,
+            })
+            .eq("id", msg.id);
+          failed++;
+        } else {
+          const backoffMinutes = 5 * Math.pow(3, newRetry - 1);
+          const processAfter = new Date(
+            Date.now() + backoffMinutes * 60 * 1000
+          ).toISOString();
+          await supabase
+            .from("message_queue")
+            .update({
+              status: "pending",
+              retry_count: newRetry,
+              process_after: processAfter,
+              error_message: errorMsg,
+            })
+            .eq("id", msg.id);
+        }
+        console.error(`[process-message-queue] Error msg=${msg.id}:`, errorMsg);
       }
     }
 
@@ -222,7 +290,7 @@ Deno.serve(async (req) => {
       .lt("created_at", new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString());
 
     return new Response(
-      JSON.stringify({ processed: messages.length, sent, failed }),
+      JSON.stringify({ processed: messages.length, sent, failed, sessionPaused }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (e) {
