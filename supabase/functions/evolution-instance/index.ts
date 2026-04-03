@@ -15,7 +15,6 @@ async function getGlobalCredentials(supabaseAdmin: any) {
   const rawUrl = data?.find((d: any) => d.key === "integration_evolution_url")?.value;
   const rawKey = data?.find((d: any) => d.key === "integration_evolution_api_key")?.value;
 
-  // JSONB strings may come with extra quotes — strip them
   const cleanStr = (v: any): string => {
     if (typeof v === "string") return v.replace(/^"|"$/g, "").trim();
     return String(v ?? "").replace(/^"|"$/g, "").trim();
@@ -62,7 +61,7 @@ serve(async (req) => {
     }
 
     const body = await req.json();
-    const action = body.action; // "create" | "connect" | "status" | "disconnect" | "restart"
+    const action = body.action; // "create" | "connect" | "status" | "disconnect" | "restart" | "health"
     const instanceName = body.instance_name;
 
     if (!instanceName) {
@@ -79,7 +78,6 @@ serve(async (req) => {
 
     // ─── CREATE INSTANCE ───
     if (action === "create") {
-      // First try to fetch existing instance
       const fetchRes = await fetch(`${evoUrl}/instance/fetchInstances`, {
         headers: { apikey: evoApiKey },
       });
@@ -92,14 +90,12 @@ serve(async (req) => {
           : null;
       }
 
-      // If instance already exists, just get the QR code
       if (existingInstance) {
         const connectRes = await fetch(`${evoUrl}/instance/connect/${instanceName}`, {
           headers: { apikey: evoApiKey },
         });
         const connectData = await connectRes.json();
 
-        // Update DB — select then update or insert
         const { data: existRow } = await supabaseAdmin
           .from("whatsapp_instances")
           .select("id")
@@ -132,7 +128,6 @@ serve(async (req) => {
         });
       }
 
-      // Create new instance
       const createPayload = {
         instanceName,
         integration: "WHATSAPP-BAILEYS",
@@ -159,8 +154,7 @@ serve(async (req) => {
 
       if (!createRes.ok) {
         const errText = await createRes.text();
-        
-        // If instance already exists (403 "already in use"), fall through to connect
+
         if (createRes.status === 403 && errText.includes("already in use")) {
           console.log("Instance already exists on Evolution, connecting...");
           const connectRes = await fetch(`${evoUrl}/instance/connect/${instanceName}`, {
@@ -168,7 +162,6 @@ serve(async (req) => {
           });
           const connectData = connectRes.ok ? await connectRes.json() : {};
 
-          // Save to DB
           const { data: existRow2 } = await supabaseAdmin
             .from("whatsapp_instances")
             .select("id")
@@ -211,7 +204,6 @@ serve(async (req) => {
 
       const createData = await createRes.json();
 
-      // Save to DB — select then update or insert
       const { data: existingRow } = await supabaseAdmin
         .from("whatsapp_instances")
         .select("id")
@@ -235,12 +227,10 @@ serve(async (req) => {
         await supabaseAdmin.from("whatsapp_instances").insert(instancePayload);
       }
 
-      // The create response may include QR in qrcode.base64
       let qrBase64 = createData.qrcode?.base64 || null;
 
-      // If no QR in create response, try /instance/connect
       if (!qrBase64) {
-        await new Promise((r) => setTimeout(r, 2000)); // Wait for instance to initialize
+        await new Promise((r) => setTimeout(r, 2000));
         const connectRes = await fetch(`${evoUrl}/instance/connect/${instanceName}`, {
           headers: { apikey: evoApiKey },
         });
@@ -287,8 +277,9 @@ serve(async (req) => {
       });
     }
 
-    // ─── STATUS (connection state) ───
+    // ─── STATUS (connection state + detailed diagnostics) ───
     if (action === "status") {
+      // 1. Get connectionState
       const res = await fetch(`${evoUrl}/instance/connectionState/${instanceName}`, {
         headers: { apikey: evoApiKey },
       });
@@ -304,26 +295,68 @@ serve(async (req) => {
       const data = await res.json();
       const state = data.instance?.state || data.state || "unknown";
 
-      // If connected, update DB
-      if (state === "open") {
-        // Fetch instance info to get phone number
+      // 2. Fetch detailed instance info
+      let instanceInfo: any = null;
+      let profileName = "";
+      let phoneNumber = "";
+      let ownerJid = "";
+
+      try {
         const infoRes = await fetch(`${evoUrl}/instance/fetchInstances?instanceName=${instanceName}`, {
           headers: { apikey: evoApiKey },
         });
-        let phoneNumber = "";
         if (infoRes.ok) {
           const instances = await infoRes.json();
           const inst = Array.isArray(instances) ? instances[0] : instances;
-          // Try multiple fields: owner, number, profileName
-          phoneNumber = inst?.instance?.owner || inst?.instance?.number || "";
-          // Clean phone: remove @s.whatsapp.net suffix if present
+          instanceInfo = inst;
+          ownerJid = inst?.instance?.owner || "";
+          profileName = inst?.instance?.profileName || "";
+          phoneNumber = ownerJid;
           if (phoneNumber.includes("@")) {
             phoneNumber = phoneNumber.split("@")[0];
           }
-          console.log(`[evolution-instance] Resolved phone_number: ${phoneNumber}`);
+          console.log(`[evolution-instance] fetchInstances: owner=${ownerJid}, profileName=${profileName}, state=${state}`);
         }
+      } catch (e) {
+        console.warn("[evolution-instance] fetchInstances failed:", e.message);
+      }
 
-        // Update or insert whatsapp_instances
+      // 3. If state is "open", do a health check by verifying the instance's own number
+      let sessionHealthy = false;
+      let healthCheckResult = "not_tested";
+
+      if (state === "open" && phoneNumber) {
+        try {
+          // Use the instance's own number for a quick health check
+          const checkRes = await fetch(`${evoUrl}/chat/whatsappNumbers/${instanceName}`, {
+            method: "POST",
+            headers: { apikey: evoApiKey, "Content-Type": "application/json" },
+            body: JSON.stringify({ numbers: [`${phoneNumber}`] }),
+          });
+
+          if (checkRes.ok) {
+            const checkData = await checkRes.json();
+            // checkData is typically an array of { exists, jid, number }
+            const results = Array.isArray(checkData) ? checkData : [];
+            sessionHealthy = results.some((r: any) => r.exists === true);
+            healthCheckResult = sessionHealthy ? "healthy" : "degraded";
+            console.log(`[evolution-instance] Health check: ${healthCheckResult}`, JSON.stringify(results));
+          } else {
+            healthCheckResult = "check_failed";
+            console.warn(`[evolution-instance] Health check HTTP ${checkRes.status}`);
+          }
+        } catch (e) {
+          healthCheckResult = "check_error";
+          console.warn("[evolution-instance] Health check error:", e.message);
+        }
+      } else if (state === "open") {
+        // Open but no phone number — can't verify health
+        healthCheckResult = "no_phone_to_verify";
+        sessionHealthy = true; // assume healthy if we can't test
+      }
+
+      // 4. Update DB if connected
+      if (state === "open") {
         const { data: existingWi } = await supabaseAdmin
           .from("whatsapp_instances")
           .select("id")
@@ -331,14 +364,20 @@ serve(async (req) => {
           .eq("provider", "evolution")
           .maybeSingle();
 
-        const wiPayload = { status: "connected", phone_number: phoneNumber, qr_code: null, instance_name: instanceName, evolution_server_url: evoUrl, api_key: evoApiKey };
+        const wiPayload = {
+          status: "connected",
+          phone_number: phoneNumber,
+          qr_code: null,
+          instance_name: instanceName,
+          evolution_server_url: evoUrl,
+          api_key: evoApiKey,
+        };
         if (existingWi) {
           await supabaseAdmin.from("whatsapp_instances").update(wiPayload).eq("id", existingWi.id);
         } else {
           await supabaseAdmin.from("whatsapp_instances").insert({ ...wiPayload, user_id: user.id, provider: "evolution" });
         }
 
-        // Upsert integrations table
         const { data: existing } = await supabaseAdmin
           .from("integrations")
           .select("id")
@@ -364,9 +403,122 @@ serve(async (req) => {
         success: true,
         state,
         connected: state === "open",
+        profileName,
+        phoneNumber,
+        ownerJid,
+        sessionHealthy,
+        healthCheckResult,
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    // ─── HEALTH CHECK (standalone) ───
+    if (action === "health") {
+      // Run a quick number verification to test if Baileys session is truly operational
+      const testPhone = body.test_phone;
+
+      // First get connection state
+      const stateRes = await fetch(`${evoUrl}/instance/connectionState/${instanceName}`, {
+        headers: { apikey: evoApiKey },
+      });
+      const stateData = stateRes.ok ? await stateRes.json() : {};
+      const state = stateData.instance?.state || stateData.state || "unknown";
+
+      if (state !== "open") {
+        return new Response(JSON.stringify({
+          success: true,
+          state,
+          connected: false,
+          sessionHealthy: false,
+          healthCheckResult: "disconnected",
+          message: "Instância não está conectada",
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Get the instance's own number for self-check
+      let ownNumber = "";
+      try {
+        const infoRes = await fetch(`${evoUrl}/instance/fetchInstances?instanceName=${instanceName}`, {
+          headers: { apikey: evoApiKey },
+        });
+        if (infoRes.ok) {
+          const instances = await infoRes.json();
+          const inst = Array.isArray(instances) ? instances[0] : instances;
+          ownNumber = (inst?.instance?.owner || "").split("@")[0];
+        }
+      } catch (_) {}
+
+      const numbersToCheck = ownNumber ? [ownNumber] : [];
+      if (testPhone) {
+        const clean = testPhone.replace(/\D/g, "");
+        if (clean.length >= 10) numbersToCheck.push(clean.startsWith("55") ? clean : `55${clean}`);
+      }
+
+      if (numbersToCheck.length === 0) {
+        return new Response(JSON.stringify({
+          success: true,
+          state: "open",
+          connected: true,
+          sessionHealthy: null,
+          healthCheckResult: "no_numbers_to_check",
+          message: "Sem números disponíveis para verificar saúde da sessão",
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      try {
+        const checkRes = await fetch(`${evoUrl}/chat/whatsappNumbers/${instanceName}`, {
+          method: "POST",
+          headers: { apikey: evoApiKey, "Content-Type": "application/json" },
+          body: JSON.stringify({ numbers: numbersToCheck }),
+        });
+
+        if (checkRes.ok) {
+          const results = await checkRes.json();
+          const existsCount = Array.isArray(results) ? results.filter((r: any) => r.exists).length : 0;
+          const sessionHealthy = existsCount > 0;
+
+          return new Response(JSON.stringify({
+            success: true,
+            state: "open",
+            connected: true,
+            sessionHealthy,
+            healthCheckResult: sessionHealthy ? "healthy" : "degraded",
+            details: results,
+            message: sessionHealthy
+              ? "Sessão Baileys operacional — verificação de números funcionando"
+              : "Sessão Baileys degradada — verificação de números retornando false. Recomenda-se reconectar.",
+          }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        } else {
+          return new Response(JSON.stringify({
+            success: true,
+            state: "open",
+            connected: true,
+            sessionHealthy: false,
+            healthCheckResult: "check_failed",
+            message: `Checagem falhou com HTTP ${checkRes.status}`,
+          }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+      } catch (e) {
+        return new Response(JSON.stringify({
+          success: true,
+          state: "open",
+          connected: true,
+          sessionHealthy: false,
+          healthCheckResult: "check_error",
+          message: e.message,
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
     }
 
     // ─── DISCONNECT ───
