@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Store, Clock, Save, Globe, Key, Webhook, Bell, Info, MessageSquare } from "lucide-react";
+import { Store, Clock, Save, Globe, Key, Webhook, Bell, Info, MessageSquare, Users } from "lucide-react";
 import LogzzTab from "@/components/settings/LogzzTab";
 import CoinzzTab from "@/components/settings/CoinzzTab";
 import MercadoPagoTab from "@/components/settings/MercadoPagoTab";
