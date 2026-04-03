@@ -1,43 +1,58 @@
 
 
-## Plano: Corrigir erro 422 de data invalida na sincronizacao Logzz
+## Relatorio de Diagnostico + Plano de Correcao
 
-### Problema
-Quando o `logzz-create-order` envia um pedido para a Logzz, a `delivery_date` armazenada no pedido pode estar expirada (data passada). O codigo ja tenta re-validar via API da Logzz (step 4.5), mas se essa chamada falhar (ex: Cloudflare 403), ele envia a data antiga e recebe 422.
+### 1. Por que a mensagem WhatsApp NAO foi enviada
 
-### Solucao
+**Causa raiz identificada nos logs:**
 
-**Arquivo: `supabase/functions/logzz-create-order/index.ts`**
-
-1. **Fallback robusto para data**: Se a re-validacao via API Logzz falhar (403, timeout, etc.), gerar automaticamente a proxima data util valida (D+2 a D+7, excluindo domingos) em vez de enviar a data expirada.
-
-2. **Validacao local de data passada**: Antes de enviar, verificar se `finalDeliveryDate` e uma data futura. Se for passada, substituir pela proxima data util calculada localmente.
-
-3. **Retry com nova data apos 422**: Se a Logzz retornar 422 com erro de data, recalcular a data para D+3 e tentar novamente uma vez.
-
-### Detalhes tecnicos
-
-```text
-Fluxo atual:
-  order.delivery_date (pode ser expirada)
-  → API Logzz /delivery-day/ (pode falhar com 403)
-  → envia data expirada → 422
-
-Fluxo corrigido:
-  order.delivery_date
-  → API Logzz /delivery-day/ (tenta re-validar)
-  → Se API falhar: calcular proxima data util (D+2, pula domingos)
-  → Se data < hoje: substituir por data util calculada
-  → Envia para Logzz
-  → Se 422 com erro de data: recalcular D+3 e retry 1x
+O flow "📅 Data de Entrega Agendada" foi disparado com sucesso pelo `trigger-flow`, porem retornou:
+```
+"skipped": true, "reason": "already_executed"
 ```
 
-Funcao helper `getNextBusinessDate(daysAhead)`:
-- Avanca N dias uteis a partir de hoje
-- Pula domingos (padrao Logzz)
-- Retorna formato YYYY-MM-DD
+Isso aconteceu porque esse mesmo pedido (`d55d37e0`) ja tinha sido movido para "Agendado" anteriormente (em 02/04 via kanban_drag), e o flow foi executado naquela vez com status `completed` na tabela `flow_executions`. Quando o pedido foi enviado novamente para a Logzz em 03/04 e teve sucesso, o sistema de deduplicacao bloqueou o reenvio da mensagem.
 
-Alteracao na logica de envio (`sendToLogzz`):
-- Apos receber 422, verificar se erro contem "delivery_date" ou "data"
-- Se sim, recalcular data e fazer 1 retry automatico
+**O problema:** A deduplicacao atual verifica apenas `flow_id + order_id + status=completed`, sem considerar que o pedido pode ter voltado para outro status e retornado ao mesmo. A logica deveria permitir re-execucao quando houve uma transicao intermediaria (ex: Agendado → Aguardando → Agendado).
+
+### 2. Fluxo bidirecional de cancelamento (ScalaCOD ↔ Logzz)
+
+**Estado atual:**
+- **Logzz → ScalaCOD**: Funciona via `process_logzz_webhook` no `checkout-api`. Quando a Logzz envia um status de cancelamento, o sistema atualiza o pedido e dispara o flow "❌ Pedido Cancelado".
+- **ScalaCOD → Logzz**: **NAO EXISTE**. Quando o usuario cancela um pedido no Kanban ou via botao "Cancelar Pedido", apenas atualiza o banco local. Nao notifica a Logzz.
+
+A Logzz nao possui uma API publica documentada para cancelar pedidos via server-to-server. O cancelamento precisaria ser feito via webhook reverso ou manualmente no painel Logzz.
+
+### Plano de Implementacao
+
+**Arquivo: `supabase/functions/trigger-flow/index.ts`**
+
+Corrigir a logica de deduplicacao (linhas 92-108). Em vez de verificar apenas se o flow ja foi executado para aquele pedido, verificar se houve uma transicao de status intermediaria apos a ultima execucao:
+
+```text
+Logica atual (incorreta):
+  SELECT FROM flow_executions WHERE flow_id=X AND order_id=Y AND status=completed → skip
+
+Logica corrigida:
+  SELECT FROM flow_executions WHERE flow_id=X AND order_id=Y AND status=completed
+  → Se existe, verificar se houve mudanca de status APOS a execucao anterior
+  → Se houve (ex: Agendado→Aguardando→Agendado), permitir re-execucao
+```
+
+Concretamente: buscar a `created_at` da ultima execucao completada, e verificar se existe um registro em `order_status_history` com `from_status = trigger_status` (saindo do status) e `created_at` posterior. Se existir, significa que o pedido passou por outro status e voltou, entao a re-execucao e valida.
+
+**Arquivo: `src/pages/Pedidos.tsx`**
+
+No `cancelMutation`, alem de atualizar o status local, disparar o `trigger-flow` com `newStatus: "Frustrado"` para que o flow de cancelamento envie a mensagem WhatsApp:
+
+```text
+cancelMutation:
+  1. Update order status → "Frustrado" (ja existe)
+  2. Insert order_status_history (ja existe)  
+  3. NOVO: Chamar trigger-flow com newStatus="Frustrado"
+```
+
+### Resultado esperado
+- Mensagens WhatsApp serao enviadas mesmo quando um pedido retorna ao mesmo status (ex: re-agendamento)
+- Cancelamento manual no ScalaCOD dispara automaticamente o flow "❌ Pedido Cancelado" com mensagem WhatsApp
 
