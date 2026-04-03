@@ -72,6 +72,27 @@ Deno.serve(async (req) => {
       console.log(`[execute-flow] Order found: ${!!order}, client: ${order?.client_name}, phone: ${order?.client_phone}`);
     }
 
+    // Resolve product name via offer_id → products table
+    let productName = (order?.products as any)?.main?.product_name || "";
+    if (!productName && order?.offer_id) {
+      const { data: offer } = await supabase
+        .from("offers")
+        .select("name, products:product_id(name)")
+        .eq("id", order.offer_id)
+        .single();
+      productName = (offer?.products as any)?.name || offer?.name || "";
+      console.log(`[execute-flow] Product name resolved via offer: "${productName}"`);
+    }
+
+    // Build full address
+    const endereco = [
+      order?.client_address,
+      order?.client_address_number ? `nº ${order.client_address_number}` : null,
+      order?.client_address_comp,
+      order?.client_address_district,
+      order?.client_address_city,
+      order?.client_address_state,
+    ].filter(Boolean).join(", ");
     // Fetch store name
     let storeName = "ScalaCOD";
     const { data: store } = await supabase
@@ -97,7 +118,8 @@ Deno.serve(async (req) => {
       cliente_nome: order?.client_name || "",
       cliente_telefone: order?.client_phone || "",
       pedido_numero: order?.order_number || order?.id?.slice(0, 8) || "",
-      produto_nome: (order?.products as any)?.main?.product_name || "",
+      produto_nome: productName,
+      endereco_completo: endereco,
       data_entrega: order?.delivery_date ? formatDate(order.delivery_date) : "",
       valor_total: order ? formatCurrency(Number(order.order_final_price)) : "",
       codigo_rastreio: order?.tracking_code || "",
