@@ -126,7 +126,7 @@ Deno.serve(async (req) => {
       pedido_numero: order?.order_number || order?.id?.slice(0, 8) || "",
       produto_nome: productName,
       endereco_completo: endereco,
-      data_entrega: order?.delivery_date ? formatDate(order.delivery_date) : "",
+      data_entrega: order?.delivery_date ? formatDate(order.delivery_date) : (order?.logistics_type === "coinzz" ? "Via Correios (rastreio será enviado)" : "A definir"),
       valor: valorFormatado,
       valor_total: valorFormatado,
       codigo_rastreio: order?.tracking_code || "",
