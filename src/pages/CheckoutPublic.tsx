@@ -83,6 +83,8 @@ const CheckoutPublic = () => {
   const { slug } = useParams<{ slug: string }>();
   const [checkout, setCheckout] = useState<CheckoutData | null>(null);
   const [offer, setOffer] = useState<OfferData | null>(null);
+  const [originalOffer, setOriginalOffer] = useState<OfferData | null>(null);
+  const [coinzzOffer, setCoinzzOffer] = useState<OfferData | null>(null);
   const [product, setProduct] = useState<ProductData | null>(null);
   const [orderBumps, setOrderBumps] = useState<OrderBump[]>([]);
   const [selectedBumps, setSelectedBumps] = useState<Set<string>>(new Set());
