@@ -31,6 +31,7 @@ const formatCurrency = (v: number) => new Intl.NumberFormat("pt-BR", { style: "c
 
 const Leads = () => {
   const { user } = useAuth();
+  const { effectiveUserId, canEdit, isViewer } = useTeamContext();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
