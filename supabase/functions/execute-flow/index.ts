@@ -72,6 +72,27 @@ Deno.serve(async (req) => {
       console.log(`[execute-flow] Order found: ${!!order}, client: ${order?.client_name}, phone: ${order?.client_phone}`);
     }
 
+    // Resolve product name via offer_id → products table
+    let productName = (order?.products as any)?.main?.product_name || "";
+    if (!productName && order?.offer_id) {
+      const { data: offer } = await supabase
+        .from("offers")
+        .select("name, products:product_id(name)")
+        .eq("id", order.offer_id)
+        .single();
+      productName = (offer?.products as any)?.name || offer?.name || "";
+      console.log(`[execute-flow] Product name resolved via offer: "${productName}"`);
+    }
+
+    // Build full address
+    const endereco = [
+      order?.client_address,
+      order?.client_address_number ? `nº ${order.client_address_number}` : null,
+      order?.client_address_comp,
+      order?.client_address_district,
+      order?.client_address_city,
+      order?.client_address_state,
+    ].filter(Boolean).join(", ");
     // Fetch store name
     let storeName = "ScalaCOD";
     const { data: store } = await supabase
