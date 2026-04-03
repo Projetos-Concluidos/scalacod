@@ -52,7 +52,18 @@ const AdminIntegracoes = lazyWithRetry(() => import("@/pages/admin/AdminIntegrac
 const AdminLogs = lazyWithRetry(() => import("@/pages/admin/AdminLogs"));
 const AdminHome = lazyWithRetry(() => import("@/pages/admin/AdminHome"));
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 2,
+      staleTime: 1000 * 60 * 5,
+      refetchOnWindowFocus: false,
+    },
+    mutations: {
+      retry: 1,
+    },
+  },
+});
 
 const App = () => (
   <QueryClientProvider client={queryClient}>

@@ -38,26 +38,33 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   const fetchProfile = async (userId: string) => {
-    // Fetch profile
-    const { data: profileData } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", userId)
-      .single();
+    try {
+      const { data: profileData, error: profileError } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", userId)
+        .single();
 
-    // Fetch role from user_roles
-    const { data: roleData } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", userId)
-      .limit(1)
-      .maybeSingle();
+      if (profileError) {
+        console.error("[AuthContext] fetchProfile error:", profileError.message);
+        return;
+      }
 
-    if (profileData) {
-      setProfile({
-        ...profileData,
-        role: roleData?.role || "tenant",
-      } as Profile);
+      const { data: roleData } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", userId)
+        .limit(1)
+        .maybeSingle();
+
+      if (profileData) {
+        setProfile({
+          ...profileData,
+          role: roleData?.role || "tenant",
+        } as Profile);
+      }
+    } catch (err) {
+      console.error("[AuthContext] fetchProfile unexpected error:", err);
     }
   };
 
