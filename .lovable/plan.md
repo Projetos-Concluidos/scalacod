@@ -1,46 +1,43 @@
 
-## Plano: Corrigir uso do hash Coinzz — diferenciar product_hash de offer_hash
 
-### Diagnostico
+## Plano: Corrigir erro 422 de data invalida na sincronizacao Logzz
 
-Voce esta correto. O `68212ba3bc599` que aparece nas 3 URLs e o **hash do PRODUTO**, nao da oferta. Na Coinzz:
+### Problema
+Quando o `logzz-create-order` envia um pedido para a Logzz, a `delivery_date` armazenada no pedido pode estar expirada (data passada). O codigo ja tenta re-validar via API da Logzz (step 4.5), mas se essa chamada falhar (ex: Cloudflare 403), ele envia a data antiga e recebe 422.
 
-- **Product hash** (`68212ba3bc599`) = identifica o produto inteiro (compartilhado por todas as ofertas/kits)
-- **Offer hash** (`offxxxxxxxx`) = identifica a oferta especifica (1 uni, 3 uni, 4 uni — cada um tem hash unico)
+### Solucao
 
-A API `POST /api/sales` exige o `offer_hash` (da oferta), nao o `product_hash`. Atualmente o sistema esta usando o product hash para todas as ofertas, o que faz a Coinzz criar sempre o mesmo pedido independente do kit selecionado.
+**Arquivo: `supabase/functions/logzz-create-order/index.ts`**
 
-### Problema na URL do Coinzz
+1. **Fallback robusto para data**: Se a re-validacao via API Logzz falhar (403, timeout, etc.), gerar automaticamente a proxima data util valida (D+2 a D+7, excluindo domingos) em vez de enviar a data expirada.
+
+2. **Validacao local de data passada**: Antes de enviar, verificar se `finalDeliveryDate` e uma data futura. Se for passada, substituir pela proxima data util calculada localmente.
+
+3. **Retry com nova data apos 422**: Se a Logzz retornar 422 com erro de data, recalcular a data para D+3 e tentar novamente uma vez.
+
+### Detalhes tecnicos
 
 ```text
-/checkout/1-organiclizz-por-107-0/68212ba3bc599   ← product hash (igual)
-/checkout/3-por-167-hxrdd-0/68212ba3bc599          ← product hash (igual)
-/checkout/4-por-197-lvyfb-0/68212ba3bc599           ← product hash (igual)
+Fluxo atual:
+  order.delivery_date (pode ser expirada)
+  → API Logzz /delivery-day/ (pode falhar com 403)
+  → envia data expirada → 422
+
+Fluxo corrigido:
+  order.delivery_date
+  → API Logzz /delivery-day/ (tenta re-validar)
+  → Se API falhar: calcular proxima data util (D+2, pula domingos)
+  → Se data < hoje: substituir por data util calculada
+  → Envia para Logzz
+  → Se 422 com erro de data: recalcular D+3 e retry 1x
 ```
 
-O offer_hash real de cada kit nao esta visivel na URL. Ele precisa ser obtido no painel da Coinzz: **Produto → Ofertas → cada oferta tem seu proprio hash** (geralmente comeca com `off...`).
+Funcao helper `getNextBusinessDate(daysAhead)`:
+- Avanca N dias uteis a partir de hoje
+- Pula domingos (padrao Logzz)
+- Retorna formato YYYY-MM-DD
 
-### Correcoes
+Alteracao na logica de envio (`sendToLogzz`):
+- Apos receber 422, verificar se erro contem "delivery_date" ou "data"
+- Se sim, recalcular data e fazer 1 retry automatico
 
-#### 1. `src/pages/Checkouts.tsx` — Melhorar campo e orientacao
-- Atualizar placeholder de `"Ex: 68212ba3bc599"` para `"Ex: off1a2b3c4d5e"`
-- Adicionar texto explicativo: "Use o hash da OFERTA (nao do produto). Cada kit/quantidade tem seu proprio hash. Encontre em: Coinzz → Produto → Ofertas."
-- Adicionar alerta visual se o hash nao comecar com `off` (aviso, nao bloqueio — formato pode variar)
-
-#### 2. `src/pages/CheckoutPublic.tsx` — Log de debug
-- Adicionar log quando trocar para oferta Coinzz mostrando qual hash esta sendo usado, para facilitar debug
-
-#### 3. `supabase/functions/checkout-api/index.ts` — Log do offer_hash usado
-- Adicionar log claro do `offer_hash` sendo enviado para a API Coinzz para facilitar rastreamento
-
-### Como encontrar o offer_hash correto
-O usuario precisa acessar o painel da Coinzz:
-1. Ir em **Produtos** → selecionar o produto
-2. Ir na aba **Ofertas**
-3. Cada oferta (1 uni, 3 uni, 4 uni) tera seu **hash proprio**
-4. Copiar o hash da oferta especifica e colar no campo do checkout correspondente
-
-### Resultado
-- Cada checkout tera seu proprio `offer_hash` unico da oferta correta
-- Campo com orientacao clara para evitar confusao entre product hash e offer hash
-- Pedidos Coinzz serao criados com a oferta/kit correto
