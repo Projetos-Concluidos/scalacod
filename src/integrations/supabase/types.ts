@@ -722,6 +722,63 @@ export type Database = {
           },
         ]
       }
+      notification_preferences: {
+        Row: {
+          alert_frustrated_orders: boolean | null
+          alert_low_tokens: boolean | null
+          created_at: string | null
+          email_delivered: boolean | null
+          email_frustrated: boolean | null
+          email_new_lead: boolean | null
+          email_new_order: boolean | null
+          email_weekly_report: boolean | null
+          id: string
+          push_delivered: boolean | null
+          push_enabled: boolean | null
+          push_frustrated: boolean | null
+          push_new_lead: boolean | null
+          push_new_order: boolean | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          alert_frustrated_orders?: boolean | null
+          alert_low_tokens?: boolean | null
+          created_at?: string | null
+          email_delivered?: boolean | null
+          email_frustrated?: boolean | null
+          email_new_lead?: boolean | null
+          email_new_order?: boolean | null
+          email_weekly_report?: boolean | null
+          id?: string
+          push_delivered?: boolean | null
+          push_enabled?: boolean | null
+          push_frustrated?: boolean | null
+          push_new_lead?: boolean | null
+          push_new_order?: boolean | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          alert_frustrated_orders?: boolean | null
+          alert_low_tokens?: boolean | null
+          created_at?: string | null
+          email_delivered?: boolean | null
+          email_frustrated?: boolean | null
+          email_new_lead?: boolean | null
+          email_new_order?: boolean | null
+          email_weekly_report?: boolean | null
+          id?: string
+          push_delivered?: boolean | null
+          push_enabled?: boolean | null
+          push_frustrated?: boolean | null
+          push_new_lead?: boolean | null
+          push_new_order?: boolean | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           body: string | null
