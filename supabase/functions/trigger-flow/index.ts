@@ -90,20 +90,38 @@ Deno.serve(async (req) => {
     for (const flow of flows) {
       try {
         // Check if this exact flow+order+status was already executed successfully
+        // BUT allow re-execution if the order went through an intermediate status change
         if (orderId) {
           const { data: existingExec } = await supabase
             .from("flow_executions")
-            .select("id")
+            .select("id, completed_at")
             .eq("flow_id", flow.id)
             .eq("order_id", orderId)
             .eq("status", "completed")
+            .order("completed_at", { ascending: false })
             .limit(1)
             .maybeSingle();
 
           if (existingExec) {
-            console.log(`[trigger-flow] Skipping flow "${flow.name}" — already executed for order ${orderId}`);
-            results.push({ flow_id: flow.id, flow_name: flow.name, skipped: true, reason: "already_executed" });
-            continue;
+            // Check if the order left this status after the last execution
+            // If it did, it means the order cycled (e.g. Agendado → Aguardando → Agendado)
+            // and we should allow re-execution
+            const lastExecTime = existingExec.completed_at || new Date(0).toISOString();
+            const { data: intermediateTransition } = await supabase
+              .from("order_status_history")
+              .select("id")
+              .eq("order_id", orderId)
+              .eq("from_status", newStatus)
+              .gt("created_at", lastExecTime)
+              .limit(1)
+              .maybeSingle();
+
+            if (!intermediateTransition) {
+              console.log(`[trigger-flow] Skipping flow "${flow.name}" — already executed for order ${orderId}, no intermediate transition`);
+              results.push({ flow_id: flow.id, flow_name: flow.name, skipped: true, reason: "already_executed" });
+              continue;
+            }
+            console.log(`[trigger-flow] Re-executing flow "${flow.name}" — order had intermediate status change after last execution`);
           }
         }
 
