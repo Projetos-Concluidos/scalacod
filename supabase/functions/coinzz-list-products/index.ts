@@ -51,14 +51,14 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Try multiple possible endpoints
+    // Try multiple possible endpoints including the v1 pattern that works for Logzz
     const endpoints = [
+      "https://app.coinzz.com.br/api/v1/products",
+      "https://app.coinzz.com.br/api/products",
       "https://app.coinzz.com.br/api/v1/my-products",
-      "https://app.coinzz.com.br/api/my-products",
-      "https://app.coinzz.com.br/api/v1/producer/products",
-      "https://app.coinzz.com.br/api/producer/products",
-      "https://app.coinzz.com.br/api/v1/offers",
-      "https://app.coinzz.com.br/api/offers",
+      "https://app.coinzz.com.br/api/v1/user/products",
+      "https://app.coinzz.com.br/api/v1/sales",
+      "https://app.coinzz.com.br/api/sales",
     ];
 
     let res: Response | null = null;
@@ -71,25 +71,26 @@ Deno.serve(async (req) => {
         headers: {
           Authorization: `Bearer ${coinzzToken}`,
           Accept: "application/json",
+          "Content-Type": "application/json",
         },
         redirect: "manual",
       });
       const ct = attempt.headers.get("content-type") || "";
       const st = attempt.status;
-      console.log(`[coinzz-list-products] ${endpoint} → status=${st}, ct=${ct.substring(0, 50)}`);
+      const body = await attempt.text();
+      console.log(`[coinzz-list-products] ${endpoint} → status=${st}, ct=${ct.substring(0, 50)}, body=${body.substring(0, 200)}`);
       
-      if (ct.includes("json") && st === 200) {
-        res = attempt;
+      if (ct.includes("json") && st >= 200 && st < 300) {
+        // Re-parse as we consumed body
+        res = new Response(body, { status: st, headers: attempt.headers });
         usedEndpoint = endpoint;
         break;
       }
-      // consume body to avoid leak
-      await attempt.text();
     }
 
     if (!res) {
       return new Response(
-        JSON.stringify({ success: true, offers: [], message: "Nenhum endpoint da Coinzz retornou dados válidos. Verifique o token." }),
+        JSON.stringify({ success: true, offers: [], message: "Nenhum endpoint da Coinzz retornou dados válidos. O token pode estar expirado ou a API não expõe listagem de produtos. Configure as ofertas manualmente." }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
