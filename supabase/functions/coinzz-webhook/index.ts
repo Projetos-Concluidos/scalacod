@@ -230,6 +230,22 @@ Deno.serve(async (req) => {
         });
         console.log("[coinzz-webhook] Status history:", order.status, "→", newKanbanStatus);
 
+        // Push notification for approved payments
+        if (newKanbanStatus === "Confirmado") {
+          const valorFormatado = orderFinalPrice
+            ? `R$ ${orderFinalPrice.toFixed(2).replace(".", ",")}`
+            : "";
+
+          await supabase.from("notifications").insert({
+            user_id: order.user_id,
+            title: "Pagamento aprovado! 💰",
+            body: `Pedido #${orderNumber}${valorFormatado ? ` — ${valorFormatado}` : ""} foi confirmado via Coinzz.`,
+            type: "new_order",
+            metadata: { order_id: order.id, source: "coinzz" },
+          });
+          console.log("[coinzz-webhook] Push notification created for approved payment");
+        }
+
         // Trigger automation flows
         try {
           const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
