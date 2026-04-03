@@ -1,91 +1,73 @@
 
-## Plano: Exibir status do pagamento no detalhe do pedido agora
 
-### Diagnóstico
-Pelo código e pelos dados atuais, o problema não é só visual:
+## Plano: Importacao de Ofertas Coinzz + Troca Automatica de Oferta por CEP
 
-1. O detalhe do pedido em `src/pages/Pedidos.tsx` só mostra o bloco de status se `o.mp_payment_status` existir.
-2. Há pedidos antigos/legados em que o webhook já gravou `status_description` como `MP: cancelled - expired`, mas `mp_payment_status` e `mp_payment_status_detail` estão `null`.
-3. O modal usa `selectedOrder` como snapshot do card. Se o pedido atualizar depois, o detalhe pode continuar com dados antigos.
+### Contexto
+Atualmente o checkout hibrido ja detecta se o CEP tem cobertura Logzz (`provider = "logzz"`) ou nao (`provider = "coinzz"`). Porem, a oferta exibida ao cliente e sempre a mesma (oferta Logzz). O campo `coinzz_offer_hash` esta no Step 2 e e preenchido manualmente. Nao existe importacao de ofertas da Coinzz.
 
-Resultado: o print mostra apenas “Método: PIX”, porque a UI depende de colunas que podem estar vazias, mesmo quando já existe informação suficiente no pedido.
+### O que sera feito
 
-### O que vou ajustar
-#### 1. Corrigir a fonte de dados do modal
-Em vez de renderizar o detalhe só com o objeto congelado em `selectedOrder`, vou fazer o modal usar a versão mais recente do pedido da lista `orders` pelo `id`.
+#### 1. Edge Function `coinzz-list-products`
+Criar uma nova Edge Function identica em estrutura a `logzz-list-products`, que:
+- Busca o token da integracao `coinzz` na tabela `integrations`
+- Chama `GET https://app.coinzz.com.br/api/v1/products`
+- Extrai ofertas no mesmo formato padrao (product_name, offer_hash, price, role, etc.)
+- Retorna `{ success: true, offers: [...] }`
 
-Assim, se o webhook atualizar o pedido, o detalhe refletirá automaticamente.
+#### 2. Checkout Editor — Step 1: Importar Coinzz
+Mover o bloco "Hash da Oferta Coinzz" do Step 2 para o Step 1, logo abaixo do bloco "Importar da Logzz". Transformar em um sistema de importacao completo:
+- Botao "Sincronizar Coinzz" (estilo roxo, identico ao verde da Logzz)
+- Combobox searchable com ofertas da Coinzz (badges roxos)
+- Ao selecionar uma oferta Coinzz, preenche automaticamente `formCoinzzOfferHash` com o `offer_hash`
+- Exibe o hash selecionado com badge COINZZ roxo
 
-#### 2. Adicionar fallback seguro para status MercadoPago
-No bloco:
-`💳 PAGAMENTO ONLINE — ENTREGA VIA CORREIOS`
+#### 3. Checkout Publico — Troca de Oferta por CEP
+No `CheckoutPublic.tsx`, quando `provider === "coinzz"`:
+- Buscar o `coinzz_offer_hash` do checkout
+- Trocar visualmente a oferta exibida (nome, preco) para a oferta Coinzz
+- O pedido criado ja usa `logistics_type: "coinzz"` (isso ja funciona)
+- A oferta Coinzz e usada no envio automatico para a API Coinzz (ja funciona via `checkout-api`)
 
-vou exibir o status usando esta prioridade:
-1. `mp_payment_status`
-2. `status_description` quando vier no formato `MP: status - detail`
-3. se não houver detalhe, mostrar ao menos um badge de “Status não informado”
+Para isso:
+- Ao carregar o checkout, buscar tambem `coinzz_offer_hash` da tabela `checkouts`
+- Buscar a oferta correspondente na tabela `offers` pelo hash
+- Quando `provider` muda para `coinzz`, trocar o `offer` state para a oferta Coinzz
+- Quando `provider` muda para `logzz`, voltar para a oferta original
 
-Exemplo do fallback:
-```text
-status_description = "MP: cancelled - expired"
--> status = cancelled
--> detalhe = expired
-```
+#### 4. Estado no formulario
+Novos estados:
+- `coinzzOffers` — lista de ofertas importadas da Coinzz
+- `syncingCoinzz` — loading state
+- `coinzzPopoverOpen` — combobox open state
+- `selectedCoinzzOffer` — oferta selecionada
 
-#### 3. Garantir tradução e cores dos badges
-Vou manter exatamente o padrão pedido:
-
-- Verde = Aprovado
-- Amarelo = Pendente
-- Vermelho = Rejeitado/Cancelado
-- Azul = Reembolsado
-
-E traduzir os detalhes, por exemplo:
-- `accredited` → Pagamento aprovado
-- `pending_waiting_payment` → Aguardando pagamento
-- `cc_rejected_insufficient_amount` → Saldo insuficiente
-- `expired` → Pagamento expirado
-
-#### 4. Exibir a jornada abaixo de “Método”
-No detalhe ficará assim, abaixo do cabeçalho financeiro:
+### Fluxo do Checkout Hibrido
 
 ```text
-💳 PAGAMENTO ONLINE — ENTREGA VIA CORREIOS
-Método: PIX
-Status: Pagamento Cancelado
-Detalhe: Pagamento expirado
+Cliente digita CEP
+       |
+  checkout-api verifica cobertura Logzz
+       |
+  +----+----+
+  |         |
+Logzz     Coinzz
+  |         |
+Oferta    Oferta Coinzz
+Logzz     (coinzz_offer_hash)
+  |         |
+COD       Pagamento Online
 ```
 
-Ou, quando aprovado:
-```text
-Método: PIX
-Status: Pagamento Aprovado
-Detalhe: Pagamento aprovado
-```
+### Arquivos
 
-#### 5. Manter tudo isolado
-Não vou mexer na lógica da Logzz.
-Não vou alterar fluxo crítico de criação de pedido.
-O ajuste é focado em:
-- leitura do dado no modal
-- fallback visual para pedidos que já existem
-
-### Arquivos que serão ajustados
-| Arquivo | Ação |
+| Arquivo | Acao |
 |---|---|
-| `src/pages/Pedidos.tsx` | Corrigir detalhe do pedido para usar dados atualizados + fallback de status MercadoPago |
+| `supabase/functions/coinzz-list-products/index.ts` | **Criar** — buscar ofertas da Coinzz |
+| `src/pages/Checkouts.tsx` | Mover Coinzz para Step 1 + importacao com sync |
+| `src/pages/CheckoutPublic.tsx` | Trocar oferta quando provider muda para coinzz |
 
-### Observação importante
-Como já existe pedido com `status_description` preenchido e colunas `mp_*` vazias, este ajuste é o caminho mais seguro para fazer o status aparecer imediatamente sem depender de novo pagamento ou novo webhook.
+### Seguranca
+- Logzz permanece 100% intacta — nenhum codigo Logzz sera tocado
+- A troca de oferta e apenas visual e no state, nao altera banco
+- O `coinzz_offer_hash` continua sendo salvo normalmente no checkout
 
-### Resultado esperado
-Ao abrir o detalhamento do pedido, abaixo de:
-
-`💳 PAGAMENTO ONLINE — ENTREGA VIA CORREIOS`
-
-vão aparecer:
-- método traduzido
-- badge colorido do status
-- detalhe traduzido do pagamento
-
-mesmo nos pedidos em que o webhook antigo salvou só `status_description`.
