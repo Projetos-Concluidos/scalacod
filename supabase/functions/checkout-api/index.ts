@@ -391,6 +391,31 @@ Deno.serve(async (req) => {
           }
         }
 
+        // ── Insert notifications: new_order + new_lead ──
+        try {
+          await supabase.from("notifications").insert({
+            user_id,
+            title: "🛒 Novo pedido recebido!",
+            body: `Pedido #${order_data.order_number || inserted?.id?.slice(0, 8)} — ${order_data.client_name} — ${new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(order_data.order_final_price || 0))}`,
+            type: "new_order",
+          });
+          console.log("[create_order] Notification new_order inserted");
+        } catch (notifErr: any) {
+          console.warn("[create_order] Notification insert error:", notifErr.message);
+        }
+
+        try {
+          await supabase.from("notifications").insert({
+            user_id,
+            title: "👤 Novo lead capturado",
+            body: `${order_data.client_name} — ${order_data.client_phone}`,
+            type: "new_lead",
+          });
+          console.log("[create_order] Notification new_lead inserted");
+        } catch (notifErr: any) {
+          console.warn("[create_order] Notification new_lead error:", notifErr.message);
+        }
+
         // Trigger automation flows for new order
         try {
           const supabaseUrl2 = Deno.env.get("SUPABASE_URL")!;

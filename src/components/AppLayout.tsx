@@ -2,8 +2,10 @@ import { Outlet } from "react-router-dom";
 import AppSidebar from "./AppSidebar";
 import TopBar from "./TopBar";
 import { MobileSidebarProvider } from "@/contexts/MobileSidebarContext";
+import { useNotificationPush } from "@/hooks/useNotificationPush";
 
 const AppLayout = () => {
+  useNotificationPush();
   return (
     <MobileSidebarProvider>
       <div className="flex min-h-screen w-full bg-background overflow-hidden">
