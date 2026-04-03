@@ -69,6 +69,7 @@ const PlatformBadge = ({ type }: { type: string | null }) => {
 
 const Pedidos = () => {
   const { user } = useAuth();
+  const { canEdit, canDelete, isViewer, effectiveUserId } = useTeamContext();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
