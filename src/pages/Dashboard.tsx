@@ -16,6 +16,7 @@ import OnboardingBanner from "@/components/OnboardingBanner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
+import { useTeamContext } from "@/hooks/useTeamContext";
 
 const periods = ["Hoje", "Ontem", "7 dias", "15 dias", "30 dias", "Máximo"];
 
@@ -47,6 +48,7 @@ function getDateRange(period: string): { from: string; to: string } {
 
 const Dashboard = () => {
   const { user } = useAuth();
+  const { effectiveUserId } = useTeamContext();
   const [activePeriod, setActivePeriod] = useState("Hoje");
   const [customDateFrom, setCustomDateFrom] = useState<Date | undefined>();
   const [customDateTo, setCustomDateTo] = useState<Date | undefined>();
@@ -74,12 +76,15 @@ const Dashboard = () => {
     }
     const { from, to } = dateRange;
 
+    const qId = effectiveUserId || user?.id;
+    if (!qId) return;
+
     const [pixelRes, ordersRes, coinzzRes, leadsRes, queueRes] = await Promise.all([
-      supabase.from("pixel_events").select("event_type, created_at").eq("user_id", user.id).gte("created_at", from).lt("created_at", to),
-      supabase.from("orders").select("order_final_price, created_at, status").eq("user_id", user.id).gte("created_at", from).lt("created_at", to),
-      supabase.from("orders").select("id", { count: "exact", head: true }).eq("user_id", user.id).eq("logistics_type", "coinzz").in("status", ["Aprovado", "Entregue"]).gte("created_at", from).lt("created_at", to),
-      supabase.from("leads").select("id, name, phone, status, created_at").eq("user_id", user.id).order("created_at", { ascending: false }).limit(5),
-      supabase.from("message_queue").select("id", { count: "exact", head: true }).eq("user_id", user.id).eq("status", "pending"),
+      supabase.from("pixel_events").select("event_type, created_at").gte("created_at", from).lt("created_at", to),
+      supabase.from("orders").select("order_final_price, created_at, status").gte("created_at", from).lt("created_at", to),
+      supabase.from("orders").select("id", { count: "exact", head: true }).eq("logistics_type", "coinzz").in("status", ["Aprovado", "Entregue"]).gte("created_at", from).lt("created_at", to),
+      supabase.from("leads").select("id, name, phone, status, created_at").order("created_at", { ascending: false }).limit(5),
+      supabase.from("message_queue").select("id", { count: "exact", head: true }).eq("status", "pending"),
     ]);
 
     const pixels = pixelRes.data || [];
@@ -126,20 +131,21 @@ const Dashboard = () => {
     setSparkData(spark);
     setRecentLeads(leadsRes.data || []);
     setQueueCount(queueRes.count || 0);
-  }, [user, activePeriod, customDateFrom, customDateTo]);
+  }, [user, activePeriod, customDateFrom, customDateTo, effectiveUserId]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
   // Realtime subscription for pixel events
   useEffect(() => {
     if (!user) return;
+    const filterUserId = effectiveUserId || user.id;
     const channel = supabase
       .channel("pixel-realtime")
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "pixel_events", filter: `user_id=eq.${user.id}` }, () => loadData())
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "orders", filter: `user_id=eq.${user.id}` }, () => loadData())
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "pixel_events", filter: `user_id=eq.${filterUserId}` }, () => loadData())
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "orders", filter: `user_id=eq.${filterUserId}` }, () => loadData())
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [user, loadData]);
+  }, [user, loadData, effectiveUserId]);
 
   const hasPixelData = metrics.pixelTotal > 0;
 

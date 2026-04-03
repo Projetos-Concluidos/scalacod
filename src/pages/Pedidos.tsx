@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import type { Tables } from "@/integrations/supabase/types";
+import { useTeamContext } from "@/hooks/useTeamContext";
 
 type Order = Tables<"orders">;
 
@@ -69,6 +70,7 @@ const PlatformBadge = ({ type }: { type: string | null }) => {
 
 const Pedidos = () => {
   const { user } = useAuth();
+  const { canEdit, canDelete, isViewer, effectiveUserId } = useTeamContext();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
@@ -94,7 +96,7 @@ const Pedidos = () => {
   const [detailTimeline, setDetailTimeline] = useState<any[]>([]);
 
   const { data: orders = [], isLoading, isFetching, refetch } = useQuery({
-    queryKey: ["orders"],
+    queryKey: ["orders", effectiveUserId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("orders")

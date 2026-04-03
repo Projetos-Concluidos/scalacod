@@ -2139,6 +2139,7 @@ export type Database = {
         Args: { p_amount: number; p_user_id: string }
         Returns: boolean
       }
+      get_effective_user_id: { Args: never; Returns: string }
       get_user_plan_limit: { Args: { feature: string }; Returns: number }
       has_active_subscription: { Args: never; Returns: boolean }
       has_role: {
@@ -2148,6 +2149,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_team_member_with_role: { Args: { _roles: string[] }; Returns: boolean }
     }
     Enums: {
       app_role: "superadmin" | "tenant" | "tenant_admin" | "tenant_agent"

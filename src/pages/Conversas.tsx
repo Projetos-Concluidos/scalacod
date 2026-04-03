@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useTeamContext } from "@/hooks/useTeamContext";
 import { toast } from "sonner";
 import { format, isToday, isYesterday, isSameDay, subDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -49,6 +50,7 @@ const labelColors = [
 
 const Conversas = () => {
   const { user } = useAuth();
+  const { effectiveUserId, isViewer } = useTeamContext();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [selectedConv, setSelectedConv] = useState<Conversation | null>(null);
@@ -142,7 +144,6 @@ const Conversas = () => {
     const { data } = await supabase
       .from("conversations")
       .select("*")
-      .eq("user_id", user.id)
       .order("last_message_at", { ascending: false });
     setConversations(data || []);
     setLoading(false);
@@ -165,7 +166,6 @@ const Conversas = () => {
     const { data: lead } = await supabase
       .from("leads")
       .select("*")
-      .eq("user_id", user.id)
       .eq("phone", conv.contact_phone)
       .maybeSingle();
     setLeadData(lead);
@@ -181,7 +181,6 @@ const Conversas = () => {
       const { data: order } = await supabase
         .from("orders")
         .select("*")
-        .eq("user_id", user.id)
         .eq("client_phone", conv.contact_phone)
         .order("created_at", { ascending: false })
         .limit(1)

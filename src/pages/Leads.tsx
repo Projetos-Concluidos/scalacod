@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { Users, Heart, MessageSquare, DollarSign, Upload, Search, LayoutGrid, List, Phone, Mail, Eye, MoreHorizontal, X, FileText, Plus, Tag, Send, Download } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useTeamContext } from "@/hooks/useTeamContext";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -30,6 +31,7 @@ const formatCurrency = (v: number) => new Intl.NumberFormat("pt-BR", { style: "c
 
 const Leads = () => {
   const { user } = useAuth();
+  const { effectiveUserId, canEdit, isViewer } = useTeamContext();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -45,7 +47,7 @@ const Leads = () => {
   const fetchLeads = async () => {
     if (!user) return;
     setLoading(true);
-    const { data } = await supabase.from("leads").select("*").eq("user_id", user.id).order("created_at", { ascending: false });
+    const { data } = await supabase.from("leads").select("*").order("created_at", { ascending: false });
     setLeads(data || []);
     setLoading(false);
   };
@@ -116,7 +118,7 @@ const Leads = () => {
   const openLeadDetail = async (lead: Lead) => {
     setSelectedLead(lead);
     if (user) {
-      const { data } = await supabase.from("orders").select("*").eq("user_id", user.id).eq("client_phone", lead.phone).order("created_at", { ascending: false }).limit(10);
+      const { data } = await supabase.from("orders").select("*").eq("client_phone", lead.phone).order("created_at", { ascending: false }).limit(10);
       setLeadOrders(data || []);
     }
   };
