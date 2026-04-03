@@ -222,7 +222,17 @@ const CheckoutPublic = () => {
     fetchKey();
   }, [checkout]);
 
-  
+  // Swap offer based on provider (Logzz vs Coinzz)
+  useEffect(() => {
+    if (!originalOffer) return;
+    if (provider === "coinzz" && coinzzOffer) {
+      setOffer(coinzzOffer);
+    } else {
+      setOffer(originalOffer);
+    }
+  }, [provider, originalOffer, coinzzOffer]);
+
+
 
   const [interactionTracked, setInteractionTracked] = useState(false);
   const trackInteraction = () => {
