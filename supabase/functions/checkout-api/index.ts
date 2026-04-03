@@ -522,9 +522,47 @@ Deno.serve(async (req) => {
         );
       }
 
-      if (!order_data?.offer_hash) {
+      // Auto-resolve offer_hash and order data from order_id if not provided inline
+      const orderId = body.order_id;
+      let resolvedOrderData = order_data || {};
+
+      if (orderId && !resolvedOrderData?.offer_hash) {
+        console.log("[coinzz] Resolving offer_hash from order_id:", orderId);
+        const { data: orderRow } = await supabase
+          .from("orders")
+          .select("*, checkouts:checkout_id(coinzz_offer_hash, offer_id), offers:offer_id(hash)")
+          .eq("id", orderId)
+          .maybeSingle();
+
+        if (orderRow) {
+          const checkout = orderRow.checkouts as any;
+          const offer = orderRow.offers as any;
+          const offerHash = checkout?.coinzz_offer_hash || offer?.hash || null;
+
+          resolvedOrderData = {
+            ...resolvedOrderData,
+            offer_hash: offerHash,
+            client_name: orderRow.client_name,
+            client_email: orderRow.client_email,
+            client_document: orderRow.client_document,
+            client_phone: orderRow.client_phone,
+            client_zip_code: orderRow.client_zip_code,
+            client_address: orderRow.client_address,
+            client_address_number: orderRow.client_address_number,
+            client_address_comp: orderRow.client_address_comp,
+            client_address_district: orderRow.client_address_district,
+            client_address_city: orderRow.client_address_city,
+            client_address_state: orderRow.client_address_state,
+            shipping_value: orderRow.shipping_value,
+            payment_method: orderRow.payment_method,
+          };
+          console.log("[coinzz] Resolved offer_hash:", offerHash);
+        }
+      }
+
+      if (!resolvedOrderData?.offer_hash) {
         return new Response(
-          JSON.stringify({ error: "offer_hash é obrigatório para criar venda na Coinzz" }),
+          JSON.stringify({ error: "offer_hash não encontrado. Configure o hash da oferta Coinzz no checkout ou na oferta." }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
