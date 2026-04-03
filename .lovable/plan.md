@@ -1,28 +1,31 @@
 
 
-## Plano: Adicionar feedback visual ao botao de refresh
+## Plano: Adaptar projeto para deploy na Vercel
 
 ### Problema
-O botao de refresh (RefreshCw) na linha 281 **funciona** — ele chama `refetch()` corretamente. Porem nao ha nenhum feedback visual (icone girando, loading state), entao parece que nao faz nada ao clicar.
+O erro 404 no screenshot ocorre porque a Vercel nao sabe redirecionar rotas do SPA (como `/c/1-un-organic-lizz-por-107-salq2l6x`) para o `index.html`. Sem configuracao, a Vercel tenta encontrar um arquivo real nesse caminho e retorna 404.
 
 ### Correcao
 
-**Arquivo: `src/pages/Pedidos.tsx`**
+**Criar arquivo `vercel.json` na raiz do projeto:**
 
-1. Extrair `isFetching` do `useQuery` (linha 96):
-```typescript
-const { data: orders = [], isLoading, isFetching, refetch } = useQuery({...});
+```json
+{
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}
 ```
 
-2. Adicionar animacao de rotacao no icone quando `isFetching` (linha 281):
-```tsx
-<Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground" onClick={() => refetch()} disabled={isFetching}>
-  <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
-</Button>
-```
+Isso instrui a Vercel a servir `index.html` para todas as rotas que nao correspondem a arquivos estaticos, permitindo que o React Router (BrowserRouter) gerencie a navegacao no cliente.
 
-### Resultado
-- Ao clicar, o icone gira enquanto os dados sao recarregados
-- O botao fica desabilitado durante o fetch para evitar cliques multiplos
-- Feedback visual claro de que a acao esta sendo executada
+### Notas importantes
+
+- O projeto ja usa `BrowserRouter` corretamente
+- As Edge Functions do backend continuam rodando no Lovable Cloud (nao na Vercel) — nenhuma mudanca necessaria no backend
+- As variaveis de ambiente `VITE_SUPABASE_URL` e `VITE_SUPABASE_PUBLISHABLE_KEY` precisam ser configuradas nas Environment Variables da Vercel para que o frontend se conecte ao backend
+
+### Resultado esperado
+- Checkout publico (`/c/...`) e todas as outras rotas do SPA funcionam sem 404
+- Build da Vercel continua usando `vite build` normalmente
 
