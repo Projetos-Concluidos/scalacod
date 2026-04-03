@@ -7,7 +7,6 @@ const corsHeaders = {
 
 const DEFAULT_LOGZZ_WEBHOOK_URL = "https://app.logzz.com.br/api/importacao-de-pedidos/webhook/ori1xzrv";
 
-// Realistic browser headers to bypass Cloudflare
 const BROWSER_HEADERS: Record<string, string> = {
   "Content-Type": "application/json",
   "Accept": "application/json",
@@ -25,7 +24,32 @@ const BROWSER_HEADERS: Record<string, string> = {
   "Connection": "keep-alive",
 };
 
-// FIX 2: Retry with exponential jitter for Cloudflare 403
+// Helper: calculate next business date (skips Sundays)
+function getNextBusinessDate(daysAhead: number): string {
+  const date = new Date();
+  let added = 0;
+  while (added < daysAhead) {
+    date.setDate(date.getDate() + 1);
+    if (date.getDay() !== 0) { // skip Sunday
+      added++;
+    }
+  }
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+// Helper: check if date string is in the past
+function isDatePast(dateStr: string): boolean {
+  if (!dateStr) return true;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const target = new Date(dateStr + "T00:00:00");
+  return target < today;
+}
+
+// Retry with exponential jitter for Cloudflare 403
 async function sendToLogzz(
   url: string,
   payload: Record<string, unknown>,
@@ -46,7 +70,7 @@ async function sendToLogzz(
 
   const responseText = await response.text();
 
-  // Detect Cloudflare JS challenge (HTML instead of JSON)
+  // Detect Cloudflare JS challenge
   if (
     response.status === 403 &&
     (responseText.includes("cf-browser-verification") ||
@@ -128,15 +152,15 @@ Deno.serve(async (req) => {
       });
     }
 
-    // 4. Determine webhook URL (custom or default)
+    // 4. Determine webhook URL
     const webhookUrl = logzzCfg?.logzz_webhook_url || DEFAULT_LOGZZ_WEBHOOK_URL;
     console.log("[logzz-create-order] Webhook URL:", webhookUrl);
 
-    // 4.5 Re-validate delivery date & fetch local_operation_code from Logzz API
+    // 4.5 Re-validate delivery date & fetch local_operation_code
     let finalDeliveryDate = order.delivery_date || "";
     let finalTypeCode = order.delivery_type_code || "";
     let localOperationCode = order.local_operation_code || "";
-    let localOperationName = "";
+    let apiValidationSucceeded = false;
 
     if (order.client_zip_code) {
       const cleanCep = (order.client_zip_code || "").replace(/\D/g, "");
@@ -147,9 +171,8 @@ Deno.serve(async (req) => {
           headers: { Authorization: `Bearer ${bearerToken}`, Accept: "application/json", "User-Agent": "Mozilla/5.0 Chrome/120" },
         });
         const dateText = await dateRes.text();
-        if (dateRes.ok) {
+        if (dateRes.ok && !dateText.includes("<!DOCTYPE html>")) {
           const dateData = JSON.parse(dateText);
-          // Extract dates_available from various response structures
           let datesAvail: any[] = [];
           if (dateData?.data?.response?.dates_available?.length > 0) datesAvail = dateData.data.response.dates_available;
           else if (dateData?.response?.dates_available?.length > 0) datesAvail = dateData.response.dates_available;
@@ -161,23 +184,18 @@ Deno.serve(async (req) => {
           console.log("[logzz-create-order] Available dates:", datesAvail.length);
 
           if (datesAvail.length > 0) {
-            // Try to find the originally selected date
+            apiValidationSucceeded = true;
             const match = datesAvail.find((d: any) => d.date === finalDeliveryDate);
             if (match) {
               finalTypeCode = match.type_code || finalTypeCode;
               localOperationCode = match.local_operation_code || "";
-              localOperationName = match.local_operation_name || "";
-              console.log("[logzz-create-order] Date validated OK:", finalDeliveryDate, "op_code:", localOperationCode);
+              console.log("[logzz-create-order] Date validated OK:", finalDeliveryDate);
             } else {
-              // Date no longer available — use closest available
               const first = datesAvail[0];
               finalDeliveryDate = first.date;
               finalTypeCode = first.type_code || finalTypeCode;
               localOperationCode = first.local_operation_code || "";
-              localOperationName = first.local_operation_name || "";
-              console.log("[logzz-create-order] Date re-assigned to:", finalDeliveryDate, "op_code:", localOperationCode);
-
-              // Update order with new date
+              console.log("[logzz-create-order] Date re-assigned to:", finalDeliveryDate);
               await admin.from("orders").update({
                 delivery_date: finalDeliveryDate,
                 delivery_type_code: finalTypeCode,
@@ -186,11 +204,27 @@ Deno.serve(async (req) => {
             }
           }
         } else {
-          console.warn("[logzz-create-order] Date re-validation failed:", dateRes.status);
+          console.warn("[logzz-create-order] Date API returned non-JSON or error:", dateRes.status);
         }
       } catch (dateErr: any) {
         console.warn("[logzz-create-order] Date re-validation error:", dateErr.message);
       }
+    }
+
+    // FALLBACK: If API validation failed and date is past/empty, calculate locally
+    if (!apiValidationSucceeded && isDatePast(finalDeliveryDate)) {
+      const fallbackDate = getNextBusinessDate(2);
+      console.log(`[logzz-create-order] Date fallback: "${finalDeliveryDate}" is past/empty → using ${fallbackDate}`);
+      finalDeliveryDate = fallbackDate;
+      await admin.from("orders").update({ delivery_date: finalDeliveryDate }).eq("id", order_id);
+    }
+
+    // Final safety: ensure date is never in the past
+    if (isDatePast(finalDeliveryDate)) {
+      const safeDate = getNextBusinessDate(2);
+      console.log(`[logzz-create-order] Safety check: "${finalDeliveryDate}" still past → ${safeDate}`);
+      finalDeliveryDate = safeDate;
+      await admin.from("orders").update({ delivery_date: finalDeliveryDate }).eq("id", order_id);
     }
 
     // 5. Get offer hash
@@ -204,8 +238,7 @@ Deno.serve(async (req) => {
       offerHash = offerData?.hash || "";
     }
 
-    // 6. Build payload (exact Logzz format)
-    // Payload aligned with ScalaCOD pattern: only delivery_date, no type_code/operation fields
+    // 6. Build payload
     const logzzPayload: Record<string, unknown> = {
       external_id: order.id,
       full_name: order.client_name,
@@ -223,7 +256,7 @@ Deno.serve(async (req) => {
       affiliate_email: order.affiliate_email || "",
     };
 
-    // 7. Fetch order bumps — FIX 3: filter out bumps with null/empty hash
+    // 7. Fetch order bumps & variations
     if (order.offer_id) {
       const { data: orderBumps } = await admin
         .from("order_bumps")
@@ -234,13 +267,8 @@ Deno.serve(async (req) => {
       if (orderBumps && orderBumps.length > 0) {
         const bumpsPayload: any[] = [];
         for (const bump of orderBumps) {
-          // FIX 3: Skip bumps with null or empty hash
-          if (!bump.hash || bump.hash.trim() === "") {
-            console.warn("[logzz-create-order] Skipping bump with null/empty hash");
-            continue;
-          }
+          if (!bump.hash || bump.hash.trim() === "") continue;
           const bumpEntry: any = { hash: bump.hash };
-          // Fetch variations only if product_id exists
           if (bump.product_id) {
             const { data: vars } = await admin
               .from("product_variations")
@@ -253,13 +281,11 @@ Deno.serve(async (req) => {
           }
           bumpsPayload.push(bumpEntry);
         }
-        // Only include bumps array if there are valid entries
         if (bumpsPayload.length > 0) {
           logzzPayload.bumps = bumpsPayload;
         }
       }
 
-      // Fetch main product variations
       const { data: offerData } = await admin
         .from("offers")
         .select("product_id")
@@ -272,25 +298,33 @@ Deno.serve(async (req) => {
           .eq("product_id", offerData.product_id)
           .eq("is_active", true);
         if (mainVars && mainVars.length > 0) {
-          logzzPayload.variations = mainVars.map((v: any) => ({
-            hash: v.hash,
-            quantity: 1,
-          }));
+          logzzPayload.variations = mainVars.map((v: any) => ({ hash: v.hash, quantity: 1 }));
         }
       }
     }
 
     console.log("[logzz-create-order] Payload:", JSON.stringify(logzzPayload));
-    console.log("[logzz-create-order] Has bumps:", !!logzzPayload.bumps, "Count:", Array.isArray(logzzPayload.bumps) ? (logzzPayload.bumps as any[]).length : 0);
 
-    // 8. Send to Logzz with retry (FIX 2)
-    const { status: resStatus, body: resBody } = await sendToLogzz(
-      webhookUrl,
-      logzzPayload,
-      bearerToken
-    );
-
+    // 8. Send to Logzz
+    let { status: resStatus, body: resBody } = await sendToLogzz(webhookUrl, logzzPayload, bearerToken);
     console.log("[logzz-create-order] Response:", resStatus, resBody.substring(0, 500));
+
+    // 8.5 RETRY on 422 with date error — recalculate to D+3 and try once more
+    if (resStatus === 422) {
+      const lower = resBody.toLowerCase();
+      if (lower.includes("delivery_date") || lower.includes("data") || lower.includes("date")) {
+        const retryDate = getNextBusinessDate(3);
+        console.log(`[logzz-create-order] 422 date error detected → retrying with ${retryDate}`);
+        logzzPayload.delivery_date = retryDate;
+        finalDeliveryDate = retryDate;
+        await admin.from("orders").update({ delivery_date: retryDate }).eq("id", order_id);
+
+        const retry = await sendToLogzz(webhookUrl, logzzPayload, bearerToken);
+        resStatus = retry.status;
+        resBody = retry.body;
+        console.log("[logzz-create-order] Retry response:", resStatus, resBody.substring(0, 500));
+      }
+    }
 
     // 9. Process result
     if (resStatus >= 200 && resStatus < 300) {
@@ -299,52 +333,31 @@ Deno.serve(async (req) => {
         const parsed = JSON.parse(resBody);
         logzzOrderId = parsed?.data?.id || parsed?.id || parsed?.order_id || null;
         if (typeof logzzOrderId === "number") logzzOrderId = String(logzzOrderId);
-      } catch {
-        /* non-JSON ok response */
-      }
+      } catch { /* non-JSON ok */ }
 
       const prevStatus = order.status;
+      await admin.from("orders").update({
+        status: "Agendado",
+        logzz_order_id: logzzOrderId,
+        updated_at: new Date().toISOString(),
+      }).eq("id", order_id);
 
-      // Update order
-      await admin
-        .from("orders")
-        .update({
-          status: "Agendado",
-          logzz_order_id: logzzOrderId,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", order_id);
-
-      // Record status history
       await admin.from("order_status_history").insert({
         order_id: order_id,
         from_status: prevStatus,
         to_status: "Agendado",
         source: "logzz_create_order",
-        raw_payload: {
-          webhook_url: webhookUrl,
-          logzz_status: resStatus,
-          logzz_body: resBody.substring(0, 500),
-        },
+        raw_payload: { webhook_url: webhookUrl, logzz_status: resStatus, logzz_body: resBody.substring(0, 500) },
       });
 
       console.log("[logzz-create-order] SUCCESS! logzz_order_id:", logzzOrderId);
 
-      // Trigger flow notifications for status change to Agendado
+      // Trigger flow
       try {
-        console.log("[logzz-create-order] Triggering flow for Agendado...");
         const triggerRes = await fetch(`${supabaseUrl}/functions/v1/trigger-flow`, {
           method: "POST",
-          headers: {
-            Authorization: `Bearer ${serviceKey}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            userId: effectiveUserId,
-            orderId: order_id,
-            newStatus: "Agendado",
-            triggerEvent: "order_status_changed",
-          }),
+          headers: { Authorization: `Bearer ${serviceKey}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ userId: effectiveUserId, orderId: order_id, newStatus: "Agendado", triggerEvent: "order_status_changed" }),
         });
         const triggerData = await triggerRes.json();
         console.log("[logzz-create-order] trigger-flow result:", JSON.stringify(triggerData));
@@ -353,48 +366,26 @@ Deno.serve(async (req) => {
       }
 
       return new Response(
-        JSON.stringify({
-          success: true,
-          logzz_order_id: logzzOrderId,
-          logzz_status: resStatus,
-        }),
+        JSON.stringify({ success: true, logzz_order_id: logzzOrderId, logzz_status: resStatus }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     } else {
       console.error("[logzz-create-order] FAILED:", resStatus, resBody.substring(0, 300));
 
-      // Record sync failure in order history for timeline visibility
       let errorMsg = resBody.substring(0, 500);
-      try {
-        const parsed = JSON.parse(resBody);
-        errorMsg = parsed?.message || parsed?.error || errorMsg;
-      } catch { /* keep raw */ }
+      try { const parsed = JSON.parse(resBody); errorMsg = parsed?.message || parsed?.error || errorMsg; } catch { /* keep raw */ }
 
       await admin.from("order_status_history").insert({
         order_id: order_id,
         from_status: order.status,
         to_status: "logzz_error",
         source: "logzz_create_order",
-        raw_payload: {
-          webhook_url: webhookUrl,
-          logzz_status: resStatus,
-          logzz_error: errorMsg,
-          logzz_body: resBody.substring(0, 500),
-        },
+        raw_payload: { webhook_url: webhookUrl, logzz_status: resStatus, logzz_error: errorMsg, logzz_body: resBody.substring(0, 500) },
       });
 
       return new Response(
-        JSON.stringify({
-          success: false,
-          logzz_status: resStatus,
-          logzz_error: errorMsg,
-          logzz_response: resBody.substring(0, 1000),
-          webhook_url: webhookUrl,
-        }),
-        {
-          status: 200,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        JSON.stringify({ success: false, logzz_status: resStatus, logzz_error: errorMsg, logzz_response: resBody.substring(0, 1000), webhook_url: webhookUrl }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
   } catch (e: any) {
