@@ -8,6 +8,8 @@ import ScalaCODLogo, { ScalaCODBrandName } from "@/components/ScalaCODLogo";
 
 const Login = () => {
   const { signIn, user, loading: authLoading } = useAuth();
+  const [searchParams] = useSearchParams();
+  const redirectTo = searchParams.get("redirect");
   const { data: settings } = useHomeSettings();
   const lp = settings?.login_page;
   const brand = settings?.brand;
