@@ -2,7 +2,7 @@ import { useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 
-const AUDIO_TYPES = ["new_order"];
+const AUDIO_TYPES = ["new_order", "payment_approved"];
 
 export function useNotificationPush() {
   const { user } = useAuth();
