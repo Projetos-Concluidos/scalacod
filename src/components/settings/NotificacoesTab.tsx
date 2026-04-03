@@ -62,6 +62,7 @@ const NotificacoesTab = () => {
           email_weekly_report: d.email_weekly_report ?? false,
           push_enabled: d.push_enabled ?? false,
           push_new_order: d.push_new_order ?? true,
+          push_payment_approved: d.push_payment_approved ?? true,
           push_delivered: d.push_delivered ?? true,
           push_frustrated: d.push_frustrated ?? true,
           push_new_lead: d.push_new_lead ?? true,
