@@ -6,6 +6,7 @@ import MercadoPagoTab from "@/components/settings/MercadoPagoTab";
 import ApiTab from "@/components/settings/ApiTab";
 import WebhooksTab from "@/components/settings/WebhooksTab";
 import NotificacoesTab from "@/components/settings/NotificacoesTab";
+import FilaWhatsAppTab from "@/components/settings/FilaWhatsAppTab";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
