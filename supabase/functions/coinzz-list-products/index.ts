@@ -51,15 +51,50 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log("[coinzz-list-products] Calling GET /api/products");
-    const res = await fetch("https://app.coinzz.com.br/api/products", {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${coinzzToken}`,
-        Accept: "application/json",
-      },
-      redirect: "manual",
-    });
+    // Try multiple possible endpoints
+    const endpoints = [
+      "https://app.coinzz.com.br/api/v1/my-products",
+      "https://app.coinzz.com.br/api/my-products",
+      "https://app.coinzz.com.br/api/v1/producer/products",
+      "https://app.coinzz.com.br/api/producer/products",
+      "https://app.coinzz.com.br/api/v1/offers",
+      "https://app.coinzz.com.br/api/offers",
+    ];
+
+    let res: Response | null = null;
+    let usedEndpoint = "";
+
+    for (const endpoint of endpoints) {
+      console.log(`[coinzz-list-products] Trying: ${endpoint}`);
+      const attempt = await fetch(endpoint, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${coinzzToken}`,
+          Accept: "application/json",
+        },
+        redirect: "manual",
+      });
+      const ct = attempt.headers.get("content-type") || "";
+      const st = attempt.status;
+      console.log(`[coinzz-list-products] ${endpoint} → status=${st}, ct=${ct.substring(0, 50)}`);
+      
+      if (ct.includes("json") && st === 200) {
+        res = attempt;
+        usedEndpoint = endpoint;
+        break;
+      }
+      // consume body to avoid leak
+      await attempt.text();
+    }
+
+    if (!res) {
+      return new Response(
+        JSON.stringify({ success: true, offers: [], message: "Nenhum endpoint da Coinzz retornou dados válidos. Verifique o token." }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log(`[coinzz-list-products] Success with: ${usedEndpoint}`);
 
     const status = res.status;
     console.log(`[coinzz-list-products] Status: ${status}`);
