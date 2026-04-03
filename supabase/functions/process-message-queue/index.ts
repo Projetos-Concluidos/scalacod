@@ -5,6 +5,20 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Phone validation — detect fake/invalid numbers
+const INVALID_PATTERNS = [
+  /^(\d)\1{9,}$/,           // all same digit (99999999999, 11111111111)
+  /^0{10,}$/,               // all zeros
+  /^(12345678|87654321)/,   // sequential
+];
+
+function isInvalidPhone(phone: string): boolean {
+  const clean = phone.replace(/\D/g, "");
+  if (clean.length < 10 || clean.length > 13) return true;
+  const local = clean.startsWith("55") ? clean.slice(2) : clean;
+  return INVALID_PATTERNS.some((p) => p.test(local));
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
