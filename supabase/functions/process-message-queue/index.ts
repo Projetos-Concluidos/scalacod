@@ -164,33 +164,53 @@ Deno.serve(async (req) => {
         // Delay between sends to avoid rate limits
         await new Promise((r) => setTimeout(r, 1500));
       } catch (e) {
-        const newRetry = msg.retry_count + 1;
-        if (newRetry >= msg.max_retries) {
+        // Non-retryable errors — fail immediately
+        const nonRetryable = [
+          "não encontrado no WhatsApp",
+          "Número inválido",
+          "not found on WhatsApp",
+        ];
+        const isNonRetryable = nonRetryable.some((s) => e.message?.includes(s));
+
+        if (isNonRetryable) {
           await supabase
             .from("message_queue")
             .update({
               status: "failed",
-              retry_count: newRetry,
               error_message: e.message,
             })
             .eq("id", msg.id);
           failed++;
+          console.log(`[process-message-queue] NON-RETRYABLE msg=${msg.id}: ${e.message}`);
         } else {
-          const backoffMinutes = 5 * Math.pow(3, newRetry - 1);
-          const processAfter = new Date(
-            Date.now() + backoffMinutes * 60 * 1000
-          ).toISOString();
-          await supabase
-            .from("message_queue")
-            .update({
-              status: "pending",
-              retry_count: newRetry,
-              process_after: processAfter,
-              error_message: e.message,
-            })
-            .eq("id", msg.id);
+          const newRetry = msg.retry_count + 1;
+          if (newRetry >= msg.max_retries) {
+            await supabase
+              .from("message_queue")
+              .update({
+                status: "failed",
+                retry_count: newRetry,
+                error_message: e.message,
+              })
+              .eq("id", msg.id);
+            failed++;
+          } else {
+            const backoffMinutes = 5 * Math.pow(3, newRetry - 1);
+            const processAfter = new Date(
+              Date.now() + backoffMinutes * 60 * 1000
+            ).toISOString();
+            await supabase
+              .from("message_queue")
+              .update({
+                status: "pending",
+                retry_count: newRetry,
+                process_after: processAfter,
+                error_message: e.message,
+              })
+              .eq("id", msg.id);
+          }
+          console.error(`[process-message-queue] Error msg=${msg.id}:`, e.message);
         }
-        console.error(`[process-message-queue] Error msg=${msg.id}:`, e.message);
       }
     }
 
