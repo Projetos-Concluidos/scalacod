@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useTeamContext } from "@/hooks/useTeamContext";
 import { toast } from "sonner";
 import { format, isToday, isYesterday, isSameDay, subDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
