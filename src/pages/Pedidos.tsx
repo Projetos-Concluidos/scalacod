@@ -93,7 +93,7 @@ const Pedidos = () => {
   const [detailBumps, setDetailBumps] = useState<any[]>([]);
   const [detailTimeline, setDetailTimeline] = useState<any[]>([]);
 
-  const { data: orders = [], isLoading, refetch } = useQuery({
+  const { data: orders = [], isLoading, isFetching, refetch } = useQuery({
     queryKey: ["orders"],
     queryFn: async () => {
       const { data, error } = await supabase
