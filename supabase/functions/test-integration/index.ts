@@ -171,7 +171,7 @@ serve(async (req) => {
           break;
         }
         // Test Coinzz by calling their products endpoint
-        const res = await fetch("https://app.coinzz.com.br/api/v1/products", {
+        const res = await fetch("https://app.coinzz.com.br/api/products", {
           headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
         });
         if (res.ok) {

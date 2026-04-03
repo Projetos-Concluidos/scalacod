@@ -51,15 +51,51 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log("[coinzz-list-products] Calling GET /api/v1/products");
-    const res = await fetch("https://app.coinzz.com.br/api/v1/products", {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${coinzzToken}`,
-        Accept: "application/json",
-      },
-      redirect: "manual",
-    });
+    // Try multiple possible endpoints including the v1 pattern that works for Logzz
+    const endpoints = [
+      "https://app.coinzz.com.br/api/v1/products",
+      "https://app.coinzz.com.br/api/products",
+      "https://app.coinzz.com.br/api/v1/my-products",
+      "https://app.coinzz.com.br/api/v1/user/products",
+      "https://app.coinzz.com.br/api/v1/sales",
+      "https://app.coinzz.com.br/api/sales",
+    ];
+
+    let res: Response | null = null;
+    let usedEndpoint = "";
+
+    for (const endpoint of endpoints) {
+      console.log(`[coinzz-list-products] Trying: ${endpoint}`);
+      const attempt = await fetch(endpoint, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${coinzzToken}`,
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        redirect: "manual",
+      });
+      const ct = attempt.headers.get("content-type") || "";
+      const st = attempt.status;
+      const body = await attempt.text();
+      console.log(`[coinzz-list-products] ${endpoint} → status=${st}, ct=${ct.substring(0, 50)}, body=${body.substring(0, 200)}`);
+      
+      if (ct.includes("json") && st >= 200 && st < 300) {
+        // Re-parse as we consumed body
+        res = new Response(body, { status: st, headers: attempt.headers });
+        usedEndpoint = endpoint;
+        break;
+      }
+    }
+
+    if (!res) {
+      return new Response(
+        JSON.stringify({ success: true, offers: [], message: "Nenhum endpoint da Coinzz retornou dados válidos. O token pode estar expirado ou a API não expõe listagem de produtos. Configure as ofertas manualmente." }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log(`[coinzz-list-products] Success with: ${usedEndpoint}`);
 
     const status = res.status;
     console.log(`[coinzz-list-products] Status: ${status}`);
