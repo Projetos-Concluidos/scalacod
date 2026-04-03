@@ -14,6 +14,7 @@ interface Prefs {
   email_weekly_report: boolean;
   push_enabled: boolean;
   push_new_order: boolean;
+  push_payment_approved: boolean;
   push_delivered: boolean;
   push_frustrated: boolean;
   push_new_lead: boolean;
