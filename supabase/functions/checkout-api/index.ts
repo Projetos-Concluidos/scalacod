@@ -1306,6 +1306,12 @@ Deno.serve(async (req) => {
         status_description: rawStatus,
         updated_at: new Date().toISOString(),
       };
+      // Persist logzz_order_id from webhook (critical for order link)
+      const extractedLogzzId = logzz_order_id || webhookPayload.id || webhookPayload.order_id || null;
+      if (extractedLogzzId) {
+        updateFields.logzz_order_id = String(extractedLogzzId);
+        console.log(`[Webhook Logzz] Persisting logzz_order_id: ${extractedLogzzId}`);
+      }
       if (extractedDeliveryDate) updateFields.delivery_date = extractedDeliveryDate;
       if (extractedTrackingCode) updateFields.tracking_code = extractedTrackingCode;
       if (extractedDeliveryMan) updateFields.delivery_man = extractedDeliveryMan;

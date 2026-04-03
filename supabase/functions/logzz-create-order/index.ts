@@ -331,8 +331,12 @@ Deno.serve(async (req) => {
       let logzzOrderId: string | null = null;
       try {
         const parsed = JSON.parse(resBody);
-        logzzOrderId = parsed?.data?.id || parsed?.id || parsed?.order_id || null;
+        logzzOrderId = parsed?.data?.id || parsed?.id || parsed?.order_id
+          || parsed?.data?.order_id || parsed?.data?.external_id || null;
         if (typeof logzzOrderId === "number") logzzOrderId = String(logzzOrderId);
+        if (!logzzOrderId) {
+          console.warn("[logzz-create-order] No order ID found in response. Full body:", resBody.substring(0, 300));
+        }
       } catch { /* non-JSON ok */ }
 
       const prevStatus = order.status;
