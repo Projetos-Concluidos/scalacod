@@ -29,6 +29,32 @@ Deno.serve(async (req) => {
 
     console.log(`[trigger-flow] event=${event} orderId=${orderId} status=${newStatus} userId=${userId}`);
 
+    // ── Insert notification for delivered/frustrated status ──
+    const lowerStatus = (newStatus || "").toLowerCase();
+    if (lowerStatus.includes("entregue") || lowerStatus === "delivered") {
+      try {
+        const { data: ord } = await supabase.from("orders").select("order_number, client_name").eq("id", orderId).maybeSingle();
+        await supabase.from("notifications").insert({
+          user_id: userId,
+          title: "✅ Pedido entregue!",
+          body: `Pedido #${ord?.order_number || orderId?.slice(0, 8)} — ${ord?.client_name || ""}`,
+          type: "delivered",
+        });
+        console.log("[trigger-flow] Notification delivered inserted");
+      } catch (e: any) { console.warn("[trigger-flow] Notif error:", e.message); }
+    } else if (lowerStatus.includes("frustrad") || lowerStatus.includes("cancelad") || lowerStatus.includes("devolvid")) {
+      try {
+        const { data: ord } = await supabase.from("orders").select("order_number, client_name").eq("id", orderId).maybeSingle();
+        await supabase.from("notifications").insert({
+          user_id: userId,
+          title: "⚠️ Pedido frustrado",
+          body: `Pedido #${ord?.order_number || orderId?.slice(0, 8)} — ${ord?.client_name || ""} — Status: ${newStatus}`,
+          type: "frustrated",
+        });
+        console.log("[trigger-flow] Notification frustrated inserted");
+      } catch (e: any) { console.warn("[trigger-flow] Notif error:", e.message); }
+    }
+
     // Determine flow_type based on order's logistics_type
     let flowType: string | null = null;
     if (orderId) {
