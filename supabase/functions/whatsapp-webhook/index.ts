@@ -53,6 +53,8 @@ Deno.serve(async (req) => {
     return new Response("ok", { headers: corsHeaders });
   }
 
+  const url = new URL(req.url);
+
   // Rate limit: 200 requests per 60 seconds
   if (req.method === "POST") {
     const { limited } = await checkRateLimit(req, {
@@ -64,7 +66,7 @@ Deno.serve(async (req) => {
   }
 
   const provider = url.searchParams.get("provider");
-  const storeId = url.searchParams.get("store");
+  const storeId = url.searchParams.get("store") || url.searchParams.get("user_id");
 
   if (!provider || !storeId) {
     return new Response(

@@ -314,7 +314,13 @@ serve(async (req) => {
         if (infoRes.ok) {
           const instances = await infoRes.json();
           const inst = Array.isArray(instances) ? instances[0] : instances;
-          phoneNumber = inst?.instance?.owner || "";
+          // Try multiple fields: owner, number, profileName
+          phoneNumber = inst?.instance?.owner || inst?.instance?.number || "";
+          // Clean phone: remove @s.whatsapp.net suffix if present
+          if (phoneNumber.includes("@")) {
+            phoneNumber = phoneNumber.split("@")[0];
+          }
+          console.log(`[evolution-instance] Resolved phone_number: ${phoneNumber}`);
         }
 
         // Update or insert whatsapp_instances

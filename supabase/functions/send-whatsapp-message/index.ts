@@ -119,7 +119,13 @@ Deno.serve(async (req) => {
       );
     }
 
-    const cleanPhone = targetPhone.replace(/\D/g, "");
+    // Format phone: ensure Brazilian numbers have 55 prefix
+    let cleanPhone = targetPhone.replace(/\D/g, "");
+    if (cleanPhone.length >= 10 && cleanPhone.length <= 11 && !cleanPhone.startsWith("55")) {
+      cleanPhone = "55" + cleanPhone;
+    }
+    console.log(`[send-whatsapp-message] Formatted phone: ${targetPhone} → ${cleanPhone}`);
+
     let messageIdWhatsapp: string | null = null;
     let sendError: string | null = null;
 
@@ -239,9 +245,27 @@ Deno.serve(async (req) => {
 
     // ====== EVOLUTION ======
     if (instance.provider === "evolution") {
-      const serverUrl = instance.evolution_server_url;
-      const apiKey = instance.api_key;
+      let serverUrl = instance.evolution_server_url;
+      let apiKey = instance.api_key;
       const instanceName = instance.instance_name;
+
+      // Fallback to global credentials if instance-specific ones are missing
+      if (!serverUrl || !apiKey) {
+        console.log("[send-whatsapp-message] Instance credentials missing, trying global system_config...");
+        const { data: configs } = await supabase
+          .from("system_config")
+          .select("key, value")
+          .in("key", ["integration_evolution_url", "integration_evolution_api_key"]);
+
+        if (configs) {
+          const cleanStr = (v: any): string => {
+            if (typeof v === "string") return v.replace(/^"|"$/g, "").trim();
+            return String(v ?? "").replace(/^"|"$/g, "").trim();
+          };
+          if (!serverUrl) serverUrl = cleanStr(configs.find((c: any) => c.key === "integration_evolution_url")?.value).replace(/\/$/, "");
+          if (!apiKey) apiKey = cleanStr(configs.find((c: any) => c.key === "integration_evolution_api_key")?.value);
+        }
+      }
 
       if (!serverUrl || !apiKey || !instanceName) {
         return new Response(
