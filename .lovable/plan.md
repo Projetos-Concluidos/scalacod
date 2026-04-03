@@ -1,58 +1,74 @@
 
 
-## Relatorio de Diagnostico + Plano de Correcao
+## Plano: Corrigir sistema de envio/recebimento WhatsApp via Evolution API
 
-### 1. Por que a mensagem WhatsApp NAO foi enviada
+### Diagnostico
 
-**Causa raiz identificada nos logs:**
+Apos analise completa do codigo, identifiquei **3 problemas criticos** que impedem o funcionamento do Inbox WhatsApp com a Evolution API:
 
-O flow "📅 Data de Entrega Agendada" foi disparado com sucesso pelo `trigger-flow`, porem retornou:
-```
-"skipped": true, "reason": "already_executed"
-```
+#### Bug 1: Webhook quebrado — variavel `url` nao existe
+Em `whatsapp-webhook/index.ts` linha 66-67, o codigo usa `url.searchParams` mas a variavel `url` nunca e declarada. Isso causa crash em **toda** requisicao de webhook, impedindo o recebimento de mensagens.
 
-Isso aconteceu porque esse mesmo pedido (`d55d37e0`) ja tinha sido movido para "Agendado" anteriormente (em 02/04 via kanban_drag), e o flow foi executado naquela vez com status `completed` na tabela `flow_executions`. Quando o pedido foi enviado novamente para a Logzz em 03/04 e teve sucesso, o sistema de deduplicacao bloqueou o reenvio da mensagem.
+#### Bug 2: Parametro do webhook incompativel
+O `evolution-instance` registra o webhook com `?user_id=XXX&provider=evolution`, mas o `whatsapp-webhook` espera `?store=XXX&provider=XXX`. O parametro `user_id` e ignorado — mesmo que o Bug 1 fosse corrigido, o `storeId` seria `null` e retornaria 400.
 
-**O problema:** A deduplicacao atual verifica apenas `flow_id + order_id + status=completed`, sem considerar que o pedido pode ter voltado para outro status e retornado ao mesmo. A logica deveria permitir re-execucao quando houve uma transicao intermediaria (ex: Agendado → Aguardando → Agendado).
+#### Bug 3: Phone number vazio na instancia
+O campo `phone_number` da instancia esta vazio. O `send-whatsapp-message` nao adiciona prefixo `55` ao telefone brasileiro automaticamente. Numeros como `94992118777` sao enviados sem o codigo de pais.
 
-### 2. Fluxo bidirecional de cancelamento (ScalaCOD ↔ Logzz)
-
-**Estado atual:**
-- **Logzz → ScalaCOD**: Funciona via `process_logzz_webhook` no `checkout-api`. Quando a Logzz envia um status de cancelamento, o sistema atualiza o pedido e dispara o flow "❌ Pedido Cancelado".
-- **ScalaCOD → Logzz**: **NAO EXISTE**. Quando o usuario cancela um pedido no Kanban ou via botao "Cancelar Pedido", apenas atualiza o banco local. Nao notifica a Logzz.
-
-A Logzz nao possui uma API publica documentada para cancelar pedidos via server-to-server. O cancelamento precisaria ser feito via webhook reverso ou manualmente no painel Logzz.
+### O que ja funciona
+- Tabelas `conversations` e `messages` — estrutura correta
+- `send-whatsapp-message` — logica de envio Evolution funcional (quando tem credenciais e phone correto)
+- `execute-flow` — disparo de fluxos e envio via WhatsApp
+- Frontend `Conversas.tsx` — Inbox completo com chat, filtros, labels, realtime, emojis, templates, teste
+- `evolution-instance` — criacao e gerenciamento de instancias
 
 ### Plano de Implementacao
 
-**Arquivo: `supabase/functions/trigger-flow/index.ts`**
+**1. Corrigir `whatsapp-webhook/index.ts`** (critico)
+- Declarar `const url = new URL(req.url)` antes de usar `url.searchParams`
+- Aceitar tanto `store` quanto `user_id` como parametro: `const storeId = url.searchParams.get("store") || url.searchParams.get("user_id")`
+- Isso corrige recebimento de mensagens inbound e atualizacoes de status de conexao
 
-Corrigir a logica de deduplicacao (linhas 92-108). Em vez de verificar apenas se o flow ja foi executado para aquele pedido, verificar se houve uma transicao de status intermediaria apos a ultima execucao:
+**2. Corrigir formatacao de telefone em `send-whatsapp-message/index.ts`**
+- Adicionar funcao `formatBrazilPhone(phone)` que garante prefixo `55` em numeros brasileiros
+- Aplicar antes de montar o JID `@s.whatsapp.net` no bloco Evolution
+- Aplicar no `cleanPhone` geral para todos os providers
+
+**3. Atualizar `evolution-instance/index.ts`** — salvar phone_number
+- No action `status` quando `state === "open"`, o codigo ja busca o `owner` mas o campo pode vir vazio
+- Adicionar fallback: buscar phone do `fetchInstances` response no campo `instance.profilePictureUrl` ou `number`
+
+**4. Corrigir `send-whatsapp-message` — fallback de credenciais Evolution**
+- Quando `instance.evolution_server_url` ou `instance.api_key` estiverem vazios, buscar credenciais globais da `system_config` (mesmo padrao do `evolution-instance`)
+- Isso garante que o envio funciona mesmo quando as credenciais nao foram salvas corretamente na instancia
+
+### Detalhes tecnicos
 
 ```text
-Logica atual (incorreta):
-  SELECT FROM flow_executions WHERE flow_id=X AND order_id=Y AND status=completed → skip
+Fluxo corrigido de recebimento (inbound):
+  Evolution API → POST webhook?user_id=XXX&provider=evolution
+  → whatsapp-webhook: url = new URL(req.url)
+  → storeId = url.get("store") || url.get("user_id")  
+  → findOrCreateConversation(supabase, storeId, phone, null)
+  → INSERT messages + UPDATE conversations
+  → Realtime → Inbox atualiza
 
-Logica corrigida:
-  SELECT FROM flow_executions WHERE flow_id=X AND order_id=Y AND status=completed
-  → Se existe, verificar se houve mudanca de status APOS a execucao anterior
-  → Se houve (ex: Agendado→Aguardando→Agendado), permitir re-execucao
+Fluxo corrigido de envio (outbound):
+  Inbox/Flow → send-whatsapp-message
+  → cleanPhone = formatBrazilPhone(phone)  // garante 55 prefix
+  → Evolution: number = cleanPhone + "@s.whatsapp.net"
+  → POST /message/sendText/{instanceName}
+  → INSERT messages + UPDATE conversations
 ```
 
-Concretamente: buscar a `created_at` da ultima execucao completada, e verificar se existe um registro em `order_status_history` com `from_status = trigger_status` (saindo do status) e `created_at` posterior. Se existir, significa que o pedido passou por outro status e voltou, entao a re-execucao e valida.
-
-**Arquivo: `src/pages/Pedidos.tsx`**
-
-No `cancelMutation`, alem de atualizar o status local, disparar o `trigger-flow` com `newStatus: "Frustrado"` para que o flow de cancelamento envie a mensagem WhatsApp:
-
-```text
-cancelMutation:
-  1. Update order status → "Frustrado" (ja existe)
-  2. Insert order_status_history (ja existe)  
-  3. NOVO: Chamar trigger-flow com newStatus="Frustrado"
-```
+### Arquivos modificados
+1. `supabase/functions/whatsapp-webhook/index.ts` — fix `url`, aceitar `user_id` param
+2. `supabase/functions/send-whatsapp-message/index.ts` — formatBrazilPhone, fallback credenciais
+3. `supabase/functions/evolution-instance/index.ts` — salvar phone_number corretamente
 
 ### Resultado esperado
-- Mensagens WhatsApp serao enviadas mesmo quando um pedido retorna ao mesmo status (ex: re-agendamento)
-- Cancelamento manual no ScalaCOD dispara automaticamente o flow "❌ Pedido Cancelado" com mensagem WhatsApp
+- Mensagens recebidas no WhatsApp aparecem no Inbox em tempo real
+- Envio de mensagens do Inbox funciona com numero BR formatado corretamente
+- Fluxos automaticos (status de pedido) enviam mensagens com telefone correto
+- Atualizacoes de conexao da Evolution refletem no banco
 
