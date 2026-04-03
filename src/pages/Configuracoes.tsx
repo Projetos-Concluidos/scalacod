@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Store, Clock, Save, Globe, Key, Webhook, Bell, Info, MessageSquare } from "lucide-react";
+import { Store, Clock, Save, Globe, Key, Webhook, Bell, Info, MessageSquare, Users } from "lucide-react";
 import LogzzTab from "@/components/settings/LogzzTab";
 import CoinzzTab from "@/components/settings/CoinzzTab";
 import MercadoPagoTab from "@/components/settings/MercadoPagoTab";
@@ -7,6 +7,7 @@ import ApiTab from "@/components/settings/ApiTab";
 import WebhooksTab from "@/components/settings/WebhooksTab";
 import NotificacoesTab from "@/components/settings/NotificacoesTab";
 import FilaWhatsAppTab from "@/components/settings/FilaWhatsAppTab";
+import EquipeTab from "@/components/settings/EquipeTab";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -131,6 +132,7 @@ const Configuracoes = () => {
             { value: "webhooks", icon: Webhook, label: "Webhooks" },
             { value: "notificacoes", icon: Bell, label: "Notificações" },
             { value: "fila", icon: MessageSquare, label: "Fila WhatsApp" },
+            { value: "equipe", icon: Users, label: "Equipe" },
           ].map((tab) => (
             <TabsTrigger
               key={tab.value}
@@ -267,6 +269,9 @@ const Configuracoes = () => {
         </TabsContent>
         <TabsContent value="fila">
           <FilaWhatsAppTab />
+        </TabsContent>
+        <TabsContent value="equipe">
+          <EquipeTab />
         </TabsContent>
       </Tabs>
     </div>
