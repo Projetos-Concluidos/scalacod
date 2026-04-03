@@ -1,86 +1,99 @@
 
-## Plano: Corrigir variaveis vazias nos templates + Log visual da fila WhatsApp
 
-### Problema 1: Variaveis `{{produto_nome}}` e `{{endereco_completo}}` vazias
+## Plano: Sistema completo de notificacoes Push com audio
 
-**Causa raiz confirmada no banco:**
-- Pedido `MLIFIVMM`: `products = {}` (vazio), mas o produto real esta em `offers → products` (nome: "Organic Lizz")
-- `endereco_completo` **nao existe** no contexto `ctx` do `execute-flow` (linha 96-107) — nunca foi adicionada
-- `produto_nome` extrai de `products.main.product_name` que e sempre `{}` — precisa buscar via `offer_id → offers → products`
+### Situacao atual
 
-**Dados reais no banco:**
-```text
-orders.offer_id → offers.product_id → products.name = "Organic Lizz"
-orders.client_address = "Rua Rio Azul"
-orders.client_address_number = "11"
-orders.client_address_district = "Boa Viagem"
-orders.client_address_city = "Recife"
-orders.client_address_state = "PE"
+1. **NotificacoesTab** — preferencias sao apenas estado local (`useState`), nada e salvo no banco
+2. **NotificationBell** — escuta realtime da tabela `notifications`, mas so recebe inserts de pagamento (MercadoPago)
+3. **Nenhuma notificacao** e criada para: novo pedido, pedido entregue, pedido frustrado, novo lead
+4. **Audio** — existe `public/sounds/push.mp3` usado no chat WhatsApp, mas nao nas notificacoes push
+5. **Audio do usuario** — MP3 enviado (`notificação_kiwify.mp3`) deve substituir o som atual para notificacoes de novo pedido
+
+### O que sera implementado
+
+#### 1. Tabela `notification_preferences` (Migration)
+Salvar preferencias do usuario no banco em vez de estado local:
+```sql
+CREATE TABLE notification_preferences (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL UNIQUE,
+  email_new_order boolean DEFAULT true,
+  email_delivered boolean DEFAULT true,
+  email_frustrated boolean DEFAULT true,
+  email_new_lead boolean DEFAULT true,
+  email_weekly_report boolean DEFAULT false,
+  push_enabled boolean DEFAULT false,
+  push_new_order boolean DEFAULT true,
+  push_delivered boolean DEFAULT true,
+  push_frustrated boolean DEFAULT true,
+  push_new_lead boolean DEFAULT true,
+  alert_low_tokens boolean DEFAULT false,
+  alert_frustrated_orders boolean DEFAULT false,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+-- RLS: usuario le/edita apenas seus proprios dados
 ```
 
-### Correcao 1: `supabase/functions/execute-flow/index.ts`
+#### 2. Audio de notificacao (`public/sounds/notification_kiwify.mp3`)
+Copiar o MP3 enviado pelo usuario para `public/sounds/` — este sera o som tocado em notificacoes push de novo pedido.
 
-**A) Buscar nome do produto via offer_id** (apos buscar order, linhas 64-73):
+#### 3. Hook `useNotificationPush` (novo)
+Hook centralizado que:
+- Escuta realtime `notifications` (INSERT) 
+- Verifica preferencias do usuario (tabela `notification_preferences`)
+- Dispara `new Notification()` do browser com titulo/corpo
+- Toca audio `notification_kiwify.mp3` quando o tipo for `new_order`
+- Montado no `AppLayout` para funcionar em todas as paginas autenticadas
+
+#### 4. Inserir notificacoes nos eventos corretos (Edge Functions)
+
+**`checkout-api/index.ts`** — apos criar pedido com sucesso:
 ```typescript
-let productName = (order?.products as any)?.main?.product_name || "";
-if (!productName && order?.offer_id) {
-  const { data: offer } = await supabase
-    .from("offers")
-    .select("name, products:product_id(name)")
-    .eq("id", order.offer_id)
-    .single();
-  productName = (offer?.products as any)?.name || offer?.name || "";
-}
+await supabase.from("notifications").insert({
+  user_id,
+  title: "🛒 Novo pedido recebido!",
+  body: `Pedido #${order_number} - ${client_name}`,
+  type: "new_order",
+});
 ```
 
-**B) Montar `endereco_completo`** a partir dos campos do pedido:
+**`execute-flow/index.ts`** ou **`trigger-flow/index.ts`** — quando status muda para:
+- "Entregue" → tipo `delivered`
+- "Frustrado"/"Cancelado" → tipo `frustrated`
+
+**`checkout-api/index.ts`** — quando lead e criado:
 ```typescript
-const endereco = [
-  order?.client_address,
-  order?.client_address_number ? `nº ${order.client_address_number}` : null,
-  order?.client_address_comp,
-  order?.client_address_district,
-  order?.client_address_city,
-  order?.client_address_state,
-].filter(Boolean).join(", ");
+// tipo "new_lead"
 ```
 
-**C) Adicionar ao `ctx`** (linha 96-107):
-```typescript
-produto_nome: productName,
-endereco_completo: endereco,
-```
+#### 5. Reescrever `NotificacoesTab` para persistir no banco
+- Carregar preferencias da tabela `notification_preferences` (upsert na primeira vez)
+- Salvar alteracoes reais no banco ao clicar "Salvar"
+- Secao Push com toggles individuais (espelhando os do email): novo pedido, entregue, frustrado, novo lead
+- Botao "Testar notificacao" toca o audio + dispara push real
 
-### Problema 2: Log visual + botao limpar fila WhatsApp
-
-Atualmente so existe um contador "Fila WhatsApp" no Dashboard. Nao ha tela de historico.
-
-### Correcao 2: Novo componente `FilaWhatsAppTab`
-
-Criar uma nova aba na pagina de Configuracoes (ou Disparos) com:
-
-1. **Tabela de historico** da `message_queue`:
-   - Colunas: Data, Telefone, Mensagem (truncada), Status (pending/sent/failed), Tentativas, Erro
-   - Filtros: status (todos/pending/sent/failed)
-   - Paginacao com limite de 50 registros
-
-2. **Botao "Limpar Fila"**:
-   - Deleta registros com `status = 'pending'` do usuario
-   - Confirmacao via dialog antes de executar
-   - Implementado via Edge Function `clear-message-queue` (necessario para RLS com delete)
-
-3. **Contadores resumo** no topo:
-   - Pendentes, Enviados, Falhados
+#### 6. Atualizar `NotificationBell` para tocar audio
+Quando receber INSERT realtime com `type = "new_order"`, tocar o audio automaticamente.
 
 ### Arquivos a criar/editar
 
-1. `supabase/functions/execute-flow/index.ts` — buscar produto via offer, montar endereco_completo
-2. `src/components/settings/FilaWhatsAppTab.tsx` — novo componente de log visual
-3. `src/pages/Configuracoes.tsx` — adicionar aba "Fila WhatsApp"
-4. `supabase/functions/clear-message-queue/index.ts` — edge function para limpar fila
-5. Migration: adicionar RLS policy de delete na message_queue para o usuario
+| Arquivo | Acao |
+|---------|------|
+| `public/sounds/notification_kiwify.mp3` | Copiar MP3 do usuario |
+| Migration SQL | Criar tabela `notification_preferences` + RLS |
+| `src/hooks/useNotificationPush.ts` | Novo hook centralizado |
+| `src/components/settings/NotificacoesTab.tsx` | Reescrever com persistencia |
+| `src/components/NotificationBell.tsx` | Adicionar audio no INSERT |
+| `src/components/AppLayout.tsx` | Montar hook de push |
+| `supabase/functions/checkout-api/index.ts` | Insert notification new_order + new_lead |
+| `supabase/functions/execute-flow/index.ts` | Insert notification delivered/frustrated |
 
 ### Resultado esperado
-- Mensagens WhatsApp enviadas com produto "Organic Lizz" e endereco "Rua Rio Azul, nº 11, Boa Viagem, Recife, PE" em vez de `{{produto_nome}}` e `{{endereco_completo}}`
-- Tela de historico com todos os disparos e status
-- Botao para limpar fila pendente
+- Preferencias salvas no banco e respeitadas
+- Push notifications no browser para: novo pedido, entregue, frustrado, novo lead
+- Audio "kiwify" toca automaticamente ao receber novo pedido
+- Sininho mostra todas as notificacoes em tempo real
+- Botao testar funciona com audio + push real
+
