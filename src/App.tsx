@@ -88,6 +88,7 @@ const App = () => (
               <Route path="/ajuda" element={<AjudaPage />} />
               <Route path="/status" element={<StatusPage />} />
               <Route path="/termos" element={<TermosPage />} />
+              <Route path="/accept-invite" element={<AcceptInvite />} />
               <Route element={<AuthGuard><AppLayout /></AuthGuard>}>
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/checkouts" element={<Checkouts />} />
