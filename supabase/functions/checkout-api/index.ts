@@ -658,6 +658,12 @@ Deno.serve(async (req) => {
         // Extract order_hash from response
         const orderHash = data?.data?.[0]?.order_hash || data?.order_hash || null;
 
+        // If called with order_id, save coinzz_order_hash back to the order
+        if (orderId && orderHash) {
+          await supabase.from("orders").update({ coinzz_order_hash: orderHash }).eq("id", orderId);
+          console.log("[coinzz] Saved coinzz_order_hash to order:", orderId, orderHash);
+        }
+
         return new Response(JSON.stringify({
           success: true,
           coinzz_order_hash: orderHash,
