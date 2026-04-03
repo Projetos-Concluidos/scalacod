@@ -226,8 +226,10 @@ const CheckoutPublic = () => {
   useEffect(() => {
     if (!originalOffer) return;
     if (provider === "coinzz" && coinzzOffer) {
+      console.log("[CheckoutPublic] Trocando para oferta Coinzz — offer_hash:", coinzzOffer.hash, "offer_id:", coinzzOffer.id, "price:", coinzzOffer.price);
       setOffer(coinzzOffer);
     } else {
+      console.log("[CheckoutPublic] Usando oferta Logzz — offer_hash:", originalOffer.hash, "offer_id:", originalOffer.id, "price:", originalOffer.price);
       setOffer(originalOffer);
     }
   }, [provider, originalOffer, coinzzOffer]);

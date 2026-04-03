@@ -327,6 +327,7 @@ Deno.serve(async (req) => {
               }
 
               if (offerHash) {
+                console.log(`[create_order] Coinzz offer_hash being sent: "${offerHash}" for order ${inserted?.id}`);
                 const coinzzPayload: any = {
                   offer_hash: offerHash,
                   payment_method: "afterpay",

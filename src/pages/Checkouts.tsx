@@ -607,15 +607,20 @@ const Checkouts = () => {
                    <Label>Hash da Oferta Coinzz</Label>
                  </div>
                  <Input
-                   value={formCoinzzOfferHash}
-                   onChange={(e) => setFormCoinzzOfferHash(e.target.value)}
-                   placeholder="Ex: 68212ba3bc599"
-                   className="bg-input border-border font-mono"
-                 />
-                 <p className="text-xs text-muted-foreground mt-1">
-                   Cole o hash da oferta Coinzz. Encontre na plataforma Coinzz → Produto → Oferta → Hash.
-                   Necessário para checkout híbrido (CEP sem cobertura Logzz).
-                 </p>
+                    value={formCoinzzOfferHash}
+                    onChange={(e) => setFormCoinzzOfferHash(e.target.value)}
+                    placeholder="Ex: off1a2b3c4d5e"
+                    className="bg-input border-border font-mono"
+                  />
+                  {formCoinzzOfferHash && !formCoinzzOfferHash.startsWith("off") && (
+                    <p className="text-xs text-amber-500 mt-1 flex items-center gap-1">
+                      ⚠️ Atenção: O hash da OFERTA geralmente começa com "off". Verifique se não está usando o hash do PRODUTO (visível na URL).
+                    </p>
+                  )}
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Use o hash da <strong>OFERTA</strong> (não do produto). Cada kit/quantidade tem seu próprio hash.
+                    Encontre em: Coinzz → Produto → aba <strong>Ofertas</strong> → copie o hash da oferta específica.
+                  </p>
                  {formCoinzzOfferHash && (
                    <div className="mt-2 flex items-center gap-2">
                      <span className="text-[10px] bg-purple-500/15 text-purple-400 px-2 py-0.5 rounded-full font-bold">COINZZ</span>
