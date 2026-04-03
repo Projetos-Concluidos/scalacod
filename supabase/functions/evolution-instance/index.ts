@@ -451,6 +451,21 @@ serve(async (req) => {
         }
       } catch (_) {}
 
+      // Fallback: buscar phone_number da tabela whatsapp_instances
+      if (!ownNumber) {
+        try {
+          const { data: wi } = await supabaseAdmin
+            .from("whatsapp_instances")
+            .select("phone_number")
+            .eq("user_id", user.id)
+            .eq("provider", "evolution")
+            .maybeSingle();
+          if (wi?.phone_number) {
+            ownNumber = wi.phone_number.replace(/\D/g, "");
+          }
+        } catch (_) {}
+      }
+
       const numbersToCheck = ownNumber ? [ownNumber] : [];
       if (testPhone) {
         const clean = testPhone.replace(/\D/g, "");
