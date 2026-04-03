@@ -160,6 +160,14 @@ const Pedidos = () => {
       const { error } = await supabase.from("orders").update({ status: "Frustrado" }).eq("id", order.id);
       if (error) throw error;
       await supabase.from("order_status_history").insert({ order_id: order.id, from_status: order.status, to_status: "Frustrado", source: "cancelamento_manual" });
+      // Trigger WhatsApp flow for cancellation
+      try {
+        await supabase.functions.invoke("trigger-flow", {
+          body: { userId: user?.id, orderId: order.id, newStatus: "Frustrado", triggerEvent: "order_status_changed" },
+        });
+      } catch (e) {
+        console.error("[Pedidos] trigger-flow cancel error:", e);
+      }
     },
     onSuccess: () => { toast.success("Pedido cancelado (Frustrado)"); queryClient.invalidateQueries({ queryKey: ["orders"] }); setCancelTarget(null); },
     onError: (e: any) => toast.error(e.message),
