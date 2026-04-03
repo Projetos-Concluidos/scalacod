@@ -40,50 +40,41 @@ const Fluxos = () => {
     setGalleryOpen(true);
     setGalleryLoading(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
-      const res = await fetch(`https://${projectId}.supabase.co/functions/v1/seed-default-flows`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session?.access_token}`,
-        },
-        body: JSON.stringify({ action: "list_templates" }),
+      const { data, error } = await supabase.functions.invoke("seed-default-flows", {
+        body: { action: "list_templates" },
       });
-      const data = await res.json();
-      setGalleryTemplates(data.templates || []);
-    } catch {
-      toast.error("Erro ao carregar templates");
+
+      if (error) throw error;
+      setGalleryTemplates(data?.templates || []);
+    } catch (error: any) {
+      toast.error(error?.message || "Erro ao carregar templates");
+    } finally {
+      setGalleryLoading(false);
     }
-    setGalleryLoading(false);
   };
 
   const useTemplate = async (index: number) => {
     if (!user) return;
     setCreatingTemplate(index);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
-      const res = await fetch(`https://${projectId}.supabase.co/functions/v1/seed-default-flows`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session?.access_token}`,
-        },
-        body: JSON.stringify({ action: "use_template", template_index: index }),
+      const { data, error } = await supabase.functions.invoke("seed-default-flows", {
+        body: { action: "use_template", template_index: index },
       });
-      const data = await res.json();
-      if (data.success) {
+
+      if (error) throw error;
+
+      if (data?.success) {
         toast.success(`Fluxo "${data.flow.name}" criado com sucesso!`);
         setGalleryOpen(false);
         fetchFlows();
       } else {
-        toast.error(data.error || "Erro ao criar fluxo");
+        toast.error(data?.error || "Erro ao criar fluxo");
       }
-    } catch {
-      toast.error("Erro ao criar fluxo a partir do template");
+    } catch (error: any) {
+      toast.error(error?.message || "Erro ao criar fluxo a partir do template");
+    } finally {
+      setCreatingTemplate(null);
     }
-    setCreatingTemplate(null);
   };
 
   const fetchFlows = async () => {
