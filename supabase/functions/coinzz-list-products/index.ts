@@ -51,8 +51,8 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log("[coinzz-list-products] Calling GET /api/v1/products");
-    const res = await fetch("https://app.coinzz.com.br/api/v1/products", {
+    console.log("[coinzz-list-products] Calling GET /api/products");
+    const res = await fetch("https://app.coinzz.com.br/api/products", {
       method: "GET",
       headers: {
         Authorization: `Bearer ${coinzzToken}`,
