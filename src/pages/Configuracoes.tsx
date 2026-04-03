@@ -132,6 +132,7 @@ const Configuracoes = () => {
             { value: "webhooks", icon: Webhook, label: "Webhooks" },
             { value: "notificacoes", icon: Bell, label: "Notificações" },
             { value: "fila", icon: MessageSquare, label: "Fila WhatsApp" },
+            { value: "equipe", icon: Users, label: "Equipe" },
           ].map((tab) => (
             <TabsTrigger
               key={tab.value}
