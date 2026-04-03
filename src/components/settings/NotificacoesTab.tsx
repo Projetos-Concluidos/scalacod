@@ -128,6 +128,7 @@ const NotificacoesTab = () => {
 
   const pushItems = [
     { key: "push_new_order" as const, label: "Novo pedido recebido 🔊", hint: "Toca áudio de alerta" },
+    { key: "push_payment_approved" as const, label: "Pagamento aprovado 💰", hint: "Toca áudio quando pagamento é confirmado" },
     { key: "push_delivered" as const, label: "Pedido entregue" },
     { key: "push_frustrated" as const, label: "Pedido frustrado / não entregue" },
     { key: "push_new_lead" as const, label: "Novo lead" },

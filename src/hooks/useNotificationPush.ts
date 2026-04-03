@@ -56,6 +56,7 @@ export function useNotificationPush() {
           // Check per-type preference
           const typeMap: Record<string, string> = {
             new_order: "push_new_order",
+            payment_approved: "push_payment_approved",
             delivered: "push_delivered",
             frustrated: "push_frustrated",
             new_lead: "push_new_lead",
