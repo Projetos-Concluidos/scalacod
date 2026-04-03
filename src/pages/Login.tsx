@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link, Navigate } from "react-router-dom";
+import { Link, Navigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useHomeSettings } from "@/hooks/useHomeSettings";
 import { Loader2, Eye, EyeOff } from "lucide-react";
