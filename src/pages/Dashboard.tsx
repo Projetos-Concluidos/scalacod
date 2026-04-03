@@ -16,6 +16,7 @@ import OnboardingBanner from "@/components/OnboardingBanner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
+import { useTeamContext } from "@/hooks/useTeamContext";
 
 const periods = ["Hoje", "Ontem", "7 dias", "15 dias", "30 dias", "Máximo"];
 
