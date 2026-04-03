@@ -93,7 +93,7 @@ const Pedidos = () => {
   const [detailBumps, setDetailBumps] = useState<any[]>([]);
   const [detailTimeline, setDetailTimeline] = useState<any[]>([]);
 
-  const { data: orders = [], isLoading, refetch } = useQuery({
+  const { data: orders = [], isLoading, isFetching, refetch } = useQuery({
     queryKey: ["orders"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -278,7 +278,7 @@ const Pedidos = () => {
         actions={
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={exportCSV} className="border-border text-muted-foreground"><Download className="h-4 w-4 mr-1.5" /> Exportar</Button>
-            <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground" onClick={() => refetch()}><RefreshCw className="h-4 w-4" /></Button>
+            <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground" onClick={() => refetch()} disabled={isFetching}><RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} /></Button>
           </div>
         }
       />
