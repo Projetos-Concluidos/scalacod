@@ -1,38 +1,136 @@
 
 
-## Plano: Adicionar toggle de Notificação Push para Pagamento Aprovado
+## Plano: Sistema de Gestao de Equipe com Auditoria
 
-### Problema
-O webhook `coinzz-webhook` já insere notificações push quando um pagamento é aprovado (usando `type: "new_order"`), mas não existe um toggle específico na tela de preferências para "Pagamento aprovado". O usuário não consegue ativar/desativar essa notificação separadamente.
+### Visao Geral
 
-### Correção
+Implementar um sistema completo de convite e gestao de membros de equipe na aba "Configuracoes", permitindo que o dono da loja (tenant) convide membros com diferentes niveis de acesso, com badges visuais e logs de auditoria.
 
-**1. Migration SQL** — Adicionar coluna `push_payment_approved` na tabela `notification_preferences`:
+### Arquitetura de Papeis
+
+```text
+Nivel           Badge         Cor        Permissoes
+─────────────────────────────────────────────────────────
+Dono            DONO          warning    Acesso total + gestao equipe
+Admin           ADMIN         info       Tudo exceto excluir loja/equipe
+Operador        OPERADOR      success    Pedidos + Leads + Conversas (leitura+escrita)
+Visualizador    VIEWER        default    Apenas visualizacao (somente leitura)
+```
+
+### Tabelas Novas (3 migrations)
+
+**1. `team_invites`** — Convites pendentes
 ```sql
-ALTER TABLE notification_preferences
-  ADD COLUMN push_payment_approved boolean NOT NULL DEFAULT true;
+CREATE TABLE public.team_invites (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  owner_id uuid NOT NULL,          -- quem convidou (dono da loja)
+  email text NOT NULL,
+  role text NOT NULL DEFAULT 'viewer',  -- admin | operator | viewer
+  token text NOT NULL DEFAULT encode(gen_random_bytes(32), 'hex'),
+  status text NOT NULL DEFAULT 'pending', -- pending | accepted | revoked
+  created_at timestamptz DEFAULT now(),
+  expires_at timestamptz DEFAULT now() + interval '7 days',
+  accepted_at timestamptz
+);
 ```
 
-**2. `src/components/settings/NotificacoesTab.tsx`** — Adicionar o campo na interface `Prefs`, nos defaults, no load/save, e no array `pushItems`:
+**2. `team_members`** — Membros aceitos vinculados ao dono
+```sql
+CREATE TABLE public.team_members (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  owner_id uuid NOT NULL,          -- dono da loja
+  user_id uuid NOT NULL,           -- membro da equipe
+  role text NOT NULL DEFAULT 'viewer',
+  is_active boolean DEFAULT true,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now(),
+  UNIQUE(owner_id, user_id)
+);
+```
+
+**3. `team_audit_logs`** — Logs de auditoria de acoes dos membros
+```sql
+CREATE TABLE public.team_audit_logs (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  owner_id uuid NOT NULL,
+  actor_id uuid NOT NULL,          -- quem fez a acao
+  actor_email text,
+  action text NOT NULL,            -- ex: 'view_order', 'update_status', 'invite_member'
+  resource_type text,              -- ex: 'order', 'lead', 'checkout'
+  resource_id text,
+  metadata jsonb DEFAULT '{}',
+  created_at timestamptz DEFAULT now()
+);
+```
+
+Todas com RLS por `owner_id` para o dono e `user_id` para membros verem apenas o que pertencem.
+
+### Frontend — Nova aba "Equipe"
+
+**Arquivo: `src/components/settings/EquipeTab.tsx`**
+
+Secoes:
+1. **Convidar Membro** — Form com email + select de papel (Admin/Operador/Visualizador) + botao "Enviar Convite"
+2. **Convites Pendentes** — Lista com status, email, papel, data, botao revogar
+3. **Membros Ativos** — Tabela com nome, email, badge de papel (usando NinjaBadge), data de entrada, botoes alterar papel / remover
+4. **Logs de Auditoria** — Tabela com data, membro (badge), acao, recurso, detalhes (scroll infinito ou paginacao)
+
+**Badges de nivel** (usando NinjaBadge existente):
+- Dono → `variant="warning"` com icone coroa
+- Admin → `variant="info"`
+- Operador → `variant="success"`
+- Visualizador → `variant="default"`
+
+### Modificacoes em Configuracoes.tsx
+
+Adicionar a aba "Equipe" apos "Fila WhatsApp":
 ```typescript
-// No pushItems, adicionar:
-{ key: "push_payment_approved", label: "Pagamento aprovado 💰", hint: "Toca áudio quando pagamento é confirmado" }
+{ value: "equipe", icon: Users, label: "Equipe" }
 ```
 
-**3. `src/hooks/useNotificationPush.ts`** — Mapear o tipo `payment_approved` para a nova preferência no `typeMap`.
+### Limite por Plano
 
-**4. `supabase/functions/coinzz-webhook/index.ts`** — Alterar o `type` da notificação de `"new_order"` para `"payment_approved"` para distinguir dos pedidos novos e respeitar a preferência individual.
+O sistema ja possui `team_members` nos limites dos planos (Starter=1, Pro=3, Enterprise=ilimitado). O convite verificara esse limite antes de enviar.
+
+### Edge Function: `team-invite`
+
+Processa aceite de convite:
+- Valida token
+- Cria registro em `team_members`
+- Atualiza `user_roles` com papel `tenant_agent` (para RLS)
+- Marca convite como aceito
+- Loga no `team_audit_logs`
 
 ### Arquivos envolvidos
-| Arquivo | Mudança |
-|---|---|
-| Migration SQL | Adicionar coluna `push_payment_approved` |
-| `src/components/settings/NotificacoesTab.tsx` | Novo toggle no UI |
-| `src/hooks/useNotificationPush.ts` | Mapear `payment_approved` → `push_payment_approved` |
-| `supabase/functions/coinzz-webhook/index.ts` | Usar type `payment_approved` em vez de `new_order` |
 
-### Resultado
-- Toggle "Pagamento aprovado 💰" aparece na seção Push
-- Notificações de pagamento aprovado podem ser ativadas/desativadas independentemente
-- Áudio toca quando pagamento é confirmado (se ativado)
+| Arquivo | Mudanca |
+|---|---|
+| Migration SQL (3) | Criar `team_invites`, `team_members`, `team_audit_logs` com RLS |
+| `src/components/settings/EquipeTab.tsx` | Novo componente completo |
+| `src/pages/Configuracoes.tsx` | Adicionar aba "Equipe" |
+| `supabase/functions/team-invite/index.ts` | Edge function para aceitar convites |
+| `src/components/TeamRoleBadge.tsx` | Componente badge reutilizavel por papel |
+
+### Fluxo do Usuario
+
+```text
+Dono abre Configuracoes → Equipe
+  → Digita email + seleciona papel
+  → Clica "Enviar Convite"
+  → Convite aparece na lista "Pendentes"
+
+Membro recebe link → Acessa /accept-invite?token=xxx
+  → Sistema cria conta ou loga
+  → Vincula ao time do dono
+  → Membro ve o dashboard do dono (com restricoes de papel)
+
+Dono ve logs de auditoria de tudo que membros fizeram
+```
+
+### Seguranca
+
+- RLS em todas as tabelas: dono ve tudo, membro ve apenas o que o papel permite
+- Convites expiram em 7 dias
+- Limite de membros validado server-side na edge function
+- Logs de auditoria sao insert-only (sem update/delete para membros)
 
