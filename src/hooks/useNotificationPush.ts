@@ -59,6 +59,7 @@ export function useNotificationPush() {
             delivered: "push_delivered",
             frustrated: "push_frustrated",
             new_lead: "push_new_lead",
+            low_tokens: "alert_low_tokens",
           };
           const prefKey = typeMap[notif.type];
           if (prefKey && p?.[prefKey] === false) return;

@@ -173,6 +173,34 @@ serve(async (req) => {
       );
     }
 
+    // Check remaining balance and alert if low
+    try {
+      const { data: updated } = await supabase
+        .from("voice_tokens")
+        .select("total_purchased, total_used")
+        .eq("user_id", userId)
+        .maybeSingle();
+      const remaining = (updated?.total_purchased || 0) - (updated?.total_used || 0);
+      if (remaining < 100 && remaining >= 0) {
+        // Check prefs
+        const { data: prefs } = await supabase
+          .from("notification_preferences")
+          .select("alert_low_tokens")
+          .eq("user_id", userId)
+          .maybeSingle();
+        if (prefs?.alert_low_tokens) {
+          await supabase.from("notifications").insert({
+            user_id: userId,
+            title: "⚠️ Saldo de tokens baixo!",
+            body: `Restam apenas ${remaining} tokens de voz. Recarregue para continuar gerando áudios.`,
+            type: "low_tokens",
+          });
+        }
+      }
+    } catch (e) {
+      console.warn("[generate-audio] Low token alert error:", e.message);
+    }
+
     return new Response(
       JSON.stringify({ audioUrl: publicUrl, tokensUsed: tokensNeeded, provider }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
