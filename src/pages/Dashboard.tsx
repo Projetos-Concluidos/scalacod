@@ -48,6 +48,7 @@ function getDateRange(period: string): { from: string; to: string } {
 
 const Dashboard = () => {
   const { user } = useAuth();
+  const { effectiveUserId } = useTeamContext();
   const [activePeriod, setActivePeriod] = useState("Hoje");
   const [customDateFrom, setCustomDateFrom] = useState<Date | undefined>();
   const [customDateTo, setCustomDateTo] = useState<Date | undefined>();
