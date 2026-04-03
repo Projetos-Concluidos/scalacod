@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link, Navigate } from "react-router-dom";
+import { Link, Navigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useHomeSettings } from "@/hooks/useHomeSettings";
 import { Loader2, Eye, EyeOff } from "lucide-react";
@@ -8,6 +8,8 @@ import ScalaCODLogo, { ScalaCODBrandName } from "@/components/ScalaCODLogo";
 
 const Login = () => {
   const { signIn, user, loading: authLoading } = useAuth();
+  const [searchParams] = useSearchParams();
+  const redirectTo = searchParams.get("redirect");
   const { data: settings } = useHomeSettings();
   const lp = settings?.login_page;
   const brand = settings?.brand;
@@ -33,7 +35,7 @@ const Login = () => {
   }, [phrases.length]);
 
   if (authLoading) return null;
-  if (user) return <Navigate to="/dashboard" replace />;
+  if (user) return <Navigate to={redirectTo || "/dashboard"} replace />;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

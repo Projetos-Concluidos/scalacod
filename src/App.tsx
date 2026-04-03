@@ -41,6 +41,7 @@ const AjudaPage = lazyWithRetry(() => import("@/pages/Ajuda"));
 const StatusPage = lazyWithRetry(() => import("@/pages/StatusPage"));
 const TermosPage = lazyWithRetry(() => import("@/pages/Termos"));
 const NotFound = lazyWithRetry(() => import("@/pages/NotFound"));
+const AcceptInvite = lazyWithRetry(() => import("@/pages/AcceptInvite"));
 
 // Admin — separate chunk
 const AdminOverview = lazyWithRetry(() => import("@/pages/admin/AdminOverview"));
@@ -87,6 +88,7 @@ const App = () => (
               <Route path="/ajuda" element={<AjudaPage />} />
               <Route path="/status" element={<StatusPage />} />
               <Route path="/termos" element={<TermosPage />} />
+              <Route path="/accept-invite" element={<AcceptInvite />} />
               <Route element={<AuthGuard><AppLayout /></AuthGuard>}>
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/checkouts" element={<Checkouts />} />
