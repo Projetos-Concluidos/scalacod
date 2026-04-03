@@ -166,7 +166,6 @@ const Conversas = () => {
     const { data: lead } = await supabase
       .from("leads")
       .select("*")
-      .eq("user_id", user.id)
       .eq("phone", conv.contact_phone)
       .maybeSingle();
     setLeadData(lead);
@@ -182,7 +181,6 @@ const Conversas = () => {
       const { data: order } = await supabase
         .from("orders")
         .select("*")
-        .eq("user_id", user.id)
         .eq("client_phone", conv.contact_phone)
         .order("created_at", { ascending: false })
         .limit(1)

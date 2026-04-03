@@ -118,7 +118,7 @@ const Leads = () => {
   const openLeadDetail = async (lead: Lead) => {
     setSelectedLead(lead);
     if (user) {
-      const { data } = await supabase.from("orders").select("*").eq("user_id", user.id).eq("client_phone", lead.phone).order("created_at", { ascending: false }).limit(10);
+      const { data } = await supabase.from("orders").select("*").eq("client_phone", lead.phone).order("created_at", { ascending: false }).limit(10);
       setLeadOrders(data || []);
     }
   };
