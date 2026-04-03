@@ -1,37 +1,39 @@
 
 
-## Plano: Corrigir exclusao de checkout + Melhorar notificacoes toast
+## Plano: Garantir slug unico com hash da oferta
 
-### Problema 1: Erro ao excluir checkout
-O erro `update or delete on table "checkouts" violates foreign key constraint "orders_checkout_id_fkey"` ocorre porque existem pedidos (orders) vinculados ao checkout. Nao e possivel excluir um checkout que possui pedidos associados.
+### Problema
+Dois checkouts podem ter a mesma URL (`/c/1-uni-organic-lizz`) porque o slug e gerado apenas a partir do nome, sem incluir o hash da oferta.
 
-**Solucao**: Antes de tentar excluir, verificar se existem pedidos vinculados. Se existirem, exibir mensagem clara explicando que o checkout possui pedidos e nao pode ser excluido — oferecer a opcao de **desativar** em vez de excluir.
+### Correcao
 
-### Problema 2: Notificacoes toast sem informacao clara
-As mensagens de erro mostram textos tecnicos do banco de dados. As notificacoes precisam ser mais descritivas, bonitas e com botao X para fechar.
+**Arquivo: `src/pages/Checkouts.tsx`**
 
-**Solucao**: Configurar o Sonner com `closeButton: true`, `richColors: true` e `duration` adequado. Criar helper `notify` que traduz erros comuns do banco para mensagens amigaveis em portugues.
+1. Na funcao `handleSave()` (linha 286): alterar a geracao do slug para incluir o `offer_hash` da oferta Logzz selecionada (ou os primeiros 7 chars do `formOfferId` como fallback). Formato: `{nome}-{hash}`.
 
-### Alteracoes
+2. Na selecao de oferta Logzz (linha 489): ja gera slug com `offer_hash` — manter esse comportamento.
 
-#### 1. `src/pages/Checkouts.tsx`
-- No `deleteMutation`, antes de excluir verificar se existem orders vinculadas (`select count from orders where checkout_id = id`)
-- Se houver pedidos: mostrar toast de aviso "Este checkout possui X pedidos e nao pode ser excluido. Desative-o em vez disso."
-- Se nao houver: proceder com a exclusao normal
-- Melhorar a mensagem de `onError` para traduzir o erro de FK para texto amigavel
+3. Para checkouts existentes sem hash no slug: nao alterar retroativamente (so novos/editados).
 
-#### 2. `src/components/ui/sonner.tsx`
-- Adicionar `closeButton={true}` para exibir o X de fechar
-- Adicionar `richColors={true}` para cores diferenciadas (verde sucesso, vermelho erro, amarelo aviso)
-- Ajustar `duration` para 5000ms
-- Melhorar estilos com bordas arredondadas e sombra premium
+### Detalhe tecnico
 
-#### 3. `src/lib/notify.ts`
-- Atualizar helper com traducao de erros comuns do Supabase (FK violation, RLS, etc.)
-- Adicionar funcao `notifyError(error)` que detecta tipo de erro e traduz automaticamente
+Linha 286, trocar:
+```typescript
+const slug = formName.trim().toLowerCase()...
+```
+Para:
+```typescript
+const offerSuffix = selectedLogzzOffer?.offer_hash 
+  || formOfferId?.slice(0, 7) 
+  || Math.random().toString(36).slice(2, 9);
+const rawSlug = `${formName.trim()}-${offerSuffix}`;
+const slug = rawSlug.toLowerCase()
+  .replace(/\s+/g, "-")
+  .replace(/[^a-z0-9-]/g, "")
+  .replace(/-+/g, "-")
+  .replace(/^-|-$/g, "")
+  .slice(0, 80);
+```
 
-### Resultado
-- Checkout com pedidos: toast amarelo "Este checkout possui pedidos vinculados e nao pode ser excluido. Use o botao de desativar."
-- Checkout sem pedidos: exclui normalmente com toast verde
-- Todas as notificacoes do sistema ganham botao X, cores diferenciadas e mensagens em portugues
+Isso garante que cada checkout tera um slug unico baseado no nome + hash da oferta, eliminando URLs duplicadas.
 
