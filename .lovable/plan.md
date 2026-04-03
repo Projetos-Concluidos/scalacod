@@ -1,99 +1,79 @@
 
 
-## Plano: Sistema completo de notificacoes Push com audio
+## Plano: Filtro de numeros invalidos + melhorar tratamento de "Bad Request" + destravar fila
 
-### Situacao atual
+### Diagnostico
 
-1. **NotificacoesTab** — preferencias sao apenas estado local (`useState`), nada e salvo no banco
-2. **NotificationBell** — escuta realtime da tabela `notifications`, mas so recebe inserts de pagamento (MercadoPago)
-3. **Nenhuma notificacao** e criada para: novo pedido, pedido entregue, pedido frustrado, novo lead
-4. **Audio** — existe `public/sounds/push.mp3` usado no chat WhatsApp, mas nao nas notificacoes push
-5. **Audio do usuario** — MP3 enviado (`notificação_kiwify.mp3`) deve substituir o som atual para notificacoes de novo pedido
+Analisei os dados reais no banco e os logs:
 
-### O que sera implementado
+1. **Numero `99999999999`** — numero falso (teste). A Evolution API recebe `5599999999999@s.whatsapp.net` e retorna "Bad Request" porque nao e um numero WhatsApp valido. A fila fica tentando enviar ate esgotar retries.
 
-#### 1. Tabela `notification_preferences` (Migration)
-Salvar preferencias do usuario no banco em vez de estado local:
-```sql
-CREATE TABLE notification_preferences (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL UNIQUE,
-  email_new_order boolean DEFAULT true,
-  email_delivered boolean DEFAULT true,
-  email_frustrated boolean DEFAULT true,
-  email_new_lead boolean DEFAULT true,
-  email_weekly_report boolean DEFAULT false,
-  push_enabled boolean DEFAULT false,
-  push_new_order boolean DEFAULT true,
-  push_delivered boolean DEFAULT true,
-  push_frustrated boolean DEFAULT true,
-  push_new_lead boolean DEFAULT true,
-  alert_low_tokens boolean DEFAULT false,
-  alert_frustrated_orders boolean DEFAULT false,
-  created_at timestamptz DEFAULT now(),
-  updated_at timestamptz DEFAULT now()
-);
--- RLS: usuario le/edita apenas seus proprios dados
-```
+2. **Walterlange (86988158793)** — numero real, porem tambem recebeu "Bad Request". O telefone e formatado como `5586988158793` (correto). Pode ser que a Evolution API retornou erro detalhado mas o codigo so captura `data.message || data.error` sem logar o body completo.
 
-#### 2. Audio de notificacao (`public/sounds/notification_kiwify.mp3`)
-Copiar o MP3 enviado pelo usuario para `public/sounds/` — este sera o som tocado em notificacoes push de novo pedido.
+3. **Bug "R$ R$"** — os templates exibem `R$ R$ 175,33` (duplicado). O valor ja vem formatado com "R$" e o template adiciona outro.
 
-#### 3. Hook `useNotificationPush` (novo)
-Hook centralizado que:
-- Escuta realtime `notifications` (INSERT) 
-- Verifica preferencias do usuario (tabela `notification_preferences`)
-- Dispara `new Notification()` do browser com titulo/corpo
-- Toca audio `notification_kiwify.mp3` quando o tipo for `new_order`
-- Montado no `AppLayout` para funcionar em todas as paginas autenticadas
+4. **Erro generico** — quando a Evolution retorna erro, o codigo nao loga o body da resposta, dificultando debug.
 
-#### 4. Inserir notificacoes nos eventos corretos (Edge Functions)
+### Correcoes
 
-**`checkout-api/index.ts`** — apos criar pedido com sucesso:
+#### 1. Filtro de numeros invalidos (`process-message-queue`)
+
+Antes de tentar enviar, validar o telefone:
 ```typescript
-await supabase.from("notifications").insert({
-  user_id,
-  title: "🛒 Novo pedido recebido!",
-  body: `Pedido #${order_number} - ${client_name}`,
-  type: "new_order",
-});
+const INVALID_PATTERNS = [
+  /^(\d)\1{9,}$/,           // todos digitos iguais (99999999999, 11111111111)
+  /^(0{10,})$/,             // zeros
+  /^(12345678|87654321)/,   // sequenciais
+];
+
+function isInvalidPhone(phone: string): boolean {
+  const clean = phone.replace(/\D/g, "");
+  if (clean.length < 10 || clean.length > 13) return true;
+  const local = clean.startsWith("55") ? clean.slice(2) : clean;
+  return INVALID_PATTERNS.some(p => p.test(local));
+}
 ```
 
-**`execute-flow/index.ts`** ou **`trigger-flow/index.ts`** — quando status muda para:
-- "Entregue" → tipo `delivered`
-- "Frustrado"/"Cancelado" → tipo `frustrated`
+Se invalido: marcar como `failed` com `error_message: "Numero invalido/ficticio"` e pular para o proximo.
 
-**`checkout-api/index.ts`** — quando lead e criado:
+#### 2. Log detalhado do erro Evolution (`send-whatsapp-message`)
+
+Quando a Evolution retorna erro, logar o body completo:
 ```typescript
-// tipo "new_lead"
+const data = await res.json();
+if (res.ok) {
+  messageIdWhatsapp = data.key?.id || data.id || null;
+} else {
+  console.error("[send-whatsapp-message] Evolution error body:", JSON.stringify(data));
+  sendError = data.message || data.error || JSON.stringify(data) || `Evolution error: ${res.status}`;
+}
 ```
 
-#### 5. Reescrever `NotificacoesTab` para persistir no banco
-- Carregar preferencias da tabela `notification_preferences` (upsert na primeira vez)
-- Salvar alteracoes reais no banco ao clicar "Salvar"
-- Secao Push com toggles individuais (espelhando os do email): novo pedido, entregue, frustrado, novo lead
-- Botao "Testar notificacao" toca o audio + dispara push real
+#### 3. Corrigir "R$ R$" duplicado (`execute-flow`)
 
-#### 6. Atualizar `NotificationBell` para tocar audio
-Quando receber INSERT realtime com `type = "new_order"`, tocar o audio automaticamente.
+Na montagem do `ctx`, o campo `valor` ja contem "R$". Os templates usam `R$ {{valor}}`. Corrigir para que o valor no ctx seja apenas o numero formatado sem "R$".
 
-### Arquivos a criar/editar
+#### 4. Re-disparar mensagem da Walterlange
+
+Resetar o retry e process_after da mensagem `69c4920b` para que seja processada no proximo ciclo do cron (apos o fix de log ser deployado para capturar o erro real).
+
+#### 5. Limpar mensagens de numeros invalidos
+
+Marcar como `failed` todas as mensagens pendentes com telefone `99999999999` e similares.
+
+### Arquivos a editar
 
 | Arquivo | Acao |
 |---------|------|
-| `public/sounds/notification_kiwify.mp3` | Copiar MP3 do usuario |
-| Migration SQL | Criar tabela `notification_preferences` + RLS |
-| `src/hooks/useNotificationPush.ts` | Novo hook centralizado |
-| `src/components/settings/NotificacoesTab.tsx` | Reescrever com persistencia |
-| `src/components/NotificationBell.tsx` | Adicionar audio no INSERT |
-| `src/components/AppLayout.tsx` | Montar hook de push |
-| `supabase/functions/checkout-api/index.ts` | Insert notification new_order + new_lead |
-| `supabase/functions/execute-flow/index.ts` | Insert notification delivered/frustrated |
+| `supabase/functions/process-message-queue/index.ts` | Adicionar filtro de telefone invalido antes do envio |
+| `supabase/functions/send-whatsapp-message/index.ts` | Melhorar log de erro da Evolution API |
+| `supabase/functions/execute-flow/index.ts` | Corrigir valor duplicado "R$ R$" |
+| Migration SQL | Resetar msg da Walterlange + falhar msgs de numeros invalidos |
 
 ### Resultado esperado
-- Preferencias salvas no banco e respeitadas
-- Push notifications no browser para: novo pedido, entregue, frustrado, novo lead
-- Audio "kiwify" toca automaticamente ao receber novo pedido
-- Sininho mostra todas as notificacoes em tempo real
-- Botao testar funciona com audio + push real
+- Numeros fictícios (99999999999, 11111111111, etc.) sao detectados e ignorados instantaneamente
+- Fila avanca sem ficar travada em numeros invalidos
+- Erros da Evolution API sao logados com detalhes para debug
+- Mensagem da Walterlange sera re-disparada
+- Templates exibem "R$ 107,00" em vez de "R$ R$ 107,00"
 
