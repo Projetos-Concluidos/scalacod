@@ -185,6 +185,7 @@ const CheckoutPublic = () => {
         const { data: o } = await supabase.from("offers").select("*").eq("id", c.offer_id).single();
         if (o) {
           setOffer(o as any);
+          setOriginalOffer(o as any);
           const { data: p } = await supabase.from("products").select("*").eq("id", o.product_id).single();
           if (p) setProduct(p as any);
           if (c.order_bump_enabled) {
@@ -192,6 +193,12 @@ const CheckoutPublic = () => {
             if (bumps) setOrderBumps(bumps as any);
           }
         }
+      }
+      // Fetch coinzz offer by hash if configured
+      const coinzzHash = (c as any).coinzz_offer_hash;
+      if (coinzzHash) {
+        const { data: coinzzOfferData } = await supabase.from("offers").select("*").eq("hash", coinzzHash).maybeSingle();
+        if (coinzzOfferData) setCoinzzOffer(coinzzOfferData as any);
       }
       setLoading(false);
     })();
