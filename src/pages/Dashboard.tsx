@@ -76,12 +76,15 @@ const Dashboard = () => {
     }
     const { from, to } = dateRange;
 
+    const qId = effectiveUserId || user?.id;
+    if (!qId) return;
+
     const [pixelRes, ordersRes, coinzzRes, leadsRes, queueRes] = await Promise.all([
-      supabase.from("pixel_events").select("event_type, created_at").eq("user_id", user.id).gte("created_at", from).lt("created_at", to),
-      supabase.from("orders").select("order_final_price, created_at, status").eq("user_id", user.id).gte("created_at", from).lt("created_at", to),
-      supabase.from("orders").select("id", { count: "exact", head: true }).eq("user_id", user.id).eq("logistics_type", "coinzz").in("status", ["Aprovado", "Entregue"]).gte("created_at", from).lt("created_at", to),
-      supabase.from("leads").select("id, name, phone, status, created_at").eq("user_id", user.id).order("created_at", { ascending: false }).limit(5),
-      supabase.from("message_queue").select("id", { count: "exact", head: true }).eq("user_id", user.id).eq("status", "pending"),
+      supabase.from("pixel_events").select("event_type, created_at").gte("created_at", from).lt("created_at", to),
+      supabase.from("orders").select("order_final_price, created_at, status").gte("created_at", from).lt("created_at", to),
+      supabase.from("orders").select("id", { count: "exact", head: true }).eq("logistics_type", "coinzz").in("status", ["Aprovado", "Entregue"]).gte("created_at", from).lt("created_at", to),
+      supabase.from("leads").select("id, name, phone, status, created_at").order("created_at", { ascending: false }).limit(5),
+      supabase.from("message_queue").select("id", { count: "exact", head: true }).eq("status", "pending"),
     ]);
 
     const pixels = pixelRes.data || [];
