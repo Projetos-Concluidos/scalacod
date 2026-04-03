@@ -308,7 +308,13 @@ Deno.serve(async (req) => {
           messageIdWhatsapp = data.key?.id || data.id || null;
         } else {
           console.error("[send-whatsapp-message] Evolution error body:", JSON.stringify(data));
-          sendError = data.message || data.error || JSON.stringify(data) || `Evolution error: ${res.status}`;
+          // Detect "exists: false" — number not registered on WhatsApp
+          const responseMsg = data.response?.message;
+          if (Array.isArray(responseMsg) && responseMsg.some((m: any) => m.exists === false)) {
+            sendError = "Número não encontrado no WhatsApp";
+          } else {
+            sendError = data.message || data.error || JSON.stringify(data) || `Evolution error: ${res.status}`;
+          }
         }
       } catch (e) {
         sendError = `Evolution: ${e.message}`;

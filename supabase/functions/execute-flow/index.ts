@@ -128,7 +128,7 @@ Deno.serve(async (req) => {
       endereco_completo: endereco,
       data_entrega: order?.delivery_date ? formatDate(order.delivery_date) : "",
       valor: valorFormatado,
-      valor_total: order ? formatCurrency(valorNumerico) : "",
+      valor_total: valorFormatado,
       codigo_rastreio: order?.tracking_code || "",
       loja_nome: storeName,
       status_pedido: order?.status || "",
