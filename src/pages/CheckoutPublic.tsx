@@ -83,6 +83,8 @@ const CheckoutPublic = () => {
   const { slug } = useParams<{ slug: string }>();
   const [checkout, setCheckout] = useState<CheckoutData | null>(null);
   const [offer, setOffer] = useState<OfferData | null>(null);
+  const [originalOffer, setOriginalOffer] = useState<OfferData | null>(null);
+  const [coinzzOffer, setCoinzzOffer] = useState<OfferData | null>(null);
   const [product, setProduct] = useState<ProductData | null>(null);
   const [orderBumps, setOrderBumps] = useState<OrderBump[]>([]);
   const [selectedBumps, setSelectedBumps] = useState<Set<string>>(new Set());
@@ -183,6 +185,7 @@ const CheckoutPublic = () => {
         const { data: o } = await supabase.from("offers").select("*").eq("id", c.offer_id).single();
         if (o) {
           setOffer(o as any);
+          setOriginalOffer(o as any);
           const { data: p } = await supabase.from("products").select("*").eq("id", o.product_id).single();
           if (p) setProduct(p as any);
           if (c.order_bump_enabled) {
@@ -190,6 +193,12 @@ const CheckoutPublic = () => {
             if (bumps) setOrderBumps(bumps as any);
           }
         }
+      }
+      // Fetch coinzz offer by hash if configured
+      const coinzzHash = (c as any).coinzz_offer_hash;
+      if (coinzzHash) {
+        const { data: coinzzOfferData } = await supabase.from("offers").select("*").eq("hash", coinzzHash).maybeSingle();
+        if (coinzzOfferData) setCoinzzOffer(coinzzOfferData as any);
       }
       setLoading(false);
     })();
@@ -213,7 +222,17 @@ const CheckoutPublic = () => {
     fetchKey();
   }, [checkout]);
 
-  
+  // Swap offer based on provider (Logzz vs Coinzz)
+  useEffect(() => {
+    if (!originalOffer) return;
+    if (provider === "coinzz" && coinzzOffer) {
+      setOffer(coinzzOffer);
+    } else {
+      setOffer(originalOffer);
+    }
+  }, [provider, originalOffer, coinzzOffer]);
+
+
 
   const [interactionTracked, setInteractionTracked] = useState(false);
   const trackInteraction = () => {

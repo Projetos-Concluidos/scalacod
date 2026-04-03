@@ -86,6 +86,10 @@ const Checkouts = () => {
   const [formBumps, setFormBumps] = useState<Array<{ offer_id: string; name: string; price: number; label_bump: string; description: string; hash: string | null; image_url: string | null; role?: string }>>([]);
   const [bumpSearchQuery, setBumpSearchQuery] = useState("");
   const [bumpLogzzPopoverOpen, setBumpLogzzPopoverOpen] = useState(false);
+  const [coinzzOffers, setCoinzzOffers] = useState<LogzzOffer[]>([]);
+  const [syncingCoinzz, setSyncingCoinzz] = useState(false);
+  const [coinzzPopoverOpen, setCoinzzPopoverOpen] = useState(false);
+  const [selectedCoinzzOffer, setSelectedCoinzzOffer] = useState<LogzzOffer | null>(null);
 
   const { data: checkouts = [], isLoading } = useQuery({
     queryKey: ["checkouts"],
@@ -582,6 +586,98 @@ const Checkouts = () => {
                 <Label>Nome do Checkout</Label>
                 <Input value={formName} onChange={(e) => setFormName(e.target.value)} placeholder="Ex: Checkout Principal" className="bg-input border-border" />
               </div>
+              {/* Coinzz Import */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] bg-purple-500/15 text-purple-400 px-2 py-0.5 rounded-full font-bold">COINZZ</span>
+                    <Label>Importar da Coinzz</Label>
+                  </div>
+                  <button
+                    onClick={async () => {
+                      setSyncingCoinzz(true);
+                      try {
+                        const { data, error } = await supabase.functions.invoke("coinzz-list-products");
+                        if (error) throw error;
+                        if (data?.offers?.length > 0) {
+                          setCoinzzOffers(data.offers);
+                          toast.success(`${data.offers.length} ofertas encontradas na Coinzz!`);
+                        } else {
+                          toast.info(data?.message || "Nenhuma oferta encontrada. Verifique o token da Coinzz.");
+                        }
+                      } catch {
+                        toast.error("Erro ao buscar ofertas da Coinzz");
+                      } finally {
+                        setSyncingCoinzz(false);
+                      }
+                    }}
+                    disabled={syncingCoinzz}
+                    className="flex items-center gap-1 text-xs text-purple-400 hover:text-purple-300 disabled:opacity-50"
+                  >
+                    {syncingCoinzz ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+                    {syncingCoinzz ? "Buscando..." : "↻ Sincronizar Coinzz"}
+                  </button>
+                </div>
+                {coinzzOffers.length > 0 ? (
+                  <Popover open={coinzzPopoverOpen} onOpenChange={setCoinzzPopoverOpen}>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" role="combobox" aria-expanded={coinzzPopoverOpen} className="w-full justify-between bg-input border-border text-left font-normal h-10">
+                        {selectedCoinzzOffer
+                          ? <span className="truncate">{selectedCoinzzOffer.product_name} — {selectedCoinzzOffer.offer_name} (R$ {selectedCoinzzOffer.price.toFixed(2)})</span>
+                          : <span className="text-muted-foreground">Buscar oferta da Coinzz...</span>
+                        }
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                      <Command>
+                        <CommandInput placeholder="Buscar por nome, preço, hash..." />
+                        <CommandList>
+                          <CommandEmpty>Nenhuma oferta encontrada.</CommandEmpty>
+                          <CommandGroup>
+                            {coinzzOffers.map((o, i) => (
+                              <CommandItem
+                                key={o.offer_hash || i}
+                                value={`${o.product_name} ${o.offer_name} ${o.offer_hash} ${o.price} ${o.role}`}
+                                onSelect={() => {
+                                  setSelectedCoinzzOffer(o);
+                                  setCoinzzPopoverOpen(false);
+                                  setFormCoinzzOfferHash(o.offer_hash || "");
+                                  toast.success(`Oferta Coinzz "${o.offer_name}" selecionada! Hash: ${o.offer_hash}`);
+                                }}
+                              >
+                                <Check className={`mr-2 h-4 w-4 ${selectedCoinzzOffer?.offer_hash === o.offer_hash ? "opacity-100" : "opacity-0"}`} />
+                                <div className="flex flex-col min-w-0">
+                                  <span className="text-sm font-medium truncate">{o.product_name} — {o.offer_name}</span>
+                                  <span className="text-xs text-muted-foreground flex items-center gap-1.5">
+                                    R$ {o.price.toFixed(2)} ·
+                                    <span className="inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-bold uppercase bg-purple-500/15 text-purple-400">
+                                      {o.role === "affiliate" ? "afiliado" : o.role === "coproducer" ? "coprodutor" : "produtor"}
+                                    </span>
+                                    · {o.offer_hash}
+                                  </span>
+                                </div>
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                ) : (
+                  <p className="text-xs text-muted-foreground">Clique em ↻ para buscar ofertas da Coinzz (produtor, afiliado, coprodutor).</p>
+                )}
+                {formCoinzzOfferHash && (
+                  <div className="mt-2 flex items-center gap-2">
+                    <span className="text-[10px] bg-purple-500/15 text-purple-400 px-2 py-0.5 rounded-full font-bold">COINZZ</span>
+                    <span className="text-xs font-mono text-muted-foreground">{formCoinzzOfferHash}</span>
+                  </div>
+                )}
+              </div>
+              <div>
+                <Label>Nome do Checkout</Label>
+                <Input value={formName} onChange={(e) => setFormName(e.target.value)} placeholder="Ex: Checkout Principal" className="bg-input border-border" />
+              </div>
               <div>
                 <Label>Tipo</Label>
                 <Select value={formType} onValueChange={setFormType}>
@@ -827,23 +923,6 @@ const Checkouts = () => {
                 <Switch checked={formUpsell} onCheckedChange={setFormUpsell} />
               </div>
 
-              {/* Coinzz Offer Hash */}
-              <div className="rounded-xl border border-purple-500/20 bg-purple-500/5 p-4 space-y-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] bg-purple-500/15 text-purple-400 px-2 py-0.5 rounded-full font-bold">COINZZ</span>
-                  <Label className="text-sm">Hash da Oferta Coinzz</Label>
-                </div>
-                <Input
-                  value={formCoinzzOfferHash}
-                  onChange={(e) => setFormCoinzzOfferHash(e.target.value)}
-                  placeholder="Ex: abc123xyz"
-                  className="bg-input border-border font-mono text-sm"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Para pedidos fora da cobertura Logzz (Correios), o sistema envia automaticamente para a Coinzz usando este hash.
-                  Deixe em branco se este checkout não usa Coinzz.
-                </p>
-              </div>
             </div>
           )}
 
