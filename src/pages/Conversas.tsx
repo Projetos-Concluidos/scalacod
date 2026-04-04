@@ -138,6 +138,45 @@ const Conversas = () => {
     enabled: !!user,
   });
 
+  // Fetch team members for agent assignment
+  const { data: teamMembers } = useQuery({
+    queryKey: ["team-members-agents", effectiveUserId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("team_members")
+        .select("user_id, role")
+        .eq("owner_id", effectiveUserId)
+        .eq("is_active", true);
+      if (!data || data.length === 0) return [];
+      const userIds = data.map(m => m.user_id);
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, name, email")
+        .in("id", userIds);
+      return (profiles || []).map(p => ({
+        ...p,
+        role: data.find(m => m.user_id === p.id)?.role || "viewer",
+      }));
+    },
+    enabled: !!effectiveUserId,
+  });
+
+  // Check if 24h window is expired for selected conversation
+  const isWindowExpired = useMemo(() => {
+    if (!selectedConv?.last_message_at) return true;
+    const lastMsg = new Date(selectedConv.last_message_at);
+    const cutoff = subDays(new Date(), 1);
+    return lastMsg <= cutoff;
+  }, [selectedConv]);
+
+  const assignAgent = async (agentId: string | null) => {
+    if (!selectedConv) return;
+    await supabase.from("conversations").update({ assigned_agent: agentId }).eq("id", selectedConv.id);
+    setSelectedConv({ ...selectedConv, assigned_agent: agentId });
+    setConversations(prev => prev.map(c => c.id === selectedConv.id ? { ...c, assigned_agent: agentId } : c));
+    toast.success(agentId ? "Conversa atribuída!" : "Atribuição removida");
+  };
+
   const fetchConversations = async () => {
     if (!user) return;
     setLoading(true);
