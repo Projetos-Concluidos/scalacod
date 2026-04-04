@@ -85,6 +85,18 @@ const TopBar = () => {
         </button>
         <NotificationBell />
         <button
+          onClick={() => navigate("/conversas")}
+          className="relative flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          title="Conversas"
+        >
+          <MessageCircle className="h-[18px] w-[18px]" />
+          {unreadCount > 0 && (
+            <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-destructive px-1 text-[9px] font-bold text-destructive-foreground">
+              {unreadCount > 99 ? "99+" : unreadCount}
+            </span>
+          )}
+        </button>
+        <button
           onClick={() => navigate("/suporte")}
           className="hidden h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground sm:flex"
           title="Suporte"
