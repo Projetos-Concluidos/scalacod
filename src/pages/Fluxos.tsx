@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { GitBranch, Zap, Folder, Plus, MessageCircle, Tag, ChevronDown, ChevronRight, Pencil, SlidersHorizontal, Sparkles, MoreHorizontal, XCircle, Star, CheckCircle, Loader2, Power, PowerOff, Trash2, History, AlertTriangle, Clock, LayoutTemplate, X, Download, Upload, Copy } from "lucide-react";
+import { GitBranch, Zap, Folder, Plus, MessageCircle, Tag, ChevronDown, ChevronRight, Pencil, SlidersHorizontal, Sparkles, MoreHorizontal, XCircle, Star, CheckCircle, Loader2, Power, PowerOff, Trash2, History, AlertTriangle, Clock, LayoutTemplate, X, Download, Upload, Copy, BarChart3 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import PageHeader from "@/components/PageHeader";
 import StatCard from "@/components/StatCard";
 import NinjaBadge from "@/components/NinjaBadge";
