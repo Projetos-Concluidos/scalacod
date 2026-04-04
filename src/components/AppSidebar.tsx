@@ -27,13 +27,32 @@ const mainNav = [
 const AppSidebar = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { signOut } = useAuth();
+  const { signOut, user } = useAuth();
   const { isOpen, close } = useMobileSidebar();
+  const [unreadCount, setUnreadCount] = useState(0);
 
   // Close sidebar on route change (mobile)
   useEffect(() => {
     close();
   }, [location.pathname, close]);
+
+  // Fetch unread conversation count
+  useEffect(() => {
+    if (!user) return;
+    const fetchUnread = async () => {
+      const { count } = await supabase
+        .from("conversations")
+        .select("*", { count: "exact", head: true })
+        .gt("unread_count", 0);
+      setUnreadCount(count || 0);
+    };
+    fetchUnread();
+    const channel = supabase
+      .channel("sidebar-unread")
+      .on("postgres_changes", { event: "*", schema: "public", table: "conversations" }, () => fetchUnread())
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [user]);
 
   const handleSignOut = async () => {
     await signOut();
