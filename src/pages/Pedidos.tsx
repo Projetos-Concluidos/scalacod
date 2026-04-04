@@ -148,7 +148,7 @@ const Pedidos = () => {
     mutationFn: async ({ id, status, fromStatus }: { id: string; status: string; fromStatus?: string }) => {
       const { error } = await supabase.from("orders").update({ status }).eq("id", id);
       if (error) throw error;
-      supabase.from("order_status_history").insert({ order_id: id, from_status: fromStatus || null, to_status: status, source: "kanban_drag" }).then(() => {});
+      supabase.from("order_status_history").insert({ order_id: id, from_status: fromStatus || null, to_status: status, source: "kanban_drag", raw_payload: { changed_by: user?.id, changed_by_email: user?.email } }).then(() => {});
       if (user) {
         supabase.functions.invoke("trigger-flow", { body: { userId: user.id, orderId: id, newStatus: status } }).catch(() => {});
       }
