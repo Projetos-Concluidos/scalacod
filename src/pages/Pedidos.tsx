@@ -6,7 +6,7 @@ import {
   Search, SlidersHorizontal, RefreshCw, Phone, Eye, MoreHorizontal,
   Package, CalendarDays, MapPin, DollarSign, Printer, Truck, Clock,
   Download, X, ExternalLink, MessageSquare, Copy, Edit, Trash2, XCircle, AlertTriangle,
-  ChevronDown, ChevronUp,
+  ChevronDown, ChevronUp, CheckSquare, Square,
 } from "lucide-react";
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
 import PageHeader from "@/components/PageHeader";
@@ -81,6 +81,51 @@ const Pedidos = () => {
   const [filterProvider, setFilterProvider] = useState("");
   const [filterCity, setFilterCity] = useState("");
   const [filterPayment, setFilterPayment] = useState("");
+
+  // Batch selection
+  const [batchMode, setBatchMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [batchMoveTarget, setBatchMoveTarget] = useState<string | null>(null);
+
+  const toggleSelect = useCallback((id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const selectAllInColumn = useCallback((columnOrders: Order[]) => {
+    const ids = columnOrders.map(o => o.id);
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      const allSelected = ids.every(id => next.has(id));
+      if (allSelected) ids.forEach(id => next.delete(id));
+      else ids.forEach(id => next.add(id));
+      return next;
+    });
+  }, []);
+
+  const batchMoveMutation = useMutation({
+    mutationFn: async ({ ids, status }: { ids: string[]; status: string }) => {
+      for (const id of ids) {
+        const order = orders.find(o => o.id === id);
+        await supabase.from("orders").update({ status }).eq("id", id);
+        await supabase.from("order_status_history").insert({ order_id: id, from_status: order?.status || null, to_status: status, source: "batch_move" });
+      }
+    },
+    onSuccess: () => {
+      toast.success(`${selectedIds.size} pedidos movidos!`);
+      setSelectedIds(new Set());
+      setBatchMoveTarget(null);
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  // Pagination
+  const PAGE_SIZE = 50;
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
   // Edit modal
   const [editOrder, setEditOrder] = useState<Order | null>(null);
@@ -279,6 +324,9 @@ const Pedidos = () => {
         subtitle="Gerencie o fluxo operacional em tempo real"
         actions={
           <div className="flex items-center gap-2">
+            <Button variant={batchMode ? "default" : "outline"} size="sm" onClick={() => { setBatchMode(!batchMode); setSelectedIds(new Set()); }} className={batchMode ? "" : "border-border text-muted-foreground"}>
+              <CheckSquare className="h-4 w-4 mr-1.5" /> {batchMode ? "Sair seleção" : "Selecionar"}
+            </Button>
             <Button variant="outline" size="sm" onClick={exportCSV} className="border-border text-muted-foreground"><Download className="h-4 w-4 mr-1.5" /> Exportar</Button>
             <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground" onClick={() => refetch()} disabled={isFetching}><RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} /></Button>
           </div>
@@ -418,6 +466,26 @@ const Pedidos = () => {
         ))}
       </div>
 
+      {/* Batch Action Bar */}
+      {batchMode && selectedIds.size > 0 && (
+        <div className="mb-3 flex items-center gap-3 rounded-lg border border-primary/30 bg-primary/5 px-4 py-2.5">
+          <span className="text-sm font-medium text-foreground">{selectedIds.size} selecionado(s)</span>
+          <span className="text-muted-foreground">→</span>
+          <Select value={batchMoveTarget || ""} onValueChange={setBatchMoveTarget}>
+            <SelectTrigger className="w-[180px] h-8 text-xs bg-input border-border">
+              <SelectValue placeholder="Mover para..." />
+            </SelectTrigger>
+            <SelectContent>
+              {STATUS_KEYS.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Button size="sm" disabled={!batchMoveTarget || batchMoveMutation.isPending} onClick={() => batchMoveTarget && batchMoveMutation.mutate({ ids: [...selectedIds], status: batchMoveTarget })}>
+            {batchMoveMutation.isPending ? "Movendo..." : "Mover"}
+          </Button>
+          <Button variant="ghost" size="sm" className="text-muted-foreground ml-auto" onClick={() => setSelectedIds(new Set())}>Limpar seleção</Button>
+        </div>
+      )}
+
       {/* Kanban */}
       {isLoading ? (
         <div className="flex gap-4 overflow-x-auto pb-4 flex-1">
@@ -437,6 +505,11 @@ const Pedidos = () => {
               return (
                 <div key={status} className="min-w-[270px] w-[270px] flex flex-col">
                   <div className="mb-2 flex items-center gap-2 px-1">
+                    {batchMode && (
+                      <button onClick={() => selectAllInColumn(items)} className="text-muted-foreground hover:text-primary transition-colors" title="Selecionar todos">
+                        {items.length > 0 && items.every(o => selectedIds.has(o.id)) ? <CheckSquare className="h-3.5 w-3.5 text-primary" /> : <Square className="h-3.5 w-3.5" />}
+                      </button>
+                    )}
                     <span className={`h-2.5 w-2.5 rounded-full ${meta.color}`} />
                     <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">{status}</h3>
                     <Badge variant="secondary" className="h-5 min-w-5 justify-center text-[10px] font-bold bg-muted text-muted-foreground">{items.length}</Badge>
@@ -448,10 +521,15 @@ const Pedidos = () => {
                         {items.map((order, index) => (
                           <Draggable key={order.id} draggableId={order.id} index={index}>
                             {(provided, snapshot) => (
-                              <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps} className={`rounded-lg border bg-card p-3 transition-shadow cursor-grab active:cursor-grabbing ${snapshot.isDragging ? "shadow-lg shadow-primary/10 border-primary/30" : "border-border hover:border-primary/20"}`}>
-                                {/* ── Card Header: Order # + platform + link ── */}
+                              <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps} onClick={() => batchMode && toggleSelect(order.id)} className={`rounded-lg border bg-card p-3 transition-shadow ${batchMode ? "cursor-pointer" : "cursor-grab active:cursor-grabbing"} ${snapshot.isDragging ? "shadow-lg shadow-primary/10 border-primary/30" : selectedIds.has(order.id) ? "border-primary ring-1 ring-primary/30" : "border-border hover:border-primary/20"}`}>
+                                {/* ── Card Header: Order # + platform + checkbox ── */}
                                 <div className="flex items-center justify-between mb-1.5">
                                   <div className="flex items-center gap-1.5">
+                                    {batchMode && (
+                                      <button onClick={(e) => { e.stopPropagation(); toggleSelect(order.id); }} className="shrink-0">
+                                        {selectedIds.has(order.id) ? <CheckSquare className="h-4 w-4 text-primary" /> : <Square className="h-4 w-4 text-muted-foreground" />}
+                                      </button>
+                                    )}
                                     {order.logistics_type === "coinzz" && order.coinzz_order_hash ? (
                                       <a href={`https://app.coinzz.com.br/pedido/${order.coinzz_order_hash}`} target="_blank" rel="noopener noreferrer" className="text-xs font-mono text-purple-400 font-semibold hover:underline" onClick={(e) => e.stopPropagation()}>#{order.order_number || order.coinzz_order_hash}</a>
                                     ) : order.logistics_type === "logzz" && order.logzz_order_id ? (
