@@ -375,14 +375,15 @@ const Fluxos = () => {
       />
 
       {/* Stat cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 mb-8">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-4 mb-8">
         {loading ? (
-          Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-24 rounded-xl" />)
+          Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-24 rounded-xl" />)
         ) : (
           <>
             <StatCard label="Total de Fluxos" value={flows.length} icon={<GitBranch className="h-6 w-6 text-primary" />} iconBg="bg-primary/10" />
             <StatCard label="Fluxos Ativos" value={activeFlows.length} icon={<Zap className="h-6 w-6 text-success" />} iconBg="bg-success/10" />
-            <StatCard label="Pastas" value={0} icon={<Folder className="h-6 w-6 text-muted-foreground" />} iconBg="bg-muted" />
+            <StatCard label="Execuções" value={flowStats?.total || 0} icon={<BarChart3 className="h-6 w-6 text-primary" />} iconBg="bg-primary/10" />
+            <StatCard label="Taxa de Sucesso" value={`${flowStats?.rate || 0}%`} icon={<CheckCircle className="h-6 w-6 text-success" />} iconBg="bg-success/10" />
           </>
         )}
       </div>
