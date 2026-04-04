@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { GitBranch, Zap, Folder, Plus, MessageCircle, Tag, ChevronDown, ChevronRight, Pencil, SlidersHorizontal, Sparkles, MoreHorizontal, XCircle, Star, CheckCircle, Loader2, Power, PowerOff, Trash2, History, AlertTriangle, Clock, LayoutTemplate, X, Download, Upload, Copy } from "lucide-react";
+import { GitBranch, Zap, Folder, Plus, MessageCircle, Tag, ChevronDown, ChevronRight, Pencil, SlidersHorizontal, Sparkles, MoreHorizontal, XCircle, Star, CheckCircle, Loader2, Power, PowerOff, Trash2, History, AlertTriangle, Clock, LayoutTemplate, X, Download, Upload, Copy, BarChart3 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import PageHeader from "@/components/PageHeader";
 import StatCard from "@/components/StatCard";
 import NinjaBadge from "@/components/NinjaBadge";
@@ -110,6 +111,50 @@ const Fluxos = () => {
 
   const activeFlows = flows.filter(f => f.is_active);
   const filteredFlows = flowFilter === "all" ? flows : flows.filter(f => f.flow_type === flowFilter);
+
+  // Duplicate flow
+  const duplicateFlow = async (flow: Flow) => {
+    if (!user) return;
+    try {
+      const { error } = await supabase.from("flows").insert({
+        user_id: user.id,
+        name: `${flow.name} (cópia)`,
+        description: flow.description,
+        flow_type: flow.flow_type,
+        is_official: flow.is_official,
+        nodes: flow.nodes,
+        edges: flow.edges,
+        node_count: flow.node_count,
+        message_count: flow.message_count,
+        trigger_event: flow.trigger_event,
+        trigger_status: flow.trigger_status,
+        is_active: false,
+      });
+      if (error) throw error;
+      toast.success(`Fluxo "${flow.name}" duplicado!`);
+      fetchFlows();
+    } catch (e: any) {
+      toast.error(e.message || "Erro ao duplicar fluxo");
+    }
+  };
+
+  // Flow execution stats
+  const { data: flowStats } = useQuery({
+    queryKey: ["flow-stats", user?.id],
+    queryFn: async () => {
+      if (!user) return { total: 0, completed: 0, failed: 0, rate: 0 };
+      const { data } = await supabase
+        .from("flow_executions")
+        .select("status")
+        .eq("user_id", user.id);
+      const total = data?.length || 0;
+      const completed = data?.filter(e => e.status === "completed").length || 0;
+      const failed = data?.filter(e => e.status === "failed").length || 0;
+      const rate = total > 0 ? Math.round((completed / total) * 100) : 0;
+      return { total, completed, failed, rate };
+    },
+    enabled: !!user,
+  });
 
   const handleSaveFlow = async (data: any) => {
     if (!user) return;
@@ -330,14 +375,15 @@ const Fluxos = () => {
       />
 
       {/* Stat cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 mb-8">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-4 mb-8">
         {loading ? (
-          Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-24 rounded-xl" />)
+          Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-24 rounded-xl" />)
         ) : (
           <>
             <StatCard label="Total de Fluxos" value={flows.length} icon={<GitBranch className="h-6 w-6 text-primary" />} iconBg="bg-primary/10" />
             <StatCard label="Fluxos Ativos" value={activeFlows.length} icon={<Zap className="h-6 w-6 text-success" />} iconBg="bg-success/10" />
-            <StatCard label="Pastas" value={0} icon={<Folder className="h-6 w-6 text-muted-foreground" />} iconBg="bg-muted" />
+            <StatCard label="Execuções" value={flowStats?.total || 0} icon={<BarChart3 className="h-6 w-6 text-primary" />} iconBg="bg-primary/10" />
+            <StatCard label="Taxa de Sucesso" value={`${flowStats?.rate || 0}%`} icon={<CheckCircle className="h-6 w-6 text-success" />} iconBg="bg-success/10" />
           </>
         )}
       </div>
@@ -446,6 +492,9 @@ const Fluxos = () => {
                             <button className="text-muted-foreground hover:text-foreground"><MoreHorizontal className="h-4 w-4" /></button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => duplicateFlow(flow)}>
+                              <Copy className="h-4 w-4 mr-2" /> Duplicar
+                            </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => exportFlow(flow)}>
                               <Download className="h-4 w-4 mr-2" /> Exportar
                             </DropdownMenuItem>

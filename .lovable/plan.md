@@ -1,38 +1,32 @@
-## Plano: Itens Importantes (🟡) do Checklist
+## Batch 2 — Melhorias 🟡 Importantes + 🟢 Desejáveis
 
-### Batch 1 — Kanban & UI (esta implementação)
+### 🟡 Importantes (Pedidos)
+**7. Filtro por data, produto e método de pagamento** — Adicionar filtros avançados no Kanban
+**8. Exportar pedidos para CSV** — Botão para download dos pedidos filtrados
+**9. Detalhes do pedido em drawer** (#21 🟢) — Modal já existe, melhorar UX
 
-**1. Indicador de tempo "Aguardando" nos cards do Kanban**
-- Adicionar badge nos cards mostrando "há Xh" ou "há Xd" para pedidos em "Aguardando"
-- Destaque vermelho se > 12h (alerta visual)
+### 🟡 Importantes (Conversas)
+**10. Busca por nome/telefone** — Já existe campo de busca, verificar se funciona corretamente
+**11. Envio de mídia no chat** — Upload de imagem/documento via WhatsApp
+**12. Respostas rápidas** — Mensagens pré-salvas para uso rápido
 
-**2. Audit log com userId no drag & drop**
-- No `Pedidos.tsx`, incluir `user_id` do membro no insert de `order_status_history`
-- Adicionar campo `changed_by` no raw_payload para rastreabilidade
+### 🟡 Importantes (Fluxos)
+**13. Estatísticas por fluxo** — Dashboard com execuções, falhas, taxa de sucesso
+**14. Duplicar fluxo existente** — Botão para clonar um fluxo
 
-**3. Badge de não lidas na sidebar/topbar**
-- Consultar `conversations` com `unread_count > 0` via `get_effective_user_id()`
-- Exibir badge numérico no item "Conversas" da sidebar e no TopBar
-
-**4. Indicador de janela 24h expirada na conversa**
-- Comparar `last_message_at` com `now() - 24h`
-- Se expirada, mostrar aviso amarelo e desabilitar campo de texto (só templates)
-
-**5. Atribuição de conversa a agente**
-- No painel de detalhes da conversa, dropdown para selecionar membro da equipe
-- Atualiza `conversations.assigned_agent` com o `user_id` do membro
-- Filtro "Minhas conversas" na lista
+### 🟢 Desejáveis
+**15. Histórico de status visual (timeline)** — Já existe na aba Timeline do modal
+**16. Notas internas na conversa** — Notas visíveis só para equipe
+**17. Marcar conversa como resolvida/arquivada** — Status da conversa
 
 ### Arquivos envolvidos
 | Arquivo | Mudança |
 |---|---|
-| `src/pages/Pedidos.tsx` | Badge de tempo + audit log com userId |
-| `src/components/AppSidebar.tsx` | Badge de não lidas |
-| `src/components/TopBar.tsx` | Badge de não lidas |
-| `src/pages/Conversas.tsx` | Indicador 24h + atribuição de agente |
+| `src/pages/Pedidos.tsx` | Filtros avançados + exportar CSV |
+| `src/pages/Conversas.tsx` | Respostas rápidas + notas internas + arquivar |
+| `src/pages/Fluxos.tsx` | Estatísticas por fluxo + duplicar fluxo |
 
-### Resultado
-- Kanban mais inteligente com indicadores visuais de urgência
-- Rastreabilidade completa de quem moveu cada pedido
-- Notificação visual de mensagens pendentes
-- Gestão de conversas por membro da equipe
+### Prioridade de implementação
+1. Filtros avançados + Export CSV (Pedidos) — impacto alto na produtividade
+2. Duplicar fluxo + Estatísticas (Fluxos) — funcionalidade muito pedida
+3. Respostas rápidas + Notas internas + Arquivar (Conversas) — gestão de atendimento

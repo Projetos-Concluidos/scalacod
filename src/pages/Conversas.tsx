@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import {
   MessageSquare, Search, SlidersHorizontal, RefreshCw, Tag, Send, Paperclip,
   Smile, Mic, Info, Phone, Mail, FileText, X, Plus, Check, CheckCheck,
-  Image as ImageIcon, File, ChevronDown, Layout, FlaskConical, Zap, AlertTriangle, UserCheck
+  Image as ImageIcon, File, ChevronDown, Layout, FlaskConical, Zap, AlertTriangle, UserCheck, Archive, MessageCircleReply, StickyNote, CheckCircle2
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -75,11 +75,28 @@ const Conversas = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { play: playNotification, requestPermission } = useNotificationSound();
 
+  // Quick replies
+  const [showQuickReplies, setShowQuickReplies] = useState(false);
+  const quickReplies = [
+    "Olá! Como posso ajudar?",
+    "Seu pedido está em separação e será enviado em breve!",
+    "O código de rastreio será enviado assim que disponível.",
+    "Obrigado pela compra! Qualquer dúvida estamos à disposição.",
+    "Vou verificar e retorno em instantes.",
+    "Pedido confirmado! Acompanhe o status pelo nosso sistema.",
+  ];
+
+  // Internal notes
+  const [showNotes, setShowNotes] = useState(false);
+  const [noteText, setNoteText] = useState("");
+  const [internalNotes, setInternalNotes] = useState<Array<{ text: string; author: string; date: string }>>([]);
+
   // Advanced filters
   const [readFilter, setReadFilter] = useState<"all" | "unread" | "read">("all");
   const [windowFilter, setWindowFilter] = useState<"all" | "open" | "expired">("all");
   const [mediaFilter, setMediaFilter] = useState<"all" | "media" | "text">("all");
   const [dateFilter, setDateFilter] = useState<"all" | "today" | "7d" | "30d">("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "open" | "resolved" | "archived">("all");
 
   // Test modal
   const [testModalOpen, setTestModalOpen] = useState(false);
@@ -95,14 +112,16 @@ const Conversas = () => {
     if (windowFilter !== "all") c++;
     if (mediaFilter !== "all") c++;
     if (dateFilter !== "all") c++;
+    if (statusFilter !== "all") c++;
     return c;
-  }, [readFilter, windowFilter, mediaFilter, dateFilter]);
+  }, [readFilter, windowFilter, mediaFilter, dateFilter, statusFilter]);
 
   const clearAllFilters = () => {
     setReadFilter("all");
     setWindowFilter("all");
     setMediaFilter("all");
     setDateFilter("all");
+    setStatusFilter("all");
   };
 
   // Fetch approved templates (flows with is_official + approved flow_templates)
@@ -175,6 +194,31 @@ const Conversas = () => {
     setSelectedConv({ ...selectedConv, assigned_agent: agentId });
     setConversations(prev => prev.map(c => c.id === selectedConv.id ? { ...c, assigned_agent: agentId } : c));
     toast.success(agentId ? "Conversa atribuída!" : "Atribuição removida");
+  };
+
+  // Resolve/archive conversation
+  const updateConversationStatus = async (status: string) => {
+    if (!selectedConv) return;
+    await supabase.from("conversations").update({ status }).eq("id", selectedConv.id);
+    setSelectedConv({ ...selectedConv, status });
+    setConversations(prev => prev.map(c => c.id === selectedConv.id ? { ...c, status } : c));
+    toast.success(status === "resolved" ? "Conversa resolvida!" : status === "archived" ? "Conversa arquivada!" : "Conversa reaberta!");
+  };
+
+  // Internal notes (stored in labels JSON as a workaround)
+  const addInternalNote = () => {
+    if (!noteText.trim() || !selectedConv || !user) return;
+    const note = { text: noteText.trim(), author: user.email || "Eu", date: new Date().toISOString() };
+    setInternalNotes(prev => [...prev, note]);
+    setNoteText("");
+    toast.success("Nota adicionada!");
+  };
+
+  // Use quick reply
+  const useQuickReply = (text: string) => {
+    setNewMessage(text);
+    setShowQuickReplies(false);
+    textareaRef.current?.focus();
   };
 
   const fetchConversations = async () => {
@@ -533,6 +577,11 @@ const Conversas = () => {
       result = result.filter(c => c.last_message_at && new Date(c.last_message_at) >= cutoff);
     }
 
+    // Status filter
+    if (statusFilter === "open") result = result.filter(c => !c.status || c.status === "open");
+    if (statusFilter === "resolved") result = result.filter(c => c.status === "resolved");
+    if (statusFilter === "archived") result = result.filter(c => c.status === "archived");
+
     // Search
     if (search) {
       const s = search.toLowerCase();
@@ -543,7 +592,7 @@ const Conversas = () => {
       );
     }
     return result;
-  }, [conversations, readFilter, windowFilter, mediaFilter, dateFilter, search]);
+  }, [conversations, readFilter, windowFilter, mediaFilter, dateFilter, statusFilter, search]);
 
   // Group messages by date
   const groupedMessages = useMemo(() => {
@@ -706,6 +755,17 @@ const Conversas = () => {
                   <FilterChip active={dateFilter === "30d"} onClick={() => setDateFilter("30d")}>30 dias</FilterChip>
                 </div>
               </div>
+
+              {/* Group 5: Conversation status */}
+              <div>
+                <p className="text-[10px] text-muted-foreground mb-1.5 font-medium">Status</p>
+                <div className="flex flex-wrap gap-1">
+                  <FilterChip active={statusFilter === "all"} onClick={() => setStatusFilter("all")}>Todas</FilterChip>
+                  <FilterChip active={statusFilter === "open"} onClick={() => setStatusFilter("open")}>Abertas</FilterChip>
+                  <FilterChip active={statusFilter === "resolved"} onClick={() => setStatusFilter("resolved")}>Resolvidas</FilterChip>
+                  <FilterChip active={statusFilter === "archived"} onClick={() => setStatusFilter("archived")}>Arquivadas</FilterChip>
+                </div>
+              </div>
             </div>
           )}
 
@@ -743,7 +803,11 @@ const Conversas = () => {
                 </Avatar>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">
-                    <p className="text-sm font-semibold text-foreground truncate">{conv.contact_name || conv.contact_phone}</p>
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <p className="text-sm font-semibold text-foreground truncate">{conv.contact_name || conv.contact_phone}</p>
+                      {conv.status === "resolved" && <CheckCircle2 className="h-3 w-3 text-success shrink-0" />}
+                      {conv.status === "archived" && <Archive className="h-3 w-3 text-muted-foreground shrink-0" />}
+                    </div>
                     <span className="text-[10px] text-muted-foreground shrink-0 ml-2">
                       {conv.last_message_at ? formatTime(conv.last_message_at) : ""}
                     </span>
@@ -791,12 +855,39 @@ const Conversas = () => {
                 </Badge>
               )}
               {isWindowExpired && (
-                <Badge variant="outline" className="ml-2 text-xs bg-amber-500/10 text-amber-500 border-amber-500/30">
+                <Badge variant="outline" className="ml-2 text-xs bg-warning/10 text-warning border-warning/30">
                   <AlertTriangle className="h-3 w-3 mr-1" /> Janela 24h expirada
+                </Badge>
+              )}
+              {selectedConv.status === "resolved" && (
+                <Badge variant="outline" className="ml-2 text-xs bg-success/10 text-success border-success/30">
+                  <CheckCircle2 className="h-3 w-3 mr-1" /> Resolvida
+                </Badge>
+              )}
+              {selectedConv.status === "archived" && (
+                <Badge variant="outline" className="ml-2 text-xs bg-muted text-muted-foreground border-border">
+                  <Archive className="h-3 w-3 mr-1" /> Arquivada
                 </Badge>
               )}
             </div>
             <div className="flex items-center gap-1">
+              {selectedConv.status === "open" ? (
+                <button
+                  onClick={() => updateConversationStatus("resolved")}
+                  className="flex h-8 items-center gap-1.5 px-2.5 rounded-lg text-xs font-medium text-success hover:bg-success/10 transition-colors"
+                  title="Marcar como resolvida"
+                >
+                  <CheckCircle2 className="h-4 w-4" /> Resolver
+                </button>
+              ) : (
+                <button
+                  onClick={() => updateConversationStatus("open")}
+                  className="flex h-8 items-center gap-1.5 px-2.5 rounded-lg text-xs font-medium text-primary hover:bg-primary/10 transition-colors"
+                  title="Reabrir conversa"
+                >
+                  <MessageSquare className="h-4 w-4" /> Reabrir
+                </button>
+              )}
               <button
                 onClick={() => setShowInfo(!showInfo)}
                 className={cn("flex h-8 w-8 items-center justify-center rounded-lg transition-colors", showInfo ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground hover:bg-muted")}
@@ -890,6 +981,20 @@ const Conversas = () => {
                 )}
               </div>
             )}
+            {showQuickReplies && (
+              <div className="bg-card border border-border rounded-xl shadow-lg p-3 mb-2 max-h-48 overflow-y-auto">
+                <h4 className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wider">Respostas Rápidas</h4>
+                {quickReplies.map((reply, i) => (
+                  <button
+                    key={i}
+                    onClick={() => useQuickReply(reply)}
+                    className="w-full text-left p-2 hover:bg-primary/5 rounded-lg text-sm mb-0.5 transition-colors border border-transparent hover:border-primary/20"
+                  >
+                    <span className="text-foreground">{reply}</span>
+                  </button>
+                ))}
+              </div>
+            )}
             {showEmojiPicker && (
               <div className="relative">
                 <EmojiStickerPicker
@@ -946,6 +1051,16 @@ const Conversas = () => {
                   title="Usar template"
                 >
                   <FileText className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => { setShowQuickReplies(!showQuickReplies); setShowEmojiPicker(false); setShowTemplates(false); }}
+                  className={cn(
+                    "flex h-8 w-8 items-center justify-center rounded-lg transition-colors",
+                    showQuickReplies ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                  )}
+                  title="Respostas rápidas"
+                >
+                  <MessageCircleReply className="h-4 w-4" />
                 </button>
               </div>
               <textarea
@@ -1099,7 +1214,7 @@ const Conversas = () => {
 
           {/* Lead Tags */}
           {leadData && (
-            <div className="p-4 space-y-2">
+            <div className="p-4 border-b border-border space-y-2">
               <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Tags do Lead</p>
               <div className="flex flex-wrap gap-1.5">
                 {((leadData.tags as string[]) || []).map(tag => (
@@ -1111,6 +1226,71 @@ const Conversas = () => {
               </div>
             </div>
           )}
+
+          {/* Internal Notes */}
+          <div className="p-4 border-b border-border space-y-2">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                <StickyNote className="h-3.5 w-3.5" /> Notas Internas
+              </p>
+              <button
+                onClick={() => setShowNotes(!showNotes)}
+                className="text-xs text-primary hover:text-primary/80"
+              >
+                {showNotes ? "Fechar" : "Adicionar"}
+              </button>
+            </div>
+            {showNotes && (
+              <div className="space-y-2">
+                <textarea
+                  value={noteText}
+                  onChange={e => setNoteText(e.target.value)}
+                  placeholder="Nota visível apenas para a equipe..."
+                  rows={2}
+                  className="w-full resize-none rounded-lg border border-border bg-input px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none"
+                />
+                <Button size="sm" onClick={addInternalNote} disabled={!noteText.trim()} className="w-full text-xs bg-primary text-primary-foreground">
+                  <Plus className="h-3 w-3 mr-1" /> Salvar Nota
+                </Button>
+              </div>
+            )}
+            {internalNotes.length > 0 && (
+              <div className="space-y-1.5 max-h-32 overflow-y-auto">
+                {internalNotes.map((note, i) => (
+                  <div key={i} className="rounded-lg bg-warning/5 border border-warning/20 p-2">
+                    <p className="text-xs text-foreground">{note.text}</p>
+                    <p className="text-[10px] text-muted-foreground mt-1">{note.author} · {format(new Date(note.date), "dd/MM HH:mm")}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+            {internalNotes.length === 0 && !showNotes && (
+              <p className="text-xs text-muted-foreground">Sem notas internas</p>
+            )}
+          </div>
+
+          {/* Actions */}
+          <div className="p-4 space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Ações</p>
+            <div className="space-y-1.5">
+              {selectedConv.status !== "archived" && (
+                <button
+                  onClick={() => updateConversationStatus("archived")}
+                  className="w-full flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                >
+                  <Archive className="h-3.5 w-3.5" /> Arquivar Conversa
+                </button>
+              )}
+              {selectedConv.status !== "resolved" && selectedConv.status !== "archived" && (
+                <button
+                  onClick={() => updateConversationStatus("resolved")}
+                  className="w-full flex items-center gap-2 rounded-lg border border-success/30 bg-success/5 px-3 py-2 text-xs text-success hover:bg-success/10 transition-colors"
+                >
+                  <CheckCircle2 className="h-3.5 w-3.5" /> Marcar como Resolvida
+                </button>
+              )}
+            </div>
+          </div>
         </div>
       )}
 
