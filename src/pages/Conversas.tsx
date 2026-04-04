@@ -1015,6 +1015,16 @@ const Conversas = () => {
                 >
                   <FileText className="h-4 w-4" />
                 </button>
+                <button
+                  onClick={() => { setShowQuickReplies(!showQuickReplies); setShowEmojiPicker(false); setShowTemplates(false); }}
+                  className={cn(
+                    "flex h-8 w-8 items-center justify-center rounded-lg transition-colors",
+                    showQuickReplies ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                  )}
+                  title="Respostas rápidas"
+                >
+                  <MessageCircleReply className="h-4 w-4" />
+                </button>
               </div>
               <textarea
                 ref={textareaRef}
