@@ -115,9 +115,25 @@ Deno.serve(async (req) => {
     const results = [];
     for (const flow of flows) {
       try {
-        // Check if this exact flow+order+status was already executed successfully
-        // BUT allow re-execution if the order went through an intermediate status change
         if (orderId) {
+          // Guard 1: Time-based cooldown — skip if same flow+order executed in last 10 minutes
+          const cooldownTime = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+          const { data: recentExec } = await supabase
+            .from("flow_executions")
+            .select("id")
+            .eq("flow_id", flow.id)
+            .eq("order_id", orderId)
+            .gte("created_at", cooldownTime)
+            .limit(1)
+            .maybeSingle();
+
+          if (recentExec) {
+            console.log(`[trigger-flow] Skipping flow "${flow.name}" — executed within last 10min for order ${orderId}`);
+            results.push({ flow_id: flow.id, flow_name: flow.name, skipped: true, reason: "cooldown_10min" });
+            continue;
+          }
+
+          // Guard 2: Dedup — skip if already completed AND no intermediate status transition
           const { data: existingExec } = await supabase
             .from("flow_executions")
             .select("id, completed_at")
@@ -129,9 +145,6 @@ Deno.serve(async (req) => {
             .maybeSingle();
 
           if (existingExec) {
-            // Check if the order left this status after the last execution
-            // If it did, it means the order cycled (e.g. Agendado → Aguardando → Agendado)
-            // and we should allow re-execution
             const lastExecTime = existingExec.completed_at || new Date(0).toISOString();
             const { data: intermediateTransition } = await supabase
               .from("order_status_history")

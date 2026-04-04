@@ -51,6 +51,50 @@ const FLOW_TEMPLATES = [
     edges: [],
   },
   {
+    name: "📦 Pedido Em Separação",
+    description: "Notifica o cliente quando o pedido entra em separação",
+    trigger_event: "order_status_changed",
+    trigger_status: "Em Separação",
+    is_official: true,
+    is_active: true,
+    flow_type: "cod",
+    node_count: 1,
+    message_count: 1,
+    nodes: [
+      {
+        id: "node-1",
+        type: "text",
+        position: { x: 250, y: 100 },
+        data: {
+          content: "📦 *Pedido em Separação!*\n\nOlá, {{cliente_nome}}! 🥷\n\nSeu pedido *#{{pedido_numero}}* já está sendo *separado e preparado* para envio!\n\n🛒 *Produto:* {{produto_nome}}\n💰 *Valor:* R$ {{valor_total}}\n📅 *Previsão de entrega:* {{data_entrega}}\n\nEm breve ele sairá para entrega! Fique atento ao endereço informado. 📍\n\n_— Equipe {{loja_nome}}_",
+        },
+      },
+    ],
+    edges: [],
+  },
+  {
+    name: "✅ Pedido Separado",
+    description: "Notifica o cliente quando o pedido foi separado e está pronto para envio",
+    trigger_event: "order_status_changed",
+    trigger_status: "Separado",
+    is_official: true,
+    is_active: true,
+    flow_type: "cod",
+    node_count: 1,
+    message_count: 1,
+    nodes: [
+      {
+        id: "node-1",
+        type: "text",
+        position: { x: 250, y: 100 },
+        data: {
+          content: "✅ *Pedido Separado!*\n\nOlá, {{cliente_nome}}!\n\nSeu pedido *#{{pedido_numero}}* foi *separado com sucesso* e está pronto para sair! 🎉\n\n📦 *Produto:* {{produto_nome}}\n📅 *Entrega prevista:* {{data_entrega}}\n📍 *Endereço:* {{endereco_completo}}\n\nEm breve o entregador estará a caminho! 🚚\n\n_— Equipe {{loja_nome}}_",
+        },
+      },
+    ],
+    edges: [],
+  },
+  {
     name: "🔔 Lembrete Dia Anterior",
     description: "Envia lembrete automático no dia anterior à entrega",
     trigger_event: "scheduled_reminder",

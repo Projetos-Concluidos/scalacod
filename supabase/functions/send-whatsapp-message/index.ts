@@ -331,6 +331,43 @@ Deno.serve(async (req) => {
 
     console.log(`[send-whatsapp-message] Success via ${instance.provider}, msgId: ${messageIdWhatsapp}`);
 
+    // Auto-create or find conversation when direct=true and no conversationId
+    if (!convId && cleanPhone && userId) {
+      // Try to find existing conversation for this phone+user
+      const { data: existingConv } = await supabase
+        .from("conversations")
+        .select("id")
+        .eq("user_id", userId)
+        .or(`contact_phone.eq.${cleanPhone},contact_phone.eq.${cleanPhone.replace(/^55/, "")}`)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (existingConv) {
+        convId = existingConv.id;
+        console.log(`[send-whatsapp-message] Found existing conversation: ${convId}`);
+      } else {
+        // Create a new conversation
+        const { data: newConv } = await supabase
+          .from("conversations")
+          .insert({
+            user_id: userId,
+            contact_phone: cleanPhone,
+            contact_name: null,
+            status: "open",
+            last_message: content || `[${msgType}]`,
+            last_message_at: new Date().toISOString(),
+          })
+          .select("id")
+          .single();
+
+        if (newConv) {
+          convId = newConv.id;
+          console.log(`[send-whatsapp-message] Created new conversation: ${convId}`);
+        }
+      }
+    }
+
     // Save outbound message to DB
     if (convId) {
       await supabase.from("messages").insert({
@@ -354,7 +391,7 @@ Deno.serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ success: true, message_id: messageIdWhatsapp, provider: instance.provider }),
+      JSON.stringify({ success: true, message_id: messageIdWhatsapp, provider: instance.provider, conversation_id: convId }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (e) {
