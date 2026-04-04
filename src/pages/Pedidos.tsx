@@ -82,6 +82,51 @@ const Pedidos = () => {
   const [filterCity, setFilterCity] = useState("");
   const [filterPayment, setFilterPayment] = useState("");
 
+  // Batch selection
+  const [batchMode, setBatchMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [batchMoveTarget, setBatchMoveTarget] = useState<string | null>(null);
+
+  const toggleSelect = useCallback((id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const selectAllInColumn = useCallback((status: string) => {
+    const ids = (columns[status] || []).map(o => o.id);
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      const allSelected = ids.every(id => next.has(id));
+      if (allSelected) ids.forEach(id => next.delete(id));
+      else ids.forEach(id => next.add(id));
+      return next;
+    });
+  }, []);
+
+  const batchMoveMutation = useMutation({
+    mutationFn: async ({ ids, status }: { ids: string[]; status: string }) => {
+      for (const id of ids) {
+        const order = orders.find(o => o.id === id);
+        await supabase.from("orders").update({ status }).eq("id", id);
+        await supabase.from("order_status_history").insert({ order_id: id, from_status: order?.status || null, to_status: status, source: "batch_move" });
+      }
+    },
+    onSuccess: () => {
+      toast.success(`${selectedIds.size} pedidos movidos!`);
+      setSelectedIds(new Set());
+      setBatchMoveTarget(null);
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  // Pagination
+  const PAGE_SIZE = 50;
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+
   // Edit modal
   const [editOrder, setEditOrder] = useState<Order | null>(null);
   const [editForm, setEditForm] = useState({ client_name: "", client_phone: "", client_address: "", client_address_number: "", client_address_comp: "", client_address_district: "", client_address_city: "", client_address_state: "", client_zip_code: "", delivery_date: "" });
