@@ -958,6 +958,20 @@ const Conversas = () => {
                 )}
               </div>
             )}
+            {showQuickReplies && (
+              <div className="bg-card border border-border rounded-xl shadow-lg p-3 mb-2 max-h-48 overflow-y-auto">
+                <h4 className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wider">Respostas Rápidas</h4>
+                {quickReplies.map((reply, i) => (
+                  <button
+                    key={i}
+                    onClick={() => useQuickReply(reply)}
+                    className="w-full text-left p-2 hover:bg-primary/5 rounded-lg text-sm mb-0.5 transition-colors border border-transparent hover:border-primary/20"
+                  >
+                    <span className="text-foreground">{reply}</span>
+                  </button>
+                ))}
+              </div>
+            )}
             {showEmojiPicker && (
               <div className="relative">
                 <EmojiStickerPicker
