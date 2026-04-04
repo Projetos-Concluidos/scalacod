@@ -843,7 +843,13 @@ const Conversas = () => {
               className="hidden"
               onChange={handleFileSelect}
             />
-            {/* Template Selector */}
+            {/* 24h Window Expired Warning */}
+            {isWindowExpired && (
+              <div className="flex items-center gap-2 rounded-lg bg-amber-500/10 border border-amber-500/20 px-3 py-2 mb-2">
+                <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0" />
+                <p className="text-xs text-amber-500">Janela de 24h expirada. Use um template aprovado para iniciar a conversa.</p>
+              </div>
+            )}
             {showTemplates && (
               <div className="bg-card border border-border rounded-xl shadow-lg p-3 mb-2 max-h-48 overflow-y-auto">
                 <h4 className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wider">Templates Aprovados</h4>
