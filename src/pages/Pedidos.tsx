@@ -324,6 +324,9 @@ const Pedidos = () => {
         subtitle="Gerencie o fluxo operacional em tempo real"
         actions={
           <div className="flex items-center gap-2">
+            <Button variant={batchMode ? "default" : "outline"} size="sm" onClick={() => { setBatchMode(!batchMode); setSelectedIds(new Set()); }} className={batchMode ? "" : "border-border text-muted-foreground"}>
+              <CheckSquare className="h-4 w-4 mr-1.5" /> {batchMode ? "Sair seleção" : "Selecionar"}
+            </Button>
             <Button variant="outline" size="sm" onClick={exportCSV} className="border-border text-muted-foreground"><Download className="h-4 w-4 mr-1.5" /> Exportar</Button>
             <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground" onClick={() => refetch()} disabled={isFetching}><RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} /></Button>
           </div>
