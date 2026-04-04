@@ -466,6 +466,26 @@ const Pedidos = () => {
         ))}
       </div>
 
+      {/* Batch Action Bar */}
+      {batchMode && selectedIds.size > 0 && (
+        <div className="mb-3 flex items-center gap-3 rounded-lg border border-primary/30 bg-primary/5 px-4 py-2.5">
+          <span className="text-sm font-medium text-foreground">{selectedIds.size} selecionado(s)</span>
+          <span className="text-muted-foreground">→</span>
+          <Select value={batchMoveTarget || ""} onValueChange={setBatchMoveTarget}>
+            <SelectTrigger className="w-[180px] h-8 text-xs bg-input border-border">
+              <SelectValue placeholder="Mover para..." />
+            </SelectTrigger>
+            <SelectContent>
+              {STATUS_KEYS.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Button size="sm" disabled={!batchMoveTarget || batchMoveMutation.isPending} onClick={() => batchMoveTarget && batchMoveMutation.mutate({ ids: [...selectedIds], status: batchMoveTarget })}>
+            {batchMoveMutation.isPending ? "Movendo..." : "Mover"}
+          </Button>
+          <Button variant="ghost" size="sm" className="text-muted-foreground ml-auto" onClick={() => setSelectedIds(new Set())}>Limpar seleção</Button>
+        </div>
+      )}
+
       {/* Kanban */}
       {isLoading ? (
         <div className="flex gap-4 overflow-x-auto pb-4 flex-1">
