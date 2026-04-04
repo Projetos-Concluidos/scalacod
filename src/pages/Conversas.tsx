@@ -577,6 +577,11 @@ const Conversas = () => {
       result = result.filter(c => c.last_message_at && new Date(c.last_message_at) >= cutoff);
     }
 
+    // Status filter
+    if (statusFilter === "open") result = result.filter(c => !c.status || c.status === "open");
+    if (statusFilter === "resolved") result = result.filter(c => c.status === "resolved");
+    if (statusFilter === "archived") result = result.filter(c => c.status === "archived");
+
     // Search
     if (search) {
       const s = search.toLowerCase();
@@ -587,7 +592,7 @@ const Conversas = () => {
       );
     }
     return result;
-  }, [conversations, readFilter, windowFilter, mediaFilter, dateFilter, search]);
+  }, [conversations, readFilter, windowFilter, mediaFilter, dateFilter, statusFilter, search]);
 
   // Group messages by date
   const groupedMessages = useMemo(() => {
