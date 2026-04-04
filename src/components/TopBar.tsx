@@ -11,7 +11,6 @@ const TopBar = () => {
   const { open } = useMobileSidebar();
   const navigate = useNavigate();
   const [unreadCount, setUnreadCount] = useState(0);
-  const navigate = useNavigate();
 
   const [isDark, setIsDark] = useState(() => {
     if (typeof window !== "undefined") {
