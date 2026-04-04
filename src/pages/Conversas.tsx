@@ -112,14 +112,16 @@ const Conversas = () => {
     if (windowFilter !== "all") c++;
     if (mediaFilter !== "all") c++;
     if (dateFilter !== "all") c++;
+    if (statusFilter !== "all") c++;
     return c;
-  }, [readFilter, windowFilter, mediaFilter, dateFilter]);
+  }, [readFilter, windowFilter, mediaFilter, dateFilter, statusFilter]);
 
   const clearAllFilters = () => {
     setReadFilter("all");
     setWindowFilter("all");
     setMediaFilter("all");
     setDateFilter("all");
+    setStatusFilter("all");
   };
 
   // Fetch approved templates (flows with is_official + approved flow_templates)
