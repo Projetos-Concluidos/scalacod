@@ -1191,7 +1191,7 @@ const Conversas = () => {
 
           {/* Lead Tags */}
           {leadData && (
-            <div className="p-4 space-y-2">
+            <div className="p-4 border-b border-border space-y-2">
               <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Tags do Lead</p>
               <div className="flex flex-wrap gap-1.5">
                 {((leadData.tags as string[]) || []).map(tag => (
@@ -1203,6 +1203,71 @@ const Conversas = () => {
               </div>
             </div>
           )}
+
+          {/* Internal Notes */}
+          <div className="p-4 border-b border-border space-y-2">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                <StickyNote className="h-3.5 w-3.5" /> Notas Internas
+              </p>
+              <button
+                onClick={() => setShowNotes(!showNotes)}
+                className="text-xs text-primary hover:text-primary/80"
+              >
+                {showNotes ? "Fechar" : "Adicionar"}
+              </button>
+            </div>
+            {showNotes && (
+              <div className="space-y-2">
+                <textarea
+                  value={noteText}
+                  onChange={e => setNoteText(e.target.value)}
+                  placeholder="Nota visível apenas para a equipe..."
+                  rows={2}
+                  className="w-full resize-none rounded-lg border border-border bg-input px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none"
+                />
+                <Button size="sm" onClick={addInternalNote} disabled={!noteText.trim()} className="w-full text-xs bg-primary text-primary-foreground">
+                  <Plus className="h-3 w-3 mr-1" /> Salvar Nota
+                </Button>
+              </div>
+            )}
+            {internalNotes.length > 0 && (
+              <div className="space-y-1.5 max-h-32 overflow-y-auto">
+                {internalNotes.map((note, i) => (
+                  <div key={i} className="rounded-lg bg-warning/5 border border-warning/20 p-2">
+                    <p className="text-xs text-foreground">{note.text}</p>
+                    <p className="text-[10px] text-muted-foreground mt-1">{note.author} · {format(new Date(note.date), "dd/MM HH:mm")}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+            {internalNotes.length === 0 && !showNotes && (
+              <p className="text-xs text-muted-foreground">Sem notas internas</p>
+            )}
+          </div>
+
+          {/* Actions */}
+          <div className="p-4 space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Ações</p>
+            <div className="space-y-1.5">
+              {selectedConv.status !== "archived" && (
+                <button
+                  onClick={() => updateConversationStatus("archived")}
+                  className="w-full flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                >
+                  <Archive className="h-3.5 w-3.5" /> Arquivar Conversa
+                </button>
+              )}
+              {selectedConv.status !== "resolved" && selectedConv.status !== "archived" && (
+                <button
+                  onClick={() => updateConversationStatus("resolved")}
+                  className="w-full flex items-center gap-2 rounded-lg border border-success/30 bg-success/5 px-3 py-2 text-xs text-success hover:bg-success/10 transition-colors"
+                >
+                  <CheckCircle2 className="h-3.5 w-3.5" /> Marcar como Resolvida
+                </button>
+              )}
+            </div>
+          </div>
         </div>
       )}
 
