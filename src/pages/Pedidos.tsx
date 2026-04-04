@@ -521,10 +521,15 @@ const Pedidos = () => {
                         {items.map((order, index) => (
                           <Draggable key={order.id} draggableId={order.id} index={index}>
                             {(provided, snapshot) => (
-                              <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps} className={`rounded-lg border bg-card p-3 transition-shadow cursor-grab active:cursor-grabbing ${snapshot.isDragging ? "shadow-lg shadow-primary/10 border-primary/30" : "border-border hover:border-primary/20"}`}>
-                                {/* ── Card Header: Order # + platform + link ── */}
+                              <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps} onClick={() => batchMode && toggleSelect(order.id)} className={`rounded-lg border bg-card p-3 transition-shadow ${batchMode ? "cursor-pointer" : "cursor-grab active:cursor-grabbing"} ${snapshot.isDragging ? "shadow-lg shadow-primary/10 border-primary/30" : selectedIds.has(order.id) ? "border-primary ring-1 ring-primary/30" : "border-border hover:border-primary/20"}`}>
+                                {/* ── Card Header: Order # + platform + checkbox ── */}
                                 <div className="flex items-center justify-between mb-1.5">
                                   <div className="flex items-center gap-1.5">
+                                    {batchMode && (
+                                      <button onClick={(e) => { e.stopPropagation(); toggleSelect(order.id); }} className="shrink-0">
+                                        {selectedIds.has(order.id) ? <CheckSquare className="h-4 w-4 text-primary" /> : <Square className="h-4 w-4 text-muted-foreground" />}
+                                      </button>
+                                    )}
                                     {order.logistics_type === "coinzz" && order.coinzz_order_hash ? (
                                       <a href={`https://app.coinzz.com.br/pedido/${order.coinzz_order_hash}`} target="_blank" rel="noopener noreferrer" className="text-xs font-mono text-purple-400 font-semibold hover:underline" onClick={(e) => e.stopPropagation()}>#{order.order_number || order.coinzz_order_hash}</a>
                                     ) : order.logistics_type === "logzz" && order.logzz_order_id ? (
