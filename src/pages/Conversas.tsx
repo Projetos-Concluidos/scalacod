@@ -755,8 +755,6 @@ const Conversas = () => {
                   <FilterChip active={dateFilter === "30d"} onClick={() => setDateFilter("30d")}>30 dias</FilterChip>
                 </div>
               </div>
-            </div>
-          )}
 
               {/* Group 5: Conversation status */}
               <div>
