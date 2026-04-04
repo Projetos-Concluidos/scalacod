@@ -111,6 +111,50 @@ const Fluxos = () => {
   const activeFlows = flows.filter(f => f.is_active);
   const filteredFlows = flowFilter === "all" ? flows : flows.filter(f => f.flow_type === flowFilter);
 
+  // Duplicate flow
+  const duplicateFlow = async (flow: Flow) => {
+    if (!user) return;
+    try {
+      const { error } = await supabase.from("flows").insert({
+        user_id: user.id,
+        name: `${flow.name} (cópia)`,
+        description: flow.description,
+        flow_type: flow.flow_type,
+        is_official: flow.is_official,
+        nodes: flow.nodes,
+        edges: flow.edges,
+        node_count: flow.node_count,
+        message_count: flow.message_count,
+        trigger_event: flow.trigger_event,
+        trigger_status: flow.trigger_status,
+        is_active: false,
+      });
+      if (error) throw error;
+      toast.success(`Fluxo "${flow.name}" duplicado!`);
+      fetchFlows();
+    } catch (e: any) {
+      toast.error(e.message || "Erro ao duplicar fluxo");
+    }
+  };
+
+  // Flow execution stats
+  const { data: flowStats } = useQuery({
+    queryKey: ["flow-stats", user?.id],
+    queryFn: async () => {
+      if (!user) return { total: 0, completed: 0, failed: 0, rate: 0 };
+      const { data } = await supabase
+        .from("flow_executions")
+        .select("status")
+        .eq("user_id", user.id);
+      const total = data?.length || 0;
+      const completed = data?.filter(e => e.status === "completed").length || 0;
+      const failed = data?.filter(e => e.status === "failed").length || 0;
+      const rate = total > 0 ? Math.round((completed / total) * 100) : 0;
+      return { total, completed, failed, rate };
+    },
+    enabled: !!user,
+  });
+
   const handleSaveFlow = async (data: any) => {
     if (!user) return;
     try {
