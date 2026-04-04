@@ -505,6 +505,11 @@ const Pedidos = () => {
               return (
                 <div key={status} className="min-w-[270px] w-[270px] flex flex-col">
                   <div className="mb-2 flex items-center gap-2 px-1">
+                    {batchMode && (
+                      <button onClick={() => selectAllInColumn(items)} className="text-muted-foreground hover:text-primary transition-colors" title="Selecionar todos">
+                        {items.length > 0 && items.every(o => selectedIds.has(o.id)) ? <CheckSquare className="h-3.5 w-3.5 text-primary" /> : <Square className="h-3.5 w-3.5" />}
+                      </button>
+                    )}
                     <span className={`h-2.5 w-2.5 rounded-full ${meta.color}`} />
                     <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">{status}</h3>
                     <Badge variant="secondary" className="h-5 min-w-5 justify-center text-[10px] font-bold bg-muted text-muted-foreground">{items.length}</Badge>
