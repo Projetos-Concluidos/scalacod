@@ -89,7 +89,7 @@ const Conversas = () => {
   // Internal notes
   const [showNotes, setShowNotes] = useState(false);
   const [noteText, setNoteText] = useState("");
-  const [internalNotes, setInternalNotes] = useState<Array<{ text: string; author: string; date: string }>>([]);
+  // internalNotes now from useQuery (see below)
 
   // Advanced filters
   const [readFilter, setReadFilter] = useState<"all" | "unread" | "read">("all");
