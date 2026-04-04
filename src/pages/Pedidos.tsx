@@ -6,7 +6,7 @@ import {
   Search, SlidersHorizontal, RefreshCw, Phone, Eye, MoreHorizontal,
   Package, CalendarDays, MapPin, DollarSign, Printer, Truck, Clock,
   Download, X, ExternalLink, MessageSquare, Copy, Edit, Trash2, XCircle, AlertTriangle,
-  ChevronDown, ChevronUp,
+  ChevronDown, ChevronUp, CheckSquare, Square,
 } from "lucide-react";
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
 import PageHeader from "@/components/PageHeader";
