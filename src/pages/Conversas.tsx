@@ -832,12 +832,39 @@ const Conversas = () => {
                 </Badge>
               )}
               {isWindowExpired && (
-                <Badge variant="outline" className="ml-2 text-xs bg-amber-500/10 text-amber-500 border-amber-500/30">
+                <Badge variant="outline" className="ml-2 text-xs bg-warning/10 text-warning border-warning/30">
                   <AlertTriangle className="h-3 w-3 mr-1" /> Janela 24h expirada
+                </Badge>
+              )}
+              {selectedConv.status === "resolved" && (
+                <Badge variant="outline" className="ml-2 text-xs bg-success/10 text-success border-success/30">
+                  <CheckCircle2 className="h-3 w-3 mr-1" /> Resolvida
+                </Badge>
+              )}
+              {selectedConv.status === "archived" && (
+                <Badge variant="outline" className="ml-2 text-xs bg-muted text-muted-foreground border-border">
+                  <Archive className="h-3 w-3 mr-1" /> Arquivada
                 </Badge>
               )}
             </div>
             <div className="flex items-center gap-1">
+              {selectedConv.status === "open" ? (
+                <button
+                  onClick={() => updateConversationStatus("resolved")}
+                  className="flex h-8 items-center gap-1.5 px-2.5 rounded-lg text-xs font-medium text-success hover:bg-success/10 transition-colors"
+                  title="Marcar como resolvida"
+                >
+                  <CheckCircle2 className="h-4 w-4" /> Resolver
+                </button>
+              ) : (
+                <button
+                  onClick={() => updateConversationStatus("open")}
+                  className="flex h-8 items-center gap-1.5 px-2.5 rounded-lg text-xs font-medium text-primary hover:bg-primary/10 transition-colors"
+                  title="Reabrir conversa"
+                >
+                  <MessageSquare className="h-4 w-4" /> Reabrir
+                </button>
+              )}
               <button
                 onClick={() => setShowInfo(!showInfo)}
                 className={cn("flex h-8 w-8 items-center justify-center rounded-lg transition-colors", showInfo ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground hover:bg-muted")}
