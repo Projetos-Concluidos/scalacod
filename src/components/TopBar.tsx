@@ -1,9 +1,10 @@
-import { Moon, Sun, HelpCircle, Menu, Shield } from "lucide-react";
+import { Moon, Sun, HelpCircle, Menu, Shield, MessageCircle } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useMobileSidebar } from "@/contexts/MobileSidebarContext";
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import NotificationBell from "@/components/NotificationBell";
+import { supabase } from "@/integrations/supabase/client";
 
 const TopBar = () => {
   const { profile } = useAuth();
