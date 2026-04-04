@@ -790,6 +790,11 @@ const Conversas = () => {
                   Pedido: {orderData.status}
                 </Badge>
               )}
+              {isWindowExpired && (
+                <Badge variant="outline" className="ml-2 text-xs bg-amber-500/10 text-amber-500 border-amber-500/30">
+                  <AlertTriangle className="h-3 w-3 mr-1" /> Janela 24h expirada
+                </Badge>
+              )}
             </div>
             <div className="flex items-center gap-1">
               <button
