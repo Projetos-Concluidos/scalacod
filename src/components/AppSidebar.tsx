@@ -7,7 +7,8 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import ScalaCODLogo from "@/components/ScalaCODLogo";
 import { useMobileSidebar } from "@/contexts/MobileSidebarContext";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 const mainNav = [
   { label: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
