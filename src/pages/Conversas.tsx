@@ -803,7 +803,11 @@ const Conversas = () => {
                 </Avatar>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">
-                    <p className="text-sm font-semibold text-foreground truncate">{conv.contact_name || conv.contact_phone}</p>
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <p className="text-sm font-semibold text-foreground truncate">{conv.contact_name || conv.contact_phone}</p>
+                      {conv.status === "resolved" && <CheckCircle2 className="h-3 w-3 text-success shrink-0" />}
+                      {conv.status === "archived" && <Archive className="h-3 w-3 text-muted-foreground shrink-0" />}
+                    </div>
                     <span className="text-[10px] text-muted-foreground shrink-0 ml-2">
                       {conv.last_message_at ? formatTime(conv.last_message_at) : ""}
                     </span>
