@@ -758,6 +758,19 @@ const Conversas = () => {
             </div>
           )}
 
+              {/* Group 5: Conversation status */}
+              <div>
+                <p className="text-[10px] text-muted-foreground mb-1.5 font-medium">Status</p>
+                <div className="flex flex-wrap gap-1">
+                  <FilterChip active={statusFilter === "all"} onClick={() => setStatusFilter("all")}>Todas</FilterChip>
+                  <FilterChip active={statusFilter === "open"} onClick={() => setStatusFilter("open")}>Abertas</FilterChip>
+                  <FilterChip active={statusFilter === "resolved"} onClick={() => setStatusFilter("resolved")}>Resolvidas</FilterChip>
+                  <FilterChip active={statusFilter === "archived"} onClick={() => setStatusFilter("archived")}>Arquivadas</FilterChip>
+                </div>
+              </div>
+            </div>
+          )}
+
           <button onClick={() => setShowLabels(true)} className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors">
             <Tag className="h-3 w-3" /> Criar etiquetas rápidas
           </button>
