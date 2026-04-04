@@ -75,6 +75,22 @@ const Conversas = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { play: playNotification, requestPermission } = useNotificationSound();
 
+  // Quick replies
+  const [showQuickReplies, setShowQuickReplies] = useState(false);
+  const quickReplies = [
+    "Olá! Como posso ajudar?",
+    "Seu pedido está em separação e será enviado em breve!",
+    "O código de rastreio será enviado assim que disponível.",
+    "Obrigado pela compra! Qualquer dúvida estamos à disposição.",
+    "Vou verificar e retorno em instantes.",
+    "Pedido confirmado! Acompanhe o status pelo nosso sistema.",
+  ];
+
+  // Internal notes
+  const [showNotes, setShowNotes] = useState(false);
+  const [noteText, setNoteText] = useState("");
+  const [internalNotes, setInternalNotes] = useState<Array<{ text: string; author: string; date: string }>>([]);
+
   // Advanced filters
   const [readFilter, setReadFilter] = useState<"all" | "unread" | "read">("all");
   const [windowFilter, setWindowFilter] = useState<"all" | "open" | "expired">("all");
