@@ -492,6 +492,9 @@ const Fluxos = () => {
                             <button className="text-muted-foreground hover:text-foreground"><MoreHorizontal className="h-4 w-4" /></button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => duplicateFlow(flow)}>
+                              <Copy className="h-4 w-4 mr-2" /> Duplicar
+                            </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => exportFlow(flow)}>
                               <Download className="h-4 w-4 mr-2" /> Exportar
                             </DropdownMenuItem>
