@@ -28,6 +28,24 @@ const TopBar = () => {
     }
   }, []);
 
+  // Fetch unread count
+  useEffect(() => {
+    if (!user) return;
+    const fetchUnread = async () => {
+      const { count } = await supabase
+        .from("conversations")
+        .select("*", { count: "exact", head: true })
+        .gt("unread_count", 0);
+      setUnreadCount(count || 0);
+    };
+    fetchUnread();
+    const channel = supabase
+      .channel("topbar-unread")
+      .on("postgres_changes", { event: "*", schema: "public", table: "conversations" }, () => fetchUnread())
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [user]);
+
   const toggleTheme = () => {
     const next = !isDark;
     setIsDark(next);
