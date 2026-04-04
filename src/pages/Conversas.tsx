@@ -193,6 +193,31 @@ const Conversas = () => {
     toast.success(agentId ? "Conversa atribuída!" : "Atribuição removida");
   };
 
+  // Resolve/archive conversation
+  const updateConversationStatus = async (status: string) => {
+    if (!selectedConv) return;
+    await supabase.from("conversations").update({ status }).eq("id", selectedConv.id);
+    setSelectedConv({ ...selectedConv, status });
+    setConversations(prev => prev.map(c => c.id === selectedConv.id ? { ...c, status } : c));
+    toast.success(status === "resolved" ? "Conversa resolvida!" : status === "archived" ? "Conversa arquivada!" : "Conversa reaberta!");
+  };
+
+  // Internal notes (stored in labels JSON as a workaround)
+  const addInternalNote = () => {
+    if (!noteText.trim() || !selectedConv || !user) return;
+    const note = { text: noteText.trim(), author: user.email || "Eu", date: new Date().toISOString() };
+    setInternalNotes(prev => [...prev, note]);
+    setNoteText("");
+    toast.success("Nota adicionada!");
+  };
+
+  // Use quick reply
+  const useQuickReply = (text: string) => {
+    setNewMessage(text);
+    setShowQuickReplies(false);
+    textareaRef.current?.focus();
+  };
+
   const fetchConversations = async () => {
     if (!user) return;
     setLoading(true);
