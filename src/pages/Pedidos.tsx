@@ -95,8 +95,8 @@ const Pedidos = () => {
     });
   }, []);
 
-  const selectAllInColumn = useCallback((status: string) => {
-    const ids = (columns[status] || []).map(o => o.id);
+  const selectAllInColumn = useCallback((columnOrders: Order[]) => {
+    const ids = columnOrders.map(o => o.id);
     setSelectedIds(prev => {
       const next = new Set(prev);
       const allSelected = ids.every(id => next.has(id));
