@@ -96,6 +96,7 @@ const Conversas = () => {
   const [windowFilter, setWindowFilter] = useState<"all" | "open" | "expired">("all");
   const [mediaFilter, setMediaFilter] = useState<"all" | "media" | "text">("all");
   const [dateFilter, setDateFilter] = useState<"all" | "today" | "7d" | "30d">("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "open" | "resolved" | "archived">("all");
 
   // Test modal
   const [testModalOpen, setTestModalOpen] = useState(false);
