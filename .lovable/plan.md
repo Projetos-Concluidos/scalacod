@@ -1,32 +1,38 @@
-## Implementação dos Itens Críticos — Ordem de Prioridade
+## Plano: Itens Importantes (🟡) do Checklist
 
-### 1. Auto-cancelamento de pedidos não pagos após 24h
-- Criar Edge Function `expire-unpaid-orders` que:
-  - Busca pedidos Coinzz com status "Aguardando" criados há mais de 24h
-  - Move para status "Frustrado" automaticamente
-  - Registra no `order_status_history`
-  - Dispara `trigger-flow` para notificações
-  - Insere notificação push
-- Configurar cron job para executar a cada hora
+### Batch 1 — Kanban & UI (esta implementação)
 
-### 2. Fix de delays nos fluxos (> 25s falham)
-- No `execute-flow`, quando um nó `delay` tem tempo > 25s:
-  - Em vez de `setTimeout`, agendar os nós restantes na `message_queue` com `process_after` calculado
-  - Marcar a execução como "waiting" e retornar
-  - O `process-message-queue` (cron a cada 5min) processa quando chegar a hora
+**1. Indicador de tempo "Aguardando" nos cards do Kanban**
+- Adicionar badge nos cards mostrando "há Xh" ou "há Xd" para pedidos em "Aguardando"
+- Destaque vermelho se > 12h (alerta visual)
 
-### 3. Fix de branching em nós `condition`
-- No `execute-flow`, quando um nó `condition` avalia:
-  - Se TRUE → seguir apenas pelo edge "true"
-  - Se FALSE → seguir apenas pelo edge "false"
-  - Atualmente executa todos os nós subsequentes independente do resultado
+**2. Audit log com userId no drag & drop**
+- No `Pedidos.tsx`, incluir `user_id` do membro no insert de `order_status_history`
+- Adicionar campo `changed_by` no raw_payload para rastreabilidade
 
-### 4. RLS de mensagens para membros da equipe
-- Migration: adicionar policy SELECT na tabela `messages` usando `get_effective_user_id()` via join com `conversations`
+**3. Badge de não lidas na sidebar/topbar**
+- Consultar `conversations` com `unread_count > 0` via `get_effective_user_id()`
+- Exibir badge numérico no item "Conversas" da sidebar e no TopBar
+
+**4. Indicador de janela 24h expirada na conversa**
+- Comparar `last_message_at` com `now() - 24h`
+- Se expirada, mostrar aviso amarelo e desabilitar campo de texto (só templates)
+
+**5. Atribuição de conversa a agente**
+- No painel de detalhes da conversa, dropdown para selecionar membro da equipe
+- Atualiza `conversations.assigned_agent` com o `user_id` do membro
+- Filtro "Minhas conversas" na lista
 
 ### Arquivos envolvidos
 | Arquivo | Mudança |
 |---|---|
-| `supabase/functions/expire-unpaid-orders/index.ts` | Novo — cron de expiração |
-| `supabase/functions/execute-flow/index.ts` | Fix delays + branching |
-| Migration SQL | RLS messages + cron job |
+| `src/pages/Pedidos.tsx` | Badge de tempo + audit log com userId |
+| `src/components/AppSidebar.tsx` | Badge de não lidas |
+| `src/components/TopBar.tsx` | Badge de não lidas |
+| `src/pages/Conversas.tsx` | Indicador 24h + atribuição de agente |
+
+### Resultado
+- Kanban mais inteligente com indicadores visuais de urgência
+- Rastreabilidade completa de quem moveu cada pedido
+- Notificação visual de mensagens pendentes
+- Gestão de conversas por membro da equipe

@@ -7,7 +7,8 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import ScalaCODLogo from "@/components/ScalaCODLogo";
 import { useMobileSidebar } from "@/contexts/MobileSidebarContext";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 const mainNav = [
   { label: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
@@ -26,13 +27,32 @@ const mainNav = [
 const AppSidebar = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { signOut } = useAuth();
+  const { signOut, user } = useAuth();
   const { isOpen, close } = useMobileSidebar();
+  const [unreadCount, setUnreadCount] = useState(0);
 
   // Close sidebar on route change (mobile)
   useEffect(() => {
     close();
   }, [location.pathname, close]);
+
+  // Fetch unread conversation count
+  useEffect(() => {
+    if (!user) return;
+    const fetchUnread = async () => {
+      const { count } = await supabase
+        .from("conversations")
+        .select("*", { count: "exact", head: true })
+        .gt("unread_count", 0);
+      setUnreadCount(count || 0);
+    };
+    fetchUnread();
+    const channel = supabase
+      .channel("sidebar-unread")
+      .on("postgres_changes", { event: "*", schema: "public", table: "conversations" }, () => fetchUnread())
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [user]);
 
   const handleSignOut = async () => {
     await signOut();
@@ -96,6 +116,11 @@ const AppSidebar = () => {
               >
                 <item.icon className="h-[18px] w-[18px] shrink-0" />
                 <span>{item.label}</span>
+                {item.label === "Conversas" && unreadCount > 0 && (
+                  <span className="ml-auto flex h-5 min-w-[20px] items-center justify-center rounded-full bg-destructive px-1.5 text-[10px] font-bold text-destructive-foreground">
+                    {unreadCount > 99 ? "99+" : unreadCount}
+                  </span>
+                )}
               </NavLink>
             );
           })}

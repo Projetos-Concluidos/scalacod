@@ -1,14 +1,16 @@
-import { Moon, Sun, HelpCircle, Menu, Shield } from "lucide-react";
+import { Moon, Sun, HelpCircle, Menu, Shield, MessageCircle } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useMobileSidebar } from "@/contexts/MobileSidebarContext";
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import NotificationBell from "@/components/NotificationBell";
+import { supabase } from "@/integrations/supabase/client";
 
 const TopBar = () => {
-  const { profile } = useAuth();
+  const { profile, user } = useAuth();
   const { open } = useMobileSidebar();
   const navigate = useNavigate();
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const [isDark, setIsDark] = useState(() => {
     if (typeof window !== "undefined") {
@@ -24,6 +26,24 @@ const TopBar = () => {
       setIsDark(true);
     }
   }, []);
+
+  // Fetch unread count
+  useEffect(() => {
+    if (!user) return;
+    const fetchUnread = async () => {
+      const { count } = await supabase
+        .from("conversations")
+        .select("*", { count: "exact", head: true })
+        .gt("unread_count", 0);
+      setUnreadCount(count || 0);
+    };
+    fetchUnread();
+    const channel = supabase
+      .channel("topbar-unread")
+      .on("postgres_changes", { event: "*", schema: "public", table: "conversations" }, () => fetchUnread())
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [user]);
 
   const toggleTheme = () => {
     const next = !isDark;
@@ -64,6 +84,18 @@ const TopBar = () => {
           {isDark ? <Sun className="h-[18px] w-[18px]" /> : <Moon className="h-[18px] w-[18px]" />}
         </button>
         <NotificationBell />
+        <button
+          onClick={() => navigate("/conversas")}
+          className="relative flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          title="Conversas"
+        >
+          <MessageCircle className="h-[18px] w-[18px]" />
+          {unreadCount > 0 && (
+            <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-destructive px-1 text-[9px] font-bold text-destructive-foreground">
+              {unreadCount > 99 ? "99+" : unreadCount}
+            </span>
+          )}
+        </button>
         <button
           onClick={() => navigate("/suporte")}
           className="hidden h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground sm:flex"

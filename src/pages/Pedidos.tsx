@@ -148,7 +148,7 @@ const Pedidos = () => {
     mutationFn: async ({ id, status, fromStatus }: { id: string; status: string; fromStatus?: string }) => {
       const { error } = await supabase.from("orders").update({ status }).eq("id", id);
       if (error) throw error;
-      supabase.from("order_status_history").insert({ order_id: id, from_status: fromStatus || null, to_status: status, source: "kanban_drag" }).then(() => {});
+      supabase.from("order_status_history").insert({ order_id: id, from_status: fromStatus || null, to_status: status, source: "kanban_drag", raw_payload: { changed_by: user?.id, changed_by_email: user?.email } }).then(() => {});
       if (user) {
         supabase.functions.invoke("trigger-flow", { body: { userId: user.id, orderId: id, newStatus: status } }).catch(() => {});
       }
@@ -470,6 +470,19 @@ const Pedidos = () => {
                                   <p className="text-[11px] text-muted-foreground truncate mb-1.5">{checkoutsMap[order.checkout_id]}</p>
                                 )}
                                 <div className="space-y-1 text-xs text-muted-foreground">
+                                  {/* Tempo em Aguardando */}
+                                  {order.status === "Aguardando" && order.created_at && (() => {
+                                    const hoursAgo = Math.floor((Date.now() - new Date(order.created_at).getTime()) / (1000 * 60 * 60));
+                                    const daysAgo = Math.floor(hoursAgo / 24);
+                                    const isUrgent = hoursAgo >= 12;
+                                    const label = daysAgo >= 1 ? `há ${daysAgo}d` : `há ${hoursAgo}h`;
+                                    return (
+                                      <div className={`flex items-center gap-1.5 ${isUrgent ? "text-red-400" : "text-amber-400"}`}>
+                                        <AlertTriangle className="h-3 w-3 shrink-0" />
+                                        <span className="font-semibold text-[10px]">{label} aguardando{isUrgent ? " ⚠️" : ""}</span>
+                                      </div>
+                                    );
+                                  })()}
                                   <div className="flex items-center gap-1.5"><DollarSign className="h-3 w-3 shrink-0" /><span className="font-semibold text-foreground">R$ {Number(order.order_final_price).toFixed(2)}</span></div>
                                   {/* Data agendamento — APENAS Logzz */}
                                   {order.logistics_type === "logzz" && order.delivery_date && (

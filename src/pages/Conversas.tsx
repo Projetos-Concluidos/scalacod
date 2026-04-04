@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import {
   MessageSquare, Search, SlidersHorizontal, RefreshCw, Tag, Send, Paperclip,
   Smile, Mic, Info, Phone, Mail, FileText, X, Plus, Check, CheckCheck,
-  Image as ImageIcon, File, ChevronDown, Layout, FlaskConical, Zap
+  Image as ImageIcon, File, ChevronDown, Layout, FlaskConical, Zap, AlertTriangle, UserCheck
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -137,6 +137,45 @@ const Conversas = () => {
     },
     enabled: !!user,
   });
+
+  // Fetch team members for agent assignment
+  const { data: teamMembers } = useQuery({
+    queryKey: ["team-members-agents", effectiveUserId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("team_members")
+        .select("user_id, role")
+        .eq("owner_id", effectiveUserId)
+        .eq("is_active", true);
+      if (!data || data.length === 0) return [];
+      const userIds = data.map(m => m.user_id);
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, name, email")
+        .in("id", userIds);
+      return (profiles || []).map(p => ({
+        ...p,
+        role: data.find(m => m.user_id === p.id)?.role || "viewer",
+      }));
+    },
+    enabled: !!effectiveUserId,
+  });
+
+  // Check if 24h window is expired for selected conversation
+  const isWindowExpired = useMemo(() => {
+    if (!selectedConv?.last_message_at) return true;
+    const lastMsg = new Date(selectedConv.last_message_at);
+    const cutoff = subDays(new Date(), 1);
+    return lastMsg <= cutoff;
+  }, [selectedConv]);
+
+  const assignAgent = async (agentId: string | null) => {
+    if (!selectedConv) return;
+    await supabase.from("conversations").update({ assigned_agent: agentId }).eq("id", selectedConv.id);
+    setSelectedConv({ ...selectedConv, assigned_agent: agentId });
+    setConversations(prev => prev.map(c => c.id === selectedConv.id ? { ...c, assigned_agent: agentId } : c));
+    toast.success(agentId ? "Conversa atribuída!" : "Atribuição removida");
+  };
 
   const fetchConversations = async () => {
     if (!user) return;
@@ -751,6 +790,11 @@ const Conversas = () => {
                   Pedido: {orderData.status}
                 </Badge>
               )}
+              {isWindowExpired && (
+                <Badge variant="outline" className="ml-2 text-xs bg-amber-500/10 text-amber-500 border-amber-500/30">
+                  <AlertTriangle className="h-3 w-3 mr-1" /> Janela 24h expirada
+                </Badge>
+              )}
             </div>
             <div className="flex items-center gap-1">
               <button
@@ -799,7 +843,13 @@ const Conversas = () => {
               className="hidden"
               onChange={handleFileSelect}
             />
-            {/* Template Selector */}
+            {/* 24h Window Expired Warning */}
+            {isWindowExpired && (
+              <div className="flex items-center gap-2 rounded-lg bg-amber-500/10 border border-amber-500/20 px-3 py-2 mb-2">
+                <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0" />
+                <p className="text-xs text-amber-500">Janela de 24h expirada. Use um template aprovado para iniciar a conversa.</p>
+              </div>
+            )}
             {showTemplates && (
               <div className="bg-card border border-border rounded-xl shadow-lg p-3 mb-2 max-h-48 overflow-y-auto">
                 <h4 className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wider">Templates Aprovados</h4>
@@ -903,9 +953,10 @@ const Conversas = () => {
                 value={newMessage}
                 onChange={e => setNewMessage(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Digite uma mensagem..."
+                placeholder={isWindowExpired ? "Janela expirada — use um template" : "Digite uma mensagem..."}
+                disabled={isWindowExpired}
                 rows={1}
-                className="flex-1 resize-none rounded-lg border border-border bg-input px-4 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30 max-h-32"
+                className={cn("flex-1 resize-none rounded-lg border border-border bg-input px-4 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30 max-h-32", isWindowExpired && "opacity-50 cursor-not-allowed")}
               />
               <div className="flex items-center gap-1">
                 <button className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted">
@@ -967,6 +1018,40 @@ const Conversas = () => {
                 <span className="text-foreground">{leadData.email}</span>
               </div>
             )}
+          </div>
+
+          {/* Agent Assignment */}
+          <div className="p-4 border-b border-border space-y-3">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Atribuir Agente</p>
+            <Select
+              value={selectedConv.assigned_agent || "none"}
+              onValueChange={(v) => assignAgent(v === "none" ? null : v)}
+            >
+              <SelectTrigger className="h-9 text-xs bg-input border-border">
+                <SelectValue placeholder="Nenhum agente" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">
+                  <span className="text-muted-foreground">Nenhum agente</span>
+                </SelectItem>
+                {user && (
+                  <SelectItem value={user.id}>
+                    <div className="flex items-center gap-1.5">
+                      <UserCheck className="h-3 w-3 text-primary" />
+                      <span>Eu (Dono)</span>
+                    </div>
+                  </SelectItem>
+                )}
+                {teamMembers?.map((m) => (
+                  <SelectItem key={m.id} value={m.id}>
+                    <div className="flex items-center gap-1.5">
+                      <span>{m.name || m.email}</span>
+                      <span className="text-[10px] text-muted-foreground capitalize">({m.role})</span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Order */}
