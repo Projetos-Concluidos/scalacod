@@ -7,8 +7,10 @@ import NotificationBell from "@/components/NotificationBell";
 import { supabase } from "@/integrations/supabase/client";
 
 const TopBar = () => {
-  const { profile } = useAuth();
+  const { profile, user } = useAuth();
   const { open } = useMobileSidebar();
+  const navigate = useNavigate();
+  const [unreadCount, setUnreadCount] = useState(0);
   const navigate = useNavigate();
 
   const [isDark, setIsDark] = useState(() => {
