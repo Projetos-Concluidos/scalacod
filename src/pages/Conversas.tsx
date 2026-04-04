@@ -205,12 +205,40 @@ const Conversas = () => {
     toast.success(status === "resolved" ? "Conversa resolvida!" : status === "archived" ? "Conversa arquivada!" : "Conversa reaberta!");
   };
 
-  // Internal notes (stored in labels JSON as a workaround)
-  const addInternalNote = () => {
+  // Internal notes — persisted in conversation_notes table
+  const { data: dbNotes, refetch: refetchNotes } = useQuery({
+    queryKey: ["conversation-notes", selectedConv?.id],
+    queryFn: async () => {
+      if (!selectedConv) return [];
+      const { data } = await supabase
+        .from("conversation_notes")
+        .select("*")
+        .eq("conversation_id", selectedConv.id)
+        .order("created_at", { ascending: true });
+      return (data || []) as Array<{ id: string; content: string; author_name: string; created_at: string }>;
+    },
+    enabled: !!selectedConv,
+  });
+
+  const internalNotes = useMemo(() =>
+    (dbNotes || []).map(n => ({ text: n.content, author: n.author_name, date: n.created_at, id: n.id })),
+    [dbNotes]
+  );
+
+  const addInternalNote = async () => {
     if (!noteText.trim() || !selectedConv || !user) return;
-    const note = { text: noteText.trim(), author: user.email || "Eu", date: new Date().toISOString() };
-    setInternalNotes(prev => [...prev, note]);
+    const { error } = await supabase.from("conversation_notes").insert({
+      conversation_id: selectedConv.id,
+      user_id: user.id,
+      content: noteText.trim(),
+      author_name: user.email || "Eu",
+    } as any);
+    if (error) {
+      toast.error("Erro ao salvar nota");
+      return;
+    }
     setNoteText("");
+    refetchNotes();
     toast.success("Nota adicionada!");
   };
 
