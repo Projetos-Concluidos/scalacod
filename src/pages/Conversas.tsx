@@ -953,9 +953,10 @@ const Conversas = () => {
                 value={newMessage}
                 onChange={e => setNewMessage(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Digite uma mensagem..."
+                placeholder={isWindowExpired ? "Janela expirada — use um template" : "Digite uma mensagem..."}
+                disabled={isWindowExpired}
                 rows={1}
-                className="flex-1 resize-none rounded-lg border border-border bg-input px-4 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30 max-h-32"
+                className={cn("flex-1 resize-none rounded-lg border border-border bg-input px-4 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30 max-h-32", isWindowExpired && "opacity-50 cursor-not-allowed")}
               />
               <div className="flex items-center gap-1">
                 <button className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted">
