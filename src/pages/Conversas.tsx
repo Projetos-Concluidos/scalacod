@@ -1020,6 +1020,40 @@ const Conversas = () => {
             )}
           </div>
 
+          {/* Agent Assignment */}
+          <div className="p-4 border-b border-border space-y-3">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Atribuir Agente</p>
+            <Select
+              value={selectedConv.assigned_agent || "none"}
+              onValueChange={(v) => assignAgent(v === "none" ? null : v)}
+            >
+              <SelectTrigger className="h-9 text-xs bg-input border-border">
+                <SelectValue placeholder="Nenhum agente" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">
+                  <span className="text-muted-foreground">Nenhum agente</span>
+                </SelectItem>
+                {user && (
+                  <SelectItem value={user.id}>
+                    <div className="flex items-center gap-1.5">
+                      <UserCheck className="h-3 w-3 text-primary" />
+                      <span>Eu (Dono)</span>
+                    </div>
+                  </SelectItem>
+                )}
+                {teamMembers?.map((m) => (
+                  <SelectItem key={m.id} value={m.id}>
+                    <div className="flex items-center gap-1.5">
+                      <span>{m.name || m.email}</span>
+                      <span className="text-[10px] text-muted-foreground capitalize">({m.role})</span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           {/* Order */}
           {orderData && (
             <div className="p-4 border-b border-border space-y-2">
