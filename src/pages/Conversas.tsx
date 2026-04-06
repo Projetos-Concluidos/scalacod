@@ -77,14 +77,54 @@ const Conversas = () => {
 
   // Quick replies
   const [showQuickReplies, setShowQuickReplies] = useState(false);
-  const quickReplies = [
-    "Olá! Como posso ajudar?",
-    "Seu pedido está em separação e será enviado em breve!",
-    "O código de rastreio será enviado assim que disponível.",
-    "Obrigado pela compra! Qualquer dúvida estamos à disposição.",
-    "Vou verificar e retorno em instantes.",
-    "Pedido confirmado! Acompanhe o status pelo nosso sistema.",
-  ];
+  const [editingQuickReplies, setEditingQuickReplies] = useState(false);
+  const [newQrShortcut, setNewQrShortcut] = useState("");
+  const [newQrContent, setNewQrContent] = useState("");
+
+  // DB-backed quick replies
+  const { data: dbQuickReplies = [], refetch: refetchQr } = useQuery({
+    queryKey: ["quick-replies", user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+      const { data } = await supabase
+        .from("quick_replies")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: true });
+      return data || [];
+    },
+    enabled: !!user,
+  });
+
+  const quickReplies = dbQuickReplies.length > 0
+    ? dbQuickReplies.map((qr: any) => qr.content)
+    : [
+      "Olá! Como posso ajudar?",
+      "Seu pedido está em separação e será enviado em breve!",
+      "O código de rastreio será enviado assim que disponível.",
+      "Obrigado pela compra! Qualquer dúvida estamos à disposição.",
+      "Vou verificar e retorno em instantes.",
+      "Pedido confirmado! Acompanhe o status pelo nosso sistema.",
+    ];
+
+  const addQuickReply = async () => {
+    if (!newQrContent.trim() || !user) return;
+    await supabase.from("quick_replies").insert({
+      user_id: user.id,
+      shortcut: newQrShortcut.trim() || `/${Date.now()}`,
+      content: newQrContent.trim(),
+    } as any);
+    setNewQrShortcut("");
+    setNewQrContent("");
+    refetchQr();
+    toast.success("Resposta rápida adicionada!");
+  };
+
+  const deleteQuickReply = async (id: string) => {
+    await supabase.from("quick_replies").delete().eq("id", id);
+    refetchQr();
+    toast.success("Resposta removida!");
+  };
 
   // Internal notes
   const [showNotes, setShowNotes] = useState(false);
