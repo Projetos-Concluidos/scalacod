@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
-import { Search, ChevronDown, ExternalLink, BookOpen, Lightbulb, AlertTriangle, CheckCircle2, HelpCircle } from "lucide-react";
+import { Search, ExternalLink, BookOpen, Lightbulb, CheckCircle2, HelpCircle } from "lucide-react";
 import PageHeader from "@/components/PageHeader";
 
 interface TutorialStep {
