@@ -482,75 +482,246 @@ R: Verifique as estatísticas no topo da página e as mensagens em Conversas. Ca
     label: "WhatsApp Cloud",
     title: "WhatsApp Cloud — Guia Completo de Conexão",
     content: `## Importância da Conexão WhatsApp
-Sem o WhatsApp conectado, o ScalaCOD **não pode enviar mensagens automáticas**. É o primeiro passo obrigatório!
+Sem o WhatsApp conectado, o ScalaCOD **não pode enviar mensagens automáticas**. É o primeiro passo obrigatório após criar sua conta!
 
-## Opções de Conexão
+---
 
-### 🟢 YCloud (Recomendado)
-A YCloud é a forma mais fácil de usar a API Oficial do WhatsApp.
+## 🟢 YCloud (Recomendado)
 
-**Passo a Passo:**
-1. Acesse **ycloud.com** e crie sua conta
-2. Vá em **Settings → API Keys**
-3. Copie sua **API Key**
-4. No ScalaCOD, vá em **WhatsApp Cloud → Aba YCloud**
-5. Cole a API Key no campo indicado
-6. Configure o **Phone Number ID** (encontrado no painel da YCloud)
-7. Clique em **"Salvar"**
-8. Envie uma mensagem de teste para confirmar
+A YCloud é um provedor oficial parceiro da Meta que simplifica toda a configuração da API do WhatsApp Business. É a opção mais segura e estável.
 
-**✅ Vantagens:** Fácil configuração, alta entregabilidade, suporte a templates, menor risco de banimento.
+### Por que a YCloud é recomendada?
+- ✅ Configuração simples e rápida (menos de 10 minutos)
+- ✅ Alta entregabilidade de mensagens
+- ✅ Suporte completo a **Templates de mensagens** (obrigatório para mensagens proativas)
+- ✅ Menor risco de banimento (provedor oficial Meta)
+- ✅ Painel próprio com métricas de envio
+- ✅ Suporte técnico dedicado
 
-### 🔵 Meta/Facebook (API Oficial Direta)
-Conexão direta com a API do WhatsApp Business Platform.
+### Passo a Passo — Conectando a YCloud ao ScalaCOD
 
-**Passo a Passo:**
+**Etapa 1 — Criar conta na YCloud**
+1. Acesse **ycloud.com** e clique em **Sign Up**
+2. Crie sua conta com e-mail e senha
+3. Confirme seu e-mail de verificação
+4. Faça login no painel da YCloud
+
+**Etapa 2 — Obter sua API Key**
+1. No painel da YCloud, vá em **Settings → API Keys**
+2. Clique em **Create API Key**
+3. Dê um nome (ex: "ScalaCOD")
+4. Copie a **API Key** gerada (ela só aparece uma vez!)
+5. Guarde em local seguro
+
+**Etapa 3 — Obter o Phone Number ID**
+1. No painel da YCloud, vá em **WhatsApp → Phone Numbers**
+2. Localize seu número verificado
+3. Copie o **Phone Number ID** (é um código numérico, ex: 1234567890)
+
+**Etapa 4 — Configurar no ScalaCOD**
+1. No ScalaCOD, acesse o menu lateral → **WhatsApp Cloud**
+2. Clique na aba **YCloud**
+3. Cole a **API Key** no campo "API Key"
+4. Cole o **Phone Number ID** no campo correspondente
+5. Clique em **"Salvar"**
+6. O status mudará para **🟢 Conectado**
+
+**Etapa 5 — Testar a conexão**
+1. Vá em **Conversas** no menu lateral
+2. Inicie uma nova conversa com seu próprio número
+3. Envie uma mensagem de teste
+4. Se receber no WhatsApp, está tudo funcionando! 🎉
+
+**Etapa 6 — Configurar Webhook (Receber mensagens)**
+1. No ScalaCOD, na aba YCloud, copie a **URL do Webhook** exibida
+2. No painel da YCloud, vá em **Settings → Webhooks**
+3. Cole a URL do Webhook
+4. Marque os eventos: **message.received**, **message.updated**
+5. Salve
+
+💡 **Dica:** Com a YCloud você pode criar e gerenciar Templates diretamente no painel deles, sem precisar ir ao Facebook Business Manager.
+
+⚠️ **Importante:** A YCloud cobra por mensagem enviada. Consulte os preços em ycloud.com/pricing.
+
+---
+
+## 🔵 Meta/Facebook (API Oficial Direta)
+
+Conexão direta com a API do WhatsApp Business Platform da Meta. Ideal para quem quer controle total sem intermediários.
+
+### Quando escolher a Meta Direta?
+- ✅ Controle total sobre a API e configurações
+- ✅ Sem intermediários (você se conecta direto à Meta)
+- ✅ Suporte completo a Templates
+- ⚠️ Configuração mais complexa (requer conta de desenvolvedor)
+- ⚠️ Requer aprovação do Facebook Business Manager
+
+### Pré-requisitos
+Antes de começar, você precisa:
+- Uma conta no **Facebook** (pessoal)
+- Uma **Página do Facebook** (Business Page)
+- Uma conta no **Facebook Business Manager** (business.facebook.com)
+- Um **número de telefone** que não esteja vinculado a outro WhatsApp
+
+### Passo a Passo — Conectando a Meta ao ScalaCOD
+
+**Etapa 1 — Criar App no Facebook Developers**
 1. Acesse **developers.facebook.com**
-2. Crie um app do tipo **Business**
-3. Adicione o produto **WhatsApp**
-4. Em WhatsApp → Getting Started, copie o **Phone Number ID**
-5. Gere um **Access Token permanente** (System User Token)
-6. No ScalaCOD, vá em **WhatsApp Cloud → Aba Meta**
-7. Cole o Phone Number ID e o Access Token
-8. Configure a URL do Webhook (mostrada na tela)
-9. Clique em **"Salvar"**
+2. Clique em **Meus Apps → Criar App**
+3. Selecione o tipo **Business**
+4. Dê um nome ao app (ex: "ScalaCOD WhatsApp")
+5. Selecione sua conta do Business Manager
+6. Clique em **Criar App**
 
-**✅ Vantagens:** Controle total, sem intermediários.
-**⚠️ Desvantagens:** Configuração mais complexa, requer aprovação da Meta.
+**Etapa 2 — Adicionar o Produto WhatsApp**
+1. No painel do app, clique em **Adicionar Produtos**
+2. Encontre **WhatsApp** e clique em **Configurar**
+3. Selecione sua conta do Business Manager
+4. Aguarde a configuração inicial
 
-### 🟡 Evolution API (Sem aprovação)
-Usa o WhatsApp Web via API (não-oficial).
+**Etapa 3 — Obter o Phone Number ID**
+1. No menu lateral, vá em **WhatsApp → Primeiros Passos**
+2. Na seção "De", localize seu número de teste ou número adicionado
+3. Copie o **Phone Number ID** (ex: 123456789012345)
 
-**Passo a Passo:**
-1. Instale o Evolution API em seu servidor (Docker recomendado)
-2. No ScalaCOD, vá em **WhatsApp Cloud → Aba Evolution**
-3. Cole a **URL do servidor** (ex: https://evolution.seuservidor.com)
-4. Cole a **API Key** do Evolution
-5. Defina o **Nome da Instância**
-6. Clique em **"Conectar"**
-7. Escaneie o **QR Code** com seu WhatsApp
-8. Aguarde a conexão (30 segundos)
+**Etapa 4 — Gerar Access Token Permanente**
+1. No Business Manager, vá em **Configurações → Usuários do Sistema**
+2. Clique em **Adicionar** e crie um usuário do sistema (tipo Admin)
+3. Clique no usuário criado → **Gerar Token**
+4. Selecione o app criado na Etapa 1
+5. Marque as permissões: **whatsapp_business_messaging**, **whatsapp_business_management**
+6. Clique em **Gerar Token**
+7. Copie o token (começa com "EAA...")
+8. ⚠️ **Guarde esse token!** Ele não será mostrado novamente
 
-**✅ Vantagens:** Sem custo por mensagem, sem aprovação Meta, configuração rápida.
-**⚠️ Desvantagens:** Risco de banimento (não-oficial), sem templates, menor estabilidade.
+**Etapa 5 — Configurar no ScalaCOD**
+1. No ScalaCOD, acesse → **WhatsApp Cloud**
+2. Clique na aba **Meta**
+3. Cole o **Phone Number ID**
+4. Cole o **Access Token** (EAA...)
+5. Opcionalmente, preencha o **WABA ID** (WhatsApp Business Account ID)
+6. Clique em **"Salvar"**
 
-## Qual escolher?
+**Etapa 6 — Configurar Webhook para Receber Mensagens**
+1. No ScalaCOD, copie a **URL do Webhook** exibida na aba Meta
+2. No Facebook Developers, vá em **WhatsApp → Configuração**
+3. Na seção Webhook, clique em **Editar**
+4. Cole a **URL do Webhook** do ScalaCOD
+5. No campo **Token de verificação**, use: scalacod_verify
+6. Clique em **Verificar e Salvar**
+7. Inscreva-se nos campos: **messages**, **message_template_status_update**
 
-| Critério | YCloud | Meta | Evolution |
+💡 **Dica:** O Access Token do System User não expira, diferente do token temporário da página de testes.
+
+⚠️ **Importante:** Para enviar mensagens fora da janela de 24h, você precisa ter **Templates aprovados** pela Meta no Business Manager.
+
+---
+
+## 🟡 Evolution API (Nativa — Já Inclusa)
+
+A Evolution API já vem **integrada e configurada** no ScalaCOD. Você não precisa instalar nada, criar servidor ou configurar Docker. Basta conectar seu WhatsApp escaneando o QR Code!
+
+### O que é a Evolution API no ScalaCOD?
+O ScalaCOD já entrega a Evolution API **pronta e funcionando**. A infraestrutura do servidor, URL e API Key já estão configuradas. Você só precisa:
+1. Criar sua instância
+2. Escanear o QR Code
+3. Começar a usar!
+
+### Quando usar a Evolution?
+- ✅ Não precisa de aprovação da Meta
+- ✅ Não precisa criar conta em nenhum provedor externo
+- ✅ Sem custo por mensagem (ilimitado)
+- ✅ Configuração ultra-rápida (2 minutos)
+- ✅ Já vem inclusa no seu plano ScalaCOD
+- ⚠️ Usa WhatsApp Web internamente (não-oficial)
+- ⚠️ Risco de banimento se enviar muitas mensagens em massa
+- ⚠️ Não suporta Templates oficiais da Meta
+
+### Passo a Passo — Conectando a Evolution API
+
+**Etapa 1 — Acessar a tela de conexão**
+1. No ScalaCOD, acesse o menu lateral → **WhatsApp Cloud**
+2. Clique na aba **Evolution**
+
+**Etapa 2 — Criar sua Instância**
+1. No campo **Nome da Instância**, digite um nome identificador (ex: "minha-loja")
+2. A URL do servidor e API Key já estarão preenchidos automaticamente
+3. Clique em **"Conectar"**
+
+**Etapa 3 — Escanear o QR Code**
+1. Um **QR Code** aparecerá na tela
+2. No seu celular, abra o **WhatsApp**
+3. Vá em **Configurações → Aparelhos Conectados → Conectar um aparelho**
+4. Aponte a câmera para o QR Code na tela
+5. Aguarde a autenticação (10 a 30 segundos)
+
+**Etapa 4 — Confirmar a conexão**
+1. O status mudará para **🟢 Conectado**
+2. O nome e número do WhatsApp aparecerão na tela
+3. Pronto! Suas automações já podem enviar mensagens 🎉
+
+**Etapa 5 — Testar**
+1. Vá em **Conversas**
+2. Envie uma mensagem de teste para seu próprio número ou outro número
+3. Verifique se a mensagem chegou no WhatsApp
+
+### Solução de Problemas — Evolution
+
+**QR Code não aparece?**
+- Recarregue a página e clique em "Conectar" novamente
+- Verifique se não há outra instância ativa com o mesmo nome
+
+**Desconectou sozinho?**
+- Abra o WhatsApp no celular → Aparelhos Conectados
+- Verifique se o ScalaCOD aparece na lista
+- Se não aparecer, clique em "Reconectar" e escaneie novamente
+- 💡 Mantenha o celular conectado à internet e com bateria
+
+**Mensagens não estão sendo enviadas?**
+- Verifique se o status está 🟢 Conectado
+- Confira se o número de destino está correto (com DDD e código do país)
+- Verifique se seus Fluxos estão ativados
+
+⚠️ **Aviso sobre a Evolution API:** Por usar o WhatsApp Web (não-oficial), existe risco de banimento se você enviar muitas mensagens em massa ou for denunciado por spam. Recomendamos a Evolution para **volume moderado** (até ~500 mensagens/dia). Para alto volume, use **YCloud** ou **Meta**.
+
+---
+
+## Qual provedor escolher? — Comparativo
+
+| Critério | YCloud 🟢 | Meta 🔵 | Evolution 🟡 |
 |---|---|---|---|
-| Facilidade | ⭐⭐⭐ | ⭐ | ⭐⭐ |
-| Estabilidade | ⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐ |
-| Custo | Pago | Pago | Gratuito |
-| Risco de ban | Baixo | Baixo | Alto |
-| Templates | Sim | Sim | Não |
+| Facilidade de Setup | ⭐⭐⭐ Fácil | ⭐ Complexo | ⭐⭐⭐ Ultra-fácil |
+| Estabilidade | ⭐⭐⭐ Alta | ⭐⭐⭐ Alta | ⭐⭐ Média |
+| Custo por mensagem | Pago (centavos) | Pago (centavos) | Gratuito (ilimitado) |
+| Risco de banimento | Baixíssimo | Baixíssimo | Médio-Alto |
+| Templates oficiais | ✅ Sim | ✅ Sim | ❌ Não |
+| Aprovação Meta | Necessária | Necessária | Não necessária |
+| Incluso no ScalaCOD | Não (conta YCloud) | Não (conta Meta) | ✅ Sim, nativo |
+| Ideal para | Produção estável | Controle total | Teste e baixo volume |
+
+### Nossa Recomendação:
+- 🏆 **YCloud** para produção profissional e alto volume
+- 🔧 **Meta Direta** para quem quer controle total e já tem experiência
+- 🚀 **Evolution** para começar rápido, testar e operações de baixo volume
+
+---
 
 ## Perguntas Frequentes
 
 **P: Posso trocar de provedor depois?**
-R: Sim! Basta configurar o novo provedor. As conversas antigas permanecem salvas.
+R: Sim! Basta configurar o novo provedor na aba correspondente. As conversas e leads antigos permanecem salvos no sistema.
+
+**P: Posso usar mais de um provedor ao mesmo tempo?**
+R: O ScalaCOD usa o provedor ativo configurado. Você pode ter mais de um salvo, mas apenas um será usado para enviar mensagens por vez.
 
 **P: Preciso de um número exclusivo?**
-R: Para YCloud e Meta, sim. Para Evolution, você pode usar seu número pessoal (não recomendado para alto volume).`,
+R: Para YCloud e Meta, sim — o número precisa ser exclusivo para a API. Para Evolution, você pode usar seu número pessoal (mas não recomendamos para alto volume).
+
+**P: E se meu QR Code da Evolution expirar?**
+R: Basta clicar em "Reconectar" na aba Evolution para gerar um novo QR Code. O processo leva menos de 1 minuto.
+
+**P: Quanto custa a API oficial (YCloud/Meta)?**
+R: O custo varia por país e tipo de conversa. No Brasil, mensagens de utilidade custam aproximadamente R$ 0,05 a R$ 0,15 por conversa de 24h. Consulte a tabela de preços oficial da Meta.`,
     link: "/whatsapp-cloud",
     linkLabel: "Configurar WhatsApp →",
   },
