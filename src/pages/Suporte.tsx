@@ -1390,6 +1390,7 @@ const Suporte = () => {
     );
   }, [searchQuery]);
 
+  const activeContent = useMemo(() => TUTORIAL_SECTIONS.find((s) => s.id === activeSection), [activeSection]);
   const totalSections = TUTORIAL_SECTIONS.length;
 
   return (
