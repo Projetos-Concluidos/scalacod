@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
-import { Search, ChevronDown, ExternalLink, BookOpen, Lightbulb, AlertTriangle, CheckCircle2, HelpCircle } from "lucide-react";
+import { Search, ExternalLink, BookOpen, Lightbulb, CheckCircle2, HelpCircle } from "lucide-react";
 import PageHeader from "@/components/PageHeader";
 
 interface TutorialStep {
@@ -1317,73 +1317,60 @@ function boldify(text: string) {
   return result;
 }
 
-function TutorialSection({ section }: { section: TutorialSectionData }) {
-  const [expanded, setExpanded] = useState(false);
-
+function TutorialContent({ section }: { section: TutorialSectionData }) {
   return (
-    <section id={section.id} className="rounded-xl border border-border bg-card overflow-hidden transition-shadow hover:shadow-sm">
-      <button
-        onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center justify-between p-5 text-left hover:bg-muted/50 transition-colors"
-      >
+    <div className="rounded-xl border border-border bg-card overflow-hidden">
+      <div className="p-6 border-b border-border/50 bg-muted/30">
         <div className="flex items-center gap-3">
-          <span className="text-2xl">{section.icon}</span>
+          <span className="text-3xl">{section.icon}</span>
           <div>
-            <h2 className="text-base font-bold text-card-foreground">{section.title}</h2>
-            {!expanded && (
-              <p className="text-xs text-muted-foreground mt-0.5">Clique para expandir o tutorial completo</p>
-            )}
+            <h2 className="text-lg font-bold text-card-foreground">{section.title}</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">{section.label}</p>
           </div>
         </div>
-        <ChevronDown
-          className={`text-muted-foreground transition-transform duration-200 ${expanded ? "rotate-180" : ""}`}
-          size={20}
-        />
-      </button>
+      </div>
 
-      {expanded && (
-        <div className="px-5 pb-6 space-y-4 border-t border-border/50 pt-4">
-          {section.steps && (
-            <div className="space-y-3">
-              {section.steps.map((step, i) => (
-                <div key={i} className="flex gap-4 p-4 bg-muted/40 rounded-xl border border-border/30">
-                  <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-bold flex-shrink-0 shadow-sm">
-                    {i + 1}
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-card-foreground mb-1 text-sm">{step.title}</h3>
-                    <p className="text-sm text-muted-foreground leading-relaxed">{step.description}</p>
-                    {step.link && (
-                      <Link
-                        to={step.link}
-                        className="text-sm text-primary hover:text-primary/80 font-medium mt-2 inline-flex items-center gap-1"
-                      >
-                        {step.linkLabel}
-                        <ExternalLink size={12} />
-                      </Link>
-                    )}
-                  </div>
+      <div className="p-6 space-y-4">
+        {section.steps && (
+          <div className="space-y-3">
+            {section.steps.map((step, i) => (
+              <div key={i} className="flex gap-4 p-4 bg-muted/40 rounded-xl border border-border/30">
+                <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-bold flex-shrink-0 shadow-sm">
+                  {i + 1}
                 </div>
-              ))}
-            </div>
-          )}
+                <div className="flex-1">
+                  <h3 className="font-semibold text-card-foreground mb-1 text-sm">{step.title}</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">{step.description}</p>
+                  {step.link && (
+                    <Link
+                      to={step.link}
+                      className="text-sm text-primary hover:text-primary/80 font-medium mt-2 inline-flex items-center gap-1"
+                    >
+                      {step.linkLabel}
+                      <ExternalLink size={12} />
+                    </Link>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
 
-          {section.content && renderMarkdown(section.content)}
+        {section.content && renderMarkdown(section.content)}
 
-          {section.link && (
-            <div className="pt-4 border-t border-border">
-              <Link
-                to={section.link}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-xl hover:bg-primary/90 transition-colors shadow-sm"
-              >
-                {section.linkLabel}
-                <ExternalLink size={14} />
-              </Link>
-            </div>
-          )}
-        </div>
-      )}
-    </section>
+        {section.link && (
+          <div className="pt-4 border-t border-border">
+            <Link
+              to={section.link}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-xl hover:bg-primary/90 transition-colors shadow-sm"
+            >
+              {section.linkLabel}
+              <ExternalLink size={14} />
+            </Link>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -1403,6 +1390,7 @@ const Suporte = () => {
     );
   }, [searchQuery]);
 
+  const activeContent = useMemo(() => TUTORIAL_SECTIONS.find((s) => s.id === activeSection), [activeSection]);
   const totalSections = TUTORIAL_SECTIONS.length;
 
   return (
@@ -1453,7 +1441,7 @@ const Suporte = () => {
           </div>
         </aside>
 
-        {/* Content */}
+        {/* Content — shows only the selected tutorial */}
         <main className="flex-1 min-w-0 space-y-4">
           <div className="relative max-w-md">
             <Search size={18} className="absolute left-3 top-3 text-muted-foreground" />
@@ -1465,17 +1453,55 @@ const Suporte = () => {
             />
           </div>
 
-          {filtered.length === 0 && (
-            <div className="text-center py-12">
-              <HelpCircle size={40} className="mx-auto text-muted-foreground/50 mb-3" />
-              <p className="text-muted-foreground text-sm">Nenhum tutorial encontrado para "{searchQuery}"</p>
-              <p className="text-muted-foreground/70 text-xs mt-1">Tente buscar por palavras-chave como "checkout", "fluxo" ou "whatsapp"</p>
-            </div>
+          {searchQuery.trim() ? (
+            filtered.length === 0 ? (
+              <div className="text-center py-12">
+                <HelpCircle size={40} className="mx-auto text-muted-foreground/50 mb-3" />
+                <p className="text-muted-foreground text-sm">Nenhum tutorial encontrado para "{searchQuery}"</p>
+                <p className="text-muted-foreground/70 text-xs mt-1">Tente buscar por palavras-chave como "checkout", "fluxo" ou "whatsapp"</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground">{filtered.length} resultado(s)</p>
+                {filtered.map((section) => (
+                  <button
+                    key={section.id}
+                    onClick={() => { setActiveSection(section.id); setSearchQuery(""); }}
+                    className="w-full flex items-center gap-3 p-4 bg-card border border-border rounded-xl text-left hover:bg-muted/50 transition-colors"
+                  >
+                    <span className="text-2xl">{section.icon}</span>
+                    <div>
+                      <h3 className="text-sm font-semibold text-card-foreground">{section.title}</h3>
+                      <p className="text-xs text-muted-foreground">{section.label}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )
+          ) : (
+            activeContent && <TutorialContent section={activeContent} />
           )}
 
-          {filtered.map((section) => (
-            <TutorialSection key={section.id} section={section} />
-          ))}
+          {/* Mobile topic selector */}
+          <div className="lg:hidden mt-6">
+            <label className="text-xs text-muted-foreground font-medium mb-2 block">Outros tutoriais</label>
+            <div className="flex flex-wrap gap-2">
+              {TUTORIAL_SECTIONS.map((s) => (
+                <button
+                  key={s.id}
+                  onClick={() => setActiveSection(s.id)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-all ${
+                    activeSection === s.id
+                      ? "bg-primary/10 text-primary font-medium"
+                      : "bg-muted/50 text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <span>{s.icon}</span>
+                  {s.label}
+                </button>
+              ))}
+            </div>
+          </div>
         </main>
       </div>
     </div>
