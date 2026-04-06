@@ -63,6 +63,7 @@ const Dashboard = () => {
   const [sparkData, setSparkData] = useState(Array.from({ length: 12 }, () => ({ v: 0 })));
   const [recentLeads, setRecentLeads] = useState<any[]>([]);
   const [queueCount, setQueueCount] = useState(0);
+  const [convMetrics, setConvMetrics] = useState({ open: 0, resolved: 0, total: 0 });
 
   const loadData = useCallback(async () => {
     if (!user) return;
@@ -79,12 +80,15 @@ const Dashboard = () => {
     const qId = effectiveUserId || user?.id;
     if (!qId) return;
 
-    const [pixelRes, ordersRes, coinzzRes, leadsRes, queueRes] = await Promise.all([
+    const [pixelRes, ordersRes, coinzzRes, leadsRes, queueRes, convOpenRes, convResolvedRes, convTotalRes] = await Promise.all([
       supabase.from("pixel_events").select("event_type, created_at").gte("created_at", from).lt("created_at", to),
       supabase.from("orders").select("order_final_price, created_at, status").gte("created_at", from).lt("created_at", to),
       supabase.from("orders").select("id", { count: "exact", head: true }).eq("logistics_type", "coinzz").in("status", ["Aprovado", "Entregue"]).gte("created_at", from).lt("created_at", to),
       supabase.from("leads").select("id, name, phone, status, created_at").order("created_at", { ascending: false }).limit(5),
       supabase.from("message_queue").select("id", { count: "exact", head: true }).eq("status", "pending"),
+      supabase.from("conversations").select("id", { count: "exact", head: true }).or("status.is.null,status.eq.open"),
+      supabase.from("conversations").select("id", { count: "exact", head: true }).eq("status", "resolved"),
+      supabase.from("conversations").select("id", { count: "exact", head: true }),
     ]);
 
     const pixels = pixelRes.data || [];
@@ -131,6 +135,11 @@ const Dashboard = () => {
     setSparkData(spark);
     setRecentLeads(leadsRes.data || []);
     setQueueCount(queueRes.count || 0);
+    setConvMetrics({
+      open: convOpenRes.count || 0,
+      resolved: convResolvedRes.count || 0,
+      total: convTotalRes.count || 0,
+    });
   }, [user, activePeriod, customDateFrom, customDateTo, effectiveUserId]);
 
   useEffect(() => { loadData(); }, [loadData]);
@@ -158,6 +167,8 @@ const Dashboard = () => {
     { label: "Abandono", value: `${metrics.abandonment}%`, color: "#F59E0B", icon: AlertTriangle },
     { label: "Coinzz Pagos", value: String(metrics.coinzzPaid), color: "#6B7280", icon: Coins },
     { label: "Fila WhatsApp", value: String(queueCount), color: queueCount > 0 ? "#F59E0B" : "#10B981", icon: MessageCircle },
+    { label: "Conversas Abertas", value: String(convMetrics.open), color: "#3B82F6", icon: MessageCircle },
+    { label: "Resolvidas", value: String(convMetrics.resolved), color: "#10B981", icon: MessageCircle },
   ];
 
   return (

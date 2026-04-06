@@ -28,30 +28,10 @@ const TUTORIAL_SECTIONS: TutorialSectionData[] = [
     label: "Primeiros Passos",
     title: "Como começar com o ScalaCOD",
     steps: [
-      {
-        title: "1. Conecte seu WhatsApp",
-        description: "Vá em WhatsApp Cloud e conecte sua instância via YCloud, Meta ou Evolution API.",
-        link: "/whatsapp-cloud",
-        linkLabel: "Ir para WhatsApp Cloud →",
-      },
-      {
-        title: "2. Configure a Logzz",
-        description: "Em Configurações → Integrações, insira seu token da Logzz para habilitar a entrega COD.",
-        link: "/configuracoes",
-        linkLabel: "Ir para Configurações →",
-      },
-      {
-        title: "3. Crie seu primeiro checkout",
-        description: "Vá em Checkouts e crie seu primeiro checkout importando uma oferta da Logzz.",
-        link: "/checkouts",
-        linkLabel: "Ir para Checkouts →",
-      },
-      {
-        title: "4. Aguarde seu primeiro pedido",
-        description: "Compartilhe o link do checkout e acompanhe os pedidos em tempo real no Kanban.",
-        link: "/pedidos",
-        linkLabel: "Ir para Pedidos →",
-      },
+      { title: "1. Conecte seu WhatsApp", description: "Vá em WhatsApp Cloud e conecte sua instância via YCloud, Meta ou Evolution API.", link: "/whatsapp-cloud", linkLabel: "Ir para WhatsApp Cloud →" },
+      { title: "2. Configure a Logzz", description: "Em Configurações → Integrações, insira seu token da Logzz para habilitar a entrega COD.", link: "/configuracoes", linkLabel: "Ir para Configurações →" },
+      { title: "3. Crie seu primeiro checkout", description: "Vá em Checkouts e crie seu primeiro checkout importando uma oferta da Logzz.", link: "/checkouts", linkLabel: "Ir para Checkouts →" },
+      { title: "4. Aguarde seu primeiro pedido", description: "Compartilhe o link do checkout e acompanhe os pedidos em tempo real no Kanban.", link: "/pedidos", linkLabel: "Ir para Pedidos →" },
     ],
   },
   {
@@ -74,7 +54,16 @@ Um checkout é a página onde seu cliente finaliza a compra. O ScalaCOD cria che
 - Se a Logzz **não atende** → cliente paga online (PIX, Cartão ou Boleto) via Correios
 
 ## Order Bump
-Adicione produtos complementares que o cliente pode adicionar com um clique antes de confirmar o pedido. Aumenta o ticket médio!`,
+Adicione produtos complementares que o cliente pode adicionar com um clique antes de confirmar o pedido. Aumenta o ticket médio!
+
+## Pixel do Facebook e CAPI
+- Configure o **Pixel ID** para rastrear eventos no navegador
+- Configure o **CAPI Token** para enviar eventos server-side (mais preciso)
+- Eventos disparados: PageView, InitiateCheckout, AddPaymentInfo, Purchase
+
+## Google Ads e Analytics
+- Insira seu **Google Ads ID** para rastrear conversões de anúncios
+- Insira o **Google Analytics ID** para análise de tráfego detalhada`,
     link: "/checkouts",
     linkLabel: "Abrir Checkouts →",
   },
@@ -91,18 +80,73 @@ O kanban mostra todos os seus pedidos organizados por status. Arraste e solte pa
 - 🟢 **Confirmado** — Confirmado pelo sistema
 - 🔵 **Agendado** — Data de entrega agendada na Logzz
 - 🟠 **Em Separação** — Sendo preparado no estoque
-- 🟣 **Em Rota** — Saiu para entrega
+- 🟣 **Separado** — Pronto para envio
+- 🟢 **Em Rota** — Saiu para entrega
 - ✅ **Entregue** — Entregue com sucesso
 - 🔴 **Frustrado** — Tentativa de entrega não realizada
 - 🔄 **Reagendar** — Aguardando novo agendamento
 
+## Auto-Cancelamento 24h
+Pedidos com status "Aguardando" que **não são pagos em 24 horas** são automaticamente movidos para "Frustrado". Isso mantém seu kanban limpo e atualizado.
+
+## Filtros Avançados
+Filtre pedidos por data, cidade, método de pagamento e plataforma (Logzz/Coinzz). Clique em "Filtros Avançados" na barra superior.
+
+## Exportar CSV
+Clique no botão **Exportar** para baixar todos os pedidos filtrados em formato CSV.
+
+## Seleção em Lote
+Ative o modo de seleção para mover vários pedidos de status ao mesmo tempo.
+
 ## Atualização Automática
 Os status são atualizados automaticamente via webhook da Logzz. Você não precisa atualizar manualmente!
+
+## Link do Pedido na Logzz
+Cada pedido agendado na Logzz exibe um link direto para ver os detalhes na plataforma Logzz.
 
 ## Etiquetas de Impressão
 Clique em um pedido → aba Logística → botões "A4" e "Térmica" para imprimir a etiqueta de envio.`,
     link: "/pedidos",
     linkLabel: "Abrir Pedidos →",
+  },
+  {
+    id: "conversas",
+    icon: "💬",
+    label: "Conversas",
+    title: "Gerenciando o inbox de WhatsApp",
+    content: `## O que é o módulo Conversas?
+É a caixa de entrada unificada de todas as mensagens enviadas e recebidas via WhatsApp. Mensagens automáticas dos fluxos também aparecem aqui!
+
+## Janela de 24h
+O WhatsApp exige que respostas livres sejam enviadas dentro de **24 horas** após a última mensagem do cliente. Quando a janela expira, o campo de texto é desabilitado e você deve usar um **Template aprovado**.
+
+## Respostas Rápidas
+Use respostas pré-salvas para agilizar o atendimento:
+1. Clique no ícone de **resposta rápida** (⇄) na barra de mensagem
+2. Selecione uma resposta ou clique em **Gerenciar** para criar novas
+3. Defina um atalho (ex: /obrigado) e o texto completo
+
+## Notas Internas
+Adicione notas visíveis apenas para a equipe em cada conversa:
+1. Clique no ícone 📝 na barra lateral
+2. Escreva a nota e clique em **Adicionar**
+3. Notas ficam salvas no banco de dados e visíveis para toda equipe
+
+## Atribuição de Agente
+Atribua conversas para membros específicos da equipe na barra lateral direita.
+
+## Status da Conversa
+- **Aberta** — Conversa ativa
+- **Resolvida** — Atendimento concluído
+- **Arquivada** — Conversa arquivada
+
+## Envio de Mídia
+Envie imagens, documentos, áudios e vídeos clicando no ícone de **clipe** (📎). Limite de 16MB por arquivo.
+
+## Teste de Mensagem
+Use o botão de teste (🧪) para enviar mensagens ou disparar fluxos para um número específico sem sair do módulo.`,
+    link: "/conversas",
+    linkLabel: "Abrir Conversas →",
   },
   {
     id: "fluxos",
@@ -114,7 +158,7 @@ Fluxos são automações que enviam mensagens no WhatsApp automaticamente quando
 
 ## Criando um Fluxo
 1. Clique em **+ Novo Fluxo** ou use um **Template pronto**
-2. Escolha o **Trigger** (quando o fluxo dispara): Pedido Confirmado, Agendado, Saiu para Entrega, Entregue, Frustrado, Cancelado
+2. Escolha o **Trigger** (quando o fluxo dispara): Pedido Confirmado, Agendado, Em Separação, Separado, Saiu para Entrega, Entregue, Frustrado, Cancelado
 3. Adicione **Nós** no builder visual:
    - 💬 Mensagem de Texto
    - ⏰ Delay (espera)
@@ -126,14 +170,26 @@ Use {{variavel}} para personalizar mensagens:
 - {{cliente_nome}}, {{pedido_numero}}, {{produto_nome}}
 - {{data_entrega}}, {{valor_total}}, {{codigo_rastreio}}
 
+## Duplicar Fluxo
+Clique nos 3 pontinhos (⋯) do fluxo e selecione **Duplicar** para criar uma cópia editável.
+
+## Estatísticas por Fluxo
+Veja as métricas gerais de execução no topo: Total de Execuções, Taxa de Sucesso, e Falhas.
+
+## Proteção contra Duplicação
+O sistema possui um cooldown de 10 minutos para evitar que o mesmo fluxo seja disparado duas vezes para o mesmo pedido.
+
 ## Templates Prontos
-Clique em "IA" ou use os templates pré-criados para configurar em segundos!`,
+Clique em "Templates" para usar fluxos pré-configurados para cada status do pedido, incluindo COD e Coinzz!
+
+## Exportar e Importar
+Exporte fluxos como código para compartilhar ou importar em outra conta.`,
     link: "/fluxos",
     linkLabel: "Abrir Fluxos →",
   },
   {
     id: "whatsapp",
-    icon: "💬",
+    icon: "📱",
     label: "WhatsApp Cloud",
     title: "Conectando seu WhatsApp",
     content: `## Opções de Conexão
@@ -252,12 +308,116 @@ Gere tokens de API para integrar sistemas externos com o ScalaCOD.
 Configure uma URL para receber notificações em tempo real sobre pedidos e pagamentos.
 
 ### Notificações
-Configure alertas por email para novos pedidos, entregas, etc.`,
+Configure alertas por email para novos pedidos, entregas, etc.
+
+### Equipe
+Convide membros para sua equipe com diferentes permissões:
+- **Admin:** Acesso total (exceto exclusão de conta)
+- **Operador:** Pode ver e editar pedidos, conversas e leads
+- **Viewer:** Apenas visualização`,
     link: "/configuracoes",
     linkLabel: "Abrir Configurações →",
   },
-];
+  {
+    id: "mercadopago",
+    icon: "💳",
+    label: "MercadoPago",
+    title: "Configurando pagamentos com MercadoPago",
+    content: `## Por que configurar o MercadoPago?
+O MercadoPago é necessário para receber pagamentos online quando o cliente está em regiões **não atendidas pela Logzz** (usando Coinzz/Correios).
 
+## Passo a Passo
+1. Acesse sua conta no MercadoPago
+2. Vá em **Credenciais** → **Produção**
+3. Copie o **Access Token**
+4. No ScalaCOD, vá em **Configurações → MercadoPago**
+5. Cole o Access Token e salve
+
+## Métodos de Pagamento
+- **PIX** — Aprovação instantânea
+- **Cartão de Crédito** — Aprovação em segundos (até 12x)
+- **Boleto** — Aprovação em 1-3 dias úteis
+
+## Webhooks Automáticos
+O sistema configura automaticamente os webhooks para atualizar o status dos pagamentos em tempo real.`,
+    link: "/configuracoes",
+    linkLabel: "Abrir Configurações →",
+  },
+  {
+    id: "coinzz",
+    icon: "📬",
+    label: "Coinzz (Correios)",
+    title: "Entrega via Correios com Coinzz",
+    content: `## O que é a Coinzz?
+A Coinzz é a integração que permite enviar produtos via **Correios** quando a Logzz não atende o CEP do cliente.
+
+## Como funciona?
+1. Cliente preenche o CEP no checkout
+2. Se a Logzz **não atende** → automaticamente muda para modo Coinzz
+3. Cliente paga online (PIX, Cartão ou Boleto)
+4. Você recebe o pedido e despacha pelos Correios
+
+## Configuração
+1. Crie uma conta na Coinzz (coinzz.com.br)
+2. Copie o **Token de API** nas configurações da Coinzz
+3. No ScalaCOD, vá em **Configurações → Integrações → Coinzz**
+4. Cole o token e salve
+
+## Hash da Oferta
+Ao criar um checkout, você pode vincular uma oferta Coinzz pelo **hash da oferta**, permitindo cálculo automático de frete.`,
+    link: "/configuracoes",
+    linkLabel: "Abrir Configurações →",
+  },
+  {
+    id: "equipe",
+    icon: "👨‍💼",
+    label: "Equipe",
+    title: "Gerenciando sua equipe",
+    content: `## Convidando Membros
+1. Vá em **Configurações → Equipe**
+2. Clique em **+ Convidar**
+3. Insira o email e escolha o papel (Admin, Operador ou Viewer)
+4. O convidado receberá um email com link de acesso
+
+## Papéis e Permissões
+- **Admin:** Acesso total — pode ver, editar e excluir pedidos, leads, fluxos e configurações
+- **Operador:** Pode ver e editar pedidos, conversas e leads — não pode alterar configurações
+- **Viewer:** Apenas visualização de todos os módulos — não pode editar nada
+
+## Atribuição de Conversas
+Membros da equipe podem ser atribuídos a conversas específicas no módulo Conversas.
+
+## Logs de Auditoria
+Todas as ações da equipe são registradas no log de auditoria para rastreabilidade.`,
+    link: "/configuracoes",
+    linkLabel: "Abrir Configurações →",
+  },
+  {
+    id: "dashboard",
+    icon: "📊",
+    label: "Dashboard",
+    title: "Entendendo o painel de métricas",
+    content: `## Métricas Disponíveis
+- **Receita Estimada:** Soma dos valores de todos os pedidos no período
+- **Visitantes:** Pessoas que acessaram seus checkouts
+- **Pageviews:** Total de visualizações de páginas
+- **Interações:** Cliques e interações nos checkouts
+- **Conversão:** Percentual de visitantes que fizeram pedido
+- **Abandono:** Percentual que não concluiu
+- **Coinzz Pagos:** Pedidos pagos online via Coinzz
+- **Fila WhatsApp:** Mensagens aguardando envio
+- **Conversas Abertas:** Conversas em andamento
+- **Resolvidas:** Conversas finalizadas
+
+## Filtros de Período
+Use os botões de período (Hoje, 7 dias, 30 dias, Máximo) ou selecione um período personalizado pelo ícone de calendário.
+
+## Dados em Tempo Real
+O dashboard é atualizado automaticamente quando novos pedidos ou eventos de pixel chegam.`,
+    link: "/dashboard",
+    linkLabel: "Abrir Dashboard →",
+  },
+];
 function renderMarkdown(md: string) {
   const lines = md.trim().split("\n");
   const elements: JSX.Element[] = [];

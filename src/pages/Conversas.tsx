@@ -77,14 +77,54 @@ const Conversas = () => {
 
   // Quick replies
   const [showQuickReplies, setShowQuickReplies] = useState(false);
-  const quickReplies = [
-    "Olá! Como posso ajudar?",
-    "Seu pedido está em separação e será enviado em breve!",
-    "O código de rastreio será enviado assim que disponível.",
-    "Obrigado pela compra! Qualquer dúvida estamos à disposição.",
-    "Vou verificar e retorno em instantes.",
-    "Pedido confirmado! Acompanhe o status pelo nosso sistema.",
-  ];
+  const [editingQuickReplies, setEditingQuickReplies] = useState(false);
+  const [newQrShortcut, setNewQrShortcut] = useState("");
+  const [newQrContent, setNewQrContent] = useState("");
+
+  // DB-backed quick replies
+  const { data: dbQuickReplies = [], refetch: refetchQr } = useQuery({
+    queryKey: ["quick-replies", user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+      const { data } = await supabase
+        .from("quick_replies")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: true });
+      return data || [];
+    },
+    enabled: !!user,
+  });
+
+  const quickReplies = dbQuickReplies.length > 0
+    ? dbQuickReplies.map((qr: any) => qr.content)
+    : [
+      "Olá! Como posso ajudar?",
+      "Seu pedido está em separação e será enviado em breve!",
+      "O código de rastreio será enviado assim que disponível.",
+      "Obrigado pela compra! Qualquer dúvida estamos à disposição.",
+      "Vou verificar e retorno em instantes.",
+      "Pedido confirmado! Acompanhe o status pelo nosso sistema.",
+    ];
+
+  const addQuickReply = async () => {
+    if (!newQrContent.trim() || !user) return;
+    await supabase.from("quick_replies").insert({
+      user_id: user.id,
+      shortcut: newQrShortcut.trim() || `/${Date.now()}`,
+      content: newQrContent.trim(),
+    } as any);
+    setNewQrShortcut("");
+    setNewQrContent("");
+    refetchQr();
+    toast.success("Resposta rápida adicionada!");
+  };
+
+  const deleteQuickReply = async (id: string) => {
+    await supabase.from("quick_replies").delete().eq("id", id);
+    refetchQr();
+    toast.success("Resposta removida!");
+  };
 
   // Internal notes
   const [showNotes, setShowNotes] = useState(false);
@@ -1010,17 +1050,68 @@ const Conversas = () => {
               </div>
             )}
             {showQuickReplies && (
-              <div className="bg-card border border-border rounded-xl shadow-lg p-3 mb-2 max-h-48 overflow-y-auto">
-                <h4 className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wider">Respostas Rápidas</h4>
-                {quickReplies.map((reply, i) => (
+              <div className="bg-card border border-border rounded-xl shadow-lg p-3 mb-2 max-h-64 overflow-y-auto">
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Respostas Rápidas</h4>
                   <button
-                    key={i}
-                    onClick={() => useQuickReply(reply)}
-                    className="w-full text-left p-2 hover:bg-primary/5 rounded-lg text-sm mb-0.5 transition-colors border border-transparent hover:border-primary/20"
+                    onClick={() => setEditingQuickReplies(!editingQuickReplies)}
+                    className="text-[10px] font-medium text-primary hover:underline"
                   >
-                    <span className="text-foreground">{reply}</span>
+                    {editingQuickReplies ? "Fechar" : "Gerenciar"}
                   </button>
-                ))}
+                </div>
+                {editingQuickReplies && (
+                  <div className="mb-3 p-2 bg-muted/50 rounded-lg space-y-2">
+                    <input
+                      value={newQrShortcut}
+                      onChange={e => setNewQrShortcut(e.target.value)}
+                      placeholder="Atalho (ex: /obrigado)"
+                      className="w-full text-xs rounded border border-border bg-input px-2 py-1.5 text-foreground placeholder:text-muted-foreground"
+                    />
+                    <textarea
+                      value={newQrContent}
+                      onChange={e => setNewQrContent(e.target.value)}
+                      placeholder="Texto da resposta..."
+                      rows={2}
+                      className="w-full text-xs rounded border border-border bg-input px-2 py-1.5 text-foreground placeholder:text-muted-foreground resize-none"
+                    />
+                    <button
+                      onClick={addQuickReply}
+                      disabled={!newQrContent.trim()}
+                      className="w-full text-xs bg-primary text-primary-foreground rounded py-1.5 font-medium disabled:opacity-50"
+                    >
+                      + Adicionar
+                    </button>
+                  </div>
+                )}
+                {dbQuickReplies.length > 0 ? (
+                  dbQuickReplies.map((qr: any) => (
+                    <div key={qr.id} className="flex items-center gap-1 group">
+                      <button
+                        onClick={() => useQuickReply(qr.content)}
+                        className="flex-1 text-left p-2 hover:bg-primary/5 rounded-lg text-sm mb-0.5 transition-colors border border-transparent hover:border-primary/20"
+                      >
+                        {qr.shortcut && <span className="text-[10px] text-primary font-mono mr-1.5">{qr.shortcut}</span>}
+                        <span className="text-foreground">{qr.content}</span>
+                      </button>
+                      {editingQuickReplies && (
+                        <button onClick={() => deleteQuickReply(qr.id)} className="text-destructive hover:bg-destructive/10 rounded p-1 opacity-0 group-hover:opacity-100">
+                          <X className="h-3 w-3" />
+                        </button>
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  quickReplies.map((reply, i) => (
+                    <button
+                      key={i}
+                      onClick={() => useQuickReply(reply)}
+                      className="w-full text-left p-2 hover:bg-primary/5 rounded-lg text-sm mb-0.5 transition-colors border border-transparent hover:border-primary/20"
+                    >
+                      <span className="text-foreground">{reply}</span>
+                    </button>
+                  ))
+                )}
               </div>
             )}
             {showEmojiPicker && (
