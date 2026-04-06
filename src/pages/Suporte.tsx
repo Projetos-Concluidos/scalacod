@@ -1440,7 +1440,7 @@ const Suporte = () => {
           </div>
         </aside>
 
-        {/* Content */}
+        {/* Content — shows only the selected tutorial */}
         <main className="flex-1 min-w-0 space-y-4">
           <div className="relative max-w-md">
             <Search size={18} className="absolute left-3 top-3 text-muted-foreground" />
@@ -1452,17 +1452,55 @@ const Suporte = () => {
             />
           </div>
 
-          {filtered.length === 0 && (
-            <div className="text-center py-12">
-              <HelpCircle size={40} className="mx-auto text-muted-foreground/50 mb-3" />
-              <p className="text-muted-foreground text-sm">Nenhum tutorial encontrado para "{searchQuery}"</p>
-              <p className="text-muted-foreground/70 text-xs mt-1">Tente buscar por palavras-chave como "checkout", "fluxo" ou "whatsapp"</p>
-            </div>
+          {searchQuery.trim() ? (
+            filtered.length === 0 ? (
+              <div className="text-center py-12">
+                <HelpCircle size={40} className="mx-auto text-muted-foreground/50 mb-3" />
+                <p className="text-muted-foreground text-sm">Nenhum tutorial encontrado para "{searchQuery}"</p>
+                <p className="text-muted-foreground/70 text-xs mt-1">Tente buscar por palavras-chave como "checkout", "fluxo" ou "whatsapp"</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground">{filtered.length} resultado(s)</p>
+                {filtered.map((section) => (
+                  <button
+                    key={section.id}
+                    onClick={() => { setActiveSection(section.id); setSearchQuery(""); }}
+                    className="w-full flex items-center gap-3 p-4 bg-card border border-border rounded-xl text-left hover:bg-muted/50 transition-colors"
+                  >
+                    <span className="text-2xl">{section.icon}</span>
+                    <div>
+                      <h3 className="text-sm font-semibold text-card-foreground">{section.title}</h3>
+                      <p className="text-xs text-muted-foreground">{section.label}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )
+          ) : (
+            activeContent && <TutorialContent section={activeContent} />
           )}
 
-          {filtered.map((section) => (
-            <TutorialSection key={section.id} section={section} />
-          ))}
+          {/* Mobile topic selector */}
+          <div className="lg:hidden mt-6">
+            <label className="text-xs text-muted-foreground font-medium mb-2 block">Outros tutoriais</label>
+            <div className="flex flex-wrap gap-2">
+              {TUTORIAL_SECTIONS.map((s) => (
+                <button
+                  key={s.id}
+                  onClick={() => setActiveSection(s.id)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-all ${
+                    activeSection === s.id
+                      ? "bg-primary/10 text-primary font-medium"
+                      : "bg-muted/50 text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <span>{s.icon}</span>
+                  {s.label}
+                </button>
+              ))}
+            </div>
+          </div>
         </main>
       </div>
     </div>
