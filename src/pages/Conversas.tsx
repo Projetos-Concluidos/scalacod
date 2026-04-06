@@ -1050,17 +1050,68 @@ const Conversas = () => {
               </div>
             )}
             {showQuickReplies && (
-              <div className="bg-card border border-border rounded-xl shadow-lg p-3 mb-2 max-h-48 overflow-y-auto">
-                <h4 className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wider">Respostas Rápidas</h4>
-                {quickReplies.map((reply, i) => (
+              <div className="bg-card border border-border rounded-xl shadow-lg p-3 mb-2 max-h-64 overflow-y-auto">
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Respostas Rápidas</h4>
                   <button
-                    key={i}
-                    onClick={() => useQuickReply(reply)}
-                    className="w-full text-left p-2 hover:bg-primary/5 rounded-lg text-sm mb-0.5 transition-colors border border-transparent hover:border-primary/20"
+                    onClick={() => setEditingQuickReplies(!editingQuickReplies)}
+                    className="text-[10px] font-medium text-primary hover:underline"
                   >
-                    <span className="text-foreground">{reply}</span>
+                    {editingQuickReplies ? "Fechar" : "Gerenciar"}
                   </button>
-                ))}
+                </div>
+                {editingQuickReplies && (
+                  <div className="mb-3 p-2 bg-muted/50 rounded-lg space-y-2">
+                    <input
+                      value={newQrShortcut}
+                      onChange={e => setNewQrShortcut(e.target.value)}
+                      placeholder="Atalho (ex: /obrigado)"
+                      className="w-full text-xs rounded border border-border bg-input px-2 py-1.5 text-foreground placeholder:text-muted-foreground"
+                    />
+                    <textarea
+                      value={newQrContent}
+                      onChange={e => setNewQrContent(e.target.value)}
+                      placeholder="Texto da resposta..."
+                      rows={2}
+                      className="w-full text-xs rounded border border-border bg-input px-2 py-1.5 text-foreground placeholder:text-muted-foreground resize-none"
+                    />
+                    <button
+                      onClick={addQuickReply}
+                      disabled={!newQrContent.trim()}
+                      className="w-full text-xs bg-primary text-primary-foreground rounded py-1.5 font-medium disabled:opacity-50"
+                    >
+                      + Adicionar
+                    </button>
+                  </div>
+                )}
+                {dbQuickReplies.length > 0 ? (
+                  dbQuickReplies.map((qr: any) => (
+                    <div key={qr.id} className="flex items-center gap-1 group">
+                      <button
+                        onClick={() => useQuickReply(qr.content)}
+                        className="flex-1 text-left p-2 hover:bg-primary/5 rounded-lg text-sm mb-0.5 transition-colors border border-transparent hover:border-primary/20"
+                      >
+                        {qr.shortcut && <span className="text-[10px] text-primary font-mono mr-1.5">{qr.shortcut}</span>}
+                        <span className="text-foreground">{qr.content}</span>
+                      </button>
+                      {editingQuickReplies && (
+                        <button onClick={() => deleteQuickReply(qr.id)} className="text-destructive hover:bg-destructive/10 rounded p-1 opacity-0 group-hover:opacity-100">
+                          <X className="h-3 w-3" />
+                        </button>
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  quickReplies.map((reply, i) => (
+                    <button
+                      key={i}
+                      onClick={() => useQuickReply(reply)}
+                      className="w-full text-left p-2 hover:bg-primary/5 rounded-lg text-sm mb-0.5 transition-colors border border-transparent hover:border-primary/20"
+                    >
+                      <span className="text-foreground">{reply}</span>
+                    </button>
+                  ))
+                )}
               </div>
             )}
             {showEmojiPicker && (

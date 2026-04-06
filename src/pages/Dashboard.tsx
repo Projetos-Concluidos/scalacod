@@ -167,6 +167,8 @@ const Dashboard = () => {
     { label: "Abandono", value: `${metrics.abandonment}%`, color: "#F59E0B", icon: AlertTriangle },
     { label: "Coinzz Pagos", value: String(metrics.coinzzPaid), color: "#6B7280", icon: Coins },
     { label: "Fila WhatsApp", value: String(queueCount), color: queueCount > 0 ? "#F59E0B" : "#10B981", icon: MessageCircle },
+    { label: "Conversas Abertas", value: String(convMetrics.open), color: "#3B82F6", icon: MessageCircle },
+    { label: "Resolvidas", value: String(convMetrics.resolved), color: "#10B981", icon: MessageCircle },
   ];
 
   return (
