@@ -752,7 +752,11 @@ const Pedidos = () => {
                         <div className="mt-3 p-2.5 rounded-md bg-muted/50 border border-border space-y-2">
                           {isLogzz
                             ? <span className="text-sm font-semibold text-amber-400">💵 PAGAMENTO NA ENTREGA</span>
-                            : (
+                            : o.logistics_type?.startsWith("hyppe") ? (
+                              <span className="text-sm font-semibold text-orange-400">
+                                {o.logistics_type === "hyppe_cod" ? "💵 HYPPE — PAGAMENTO NA ENTREGA" : "💳 HYPPE — PAGAMENTO ANTECIPADO"}
+                              </span>
+                            ) : (
                               <div className="space-y-1.5">
                                 <span className="text-sm font-semibold text-purple-400">💳 PAGAMENTO ONLINE — ENTREGA VIA CORREIOS</span>
 
