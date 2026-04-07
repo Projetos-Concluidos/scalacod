@@ -654,12 +654,15 @@ const Checkouts = () => {
                       setSyncingHyppe(true);
                       try {
                         const { data, error } = await supabase.functions.invoke("hyppe-list-products");
+                        console.log("[Hyppe Sync] Response:", { data, error });
                         if (error) throw error;
-                        if (data?.offers?.length > 0) {
+                        if (data?.error) {
+                          toast.error(data.error);
+                        } else if (data?.offers?.length > 0) {
                           setHyppeOffers(data.offers);
                           toast.success(`${data.offers.length} ofertas encontradas na Hyppe!`);
                         } else {
-                          toast.info(data?.message || "Nenhuma oferta encontrada. Verifique o token da Hyppe.");
+                          toast.info("Nenhuma oferta encontrada na Hyppe. Verifique se há produtos cadastrados.");
                         }
                       } catch { toast.error("Erro ao buscar ofertas da Hyppe"); }
                       finally { setSyncingHyppe(false); }
