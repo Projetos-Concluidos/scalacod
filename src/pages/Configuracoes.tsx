@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Store, Clock, Save, Globe, Key, Webhook, Bell, Info, MessageSquare, Users } from "lucide-react";
 import LogzzTab from "@/components/settings/LogzzTab";
 import CoinzzTab from "@/components/settings/CoinzzTab";
+import HyppeTab from "@/components/settings/HyppeTab";
 import MercadoPagoTab from "@/components/settings/MercadoPagoTab";
 import ApiTab from "@/components/settings/ApiTab";
 import WebhooksTab from "@/components/settings/WebhooksTab";
