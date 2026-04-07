@@ -252,6 +252,8 @@ const Checkouts = () => {
     setFormWhatsappSupport("");
     setFormBumps([]);
     setBumpSearchQuery("");
+    setFormHyppeOfferData(null);
+    setHyppeOffers([]);
   }
 
   function openEdit(c: CheckoutWithOffer) {
