@@ -1358,11 +1358,11 @@ const CheckoutPublic = () => {
 
             {/* ── STEP 3: Date (Logzz) or Payment (Coinzz) ── */}
             <AnimatePresence mode="wait">
-            {step === 3 && provider === "logzz" && (
-              <motion.div key="step3-logzz" variants={stepVariants} initial="initial" animate="animate" exit="exit">
+            {step === 3 && isCODProvider && (
+              <motion.div key="step3-cod" variants={stepVariants} initial="initial" animate="animate" exit="exit">
                 <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
                   <div className="mb-4 rounded-xl bg-emerald-500 px-4 py-3 text-white text-sm font-semibold flex items-center gap-2">
-                    <Truck className="h-4 w-4" /> Entrega via Logzz | PAGAMENTO NA ENTREGA
+                    <Truck className="h-4 w-4" /> Entrega {provider === "hyppe_cod" ? "via Hyppe" : "via Logzz"} | PAGAMENTO NA ENTREGA
                   </div>
                   <div className="flex items-center gap-2 mb-4">
                     <div className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 text-white text-xs font-bold">3</div>
