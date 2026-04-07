@@ -348,7 +348,7 @@ const CheckoutPublic = () => {
 
   // Initialize MercadoPago Bricks when credit_card is selected on step 3
   useEffect(() => {
-    if (step !== 3 || provider !== "coinzz" || paymentMethod !== "credit_card" || !mpPublicKey || !offer) return;
+    if (step !== 3 || !needsOnlinePayment || paymentMethod !== "credit_card" || !mpPublicKey || !offer) return;
 
     setBricksReady(false);
 
