@@ -88,6 +88,7 @@ const Checkouts = () => {
   const [bumpLogzzPopoverOpen, setBumpLogzzPopoverOpen] = useState(false);
   // Hyppe state
   const [formHyppeOfferData, setFormHyppeOfferData] = useState<any>(null);
+  const [formProviderPriority, setFormProviderPriority] = useState("logzz_first");
   const [hyppeOffers, setHyppeOffers] = useState<any[]>([]);
   const [syncingHyppe, setSyncingHyppe] = useState(false);
   const [hyppePopoverOpen, setHyppePopoverOpen] = useState(false);
@@ -253,6 +254,7 @@ const Checkouts = () => {
     setFormBumps([]);
     setBumpSearchQuery("");
     setFormHyppeOfferData(null);
+    setFormProviderPriority("logzz_first");
     setHyppeOffers([]);
   }
 
@@ -263,6 +265,7 @@ const Checkouts = () => {
     setFormOfferId(c.offer_id || "");
     setFormCoinzzOfferHash((c as any).coinzz_offer_hash || "");
     setFormHyppeOfferData((c as any).hyppe_offer_data || null);
+    setFormProviderPriority((c as any).provider_priority || "logzz_first");
     setFormOrderBump(c.order_bump_enabled || false);
     setFormUpsell(c.upsell_enabled || false);
     setFormCustomCss(c.custom_css || "");
@@ -312,6 +315,7 @@ const Checkouts = () => {
       whatsapp_support: formWhatsappSupport || null,
       coinzz_offer_hash: formCoinzzOfferHash || null,
       hyppe_offer_data: formHyppeOfferData || null,
+      provider_priority: formProviderPriority || "logzz_first",
     };
     if (editingCheckout) {
       updateMutation.mutate({ id: editingCheckout.id, ...payload });
@@ -728,6 +732,20 @@ const Checkouts = () => {
                   </SelectContent>
                 </Select>
               </div>
+              {/* Provider Priority */}
+              {(formOfferId || formHyppeOfferData) && (
+                <div>
+                  <Label>Prioridade de verificação de CEP</Label>
+                  <p className="text-xs text-muted-foreground mb-1.5">Qual provedor logístico será consultado primeiro ao verificar o CEP do cliente</p>
+                  <Select value={formProviderPriority} onValueChange={setFormProviderPriority}>
+                    <SelectTrigger className="bg-input border-border"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="logzz_first">🟢 Logzz primeiro (padrão)</SelectItem>
+                      <SelectItem value="hyppe_first">🟠 Hyppe primeiro</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
           )}
 

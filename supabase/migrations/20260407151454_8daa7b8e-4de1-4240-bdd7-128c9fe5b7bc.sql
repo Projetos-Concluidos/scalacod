@@ -1,0 +1,1 @@
+ALTER TABLE public.checkouts ADD COLUMN IF NOT EXISTS provider_priority text DEFAULT 'logzz_first';

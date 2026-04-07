@@ -75,9 +75,12 @@ Deno.serve(async (req) => {
       const checkoutId = body.checkout_id;
       let checkoutData: any = null;
       if (checkoutId) {
-        const { data: cd } = await supabase.from("checkouts").select("offer_id, coinzz_offer_hash, hyppe_offer_data").eq("id", checkoutId).maybeSingle();
+        const { data: cd } = await supabase.from("checkouts").select("offer_id, coinzz_offer_hash, hyppe_offer_data, provider_priority").eq("id", checkoutId).maybeSingle();
         checkoutData = cd;
       }
+
+      const providerPriority = checkoutData?.provider_priority || "logzz_first";
+      console.log("[CEP] Provider priority:", providerPriority);
 
       const logzz = getIntegration("logzz");
       const logzzToken = (logzz?.config as any)?.bearer_token;
@@ -88,8 +91,9 @@ Deno.serve(async (req) => {
       const hasHyppeOffer = !!checkoutData?.hyppe_offer_data;
       console.log("[CEP] Hyppe token configurado:", !!hyppeToken, "Hyppe offer:", hasHyppeOffer);
 
-      // ── Step 1: Try Logzz ──
-      if (logzz?.config && logzzToken) {
+      // Helper functions for each provider
+      const tryLogzz = async () => {
+        if (!(logzz?.config && logzzToken)) return null;
         try {
           const logzzUrl = `https://app.logzz.com.br/api/delivery-day/options/zip-code/${cleanCep}`;
           console.log("[CEP] Chamando Logzz:", logzzUrl);
@@ -97,24 +101,18 @@ Deno.serve(async (req) => {
             headers: { Authorization: `Bearer ${logzzToken}`, Accept: "application/json", "User-Agent": "Mozilla/5.0 Chrome/120" },
           });
           const rawCep = await res.text();
-          console.log("[CEP] Logzz response status:", res.status);
-          
           if (res.status === 403) throw new Error("Logzz 403 Forbidden");
           if (res.status >= 300) throw new Error(`Logzz returned status ${res.status}`);
-          
           let data: any;
           try { data = JSON.parse(rawCep); } catch { throw new Error("Invalid Logzz JSON response"); }
-          
           let datesAvailable: any[] = [];
           let respObj: any = null;
-          
           if (data?.data?.response?.dates_available?.length > 0) { datesAvailable = data.data.response.dates_available; respObj = data.data.response; }
           else if (data?.response?.dates_available?.length > 0) { datesAvailable = data.response.dates_available; respObj = data.response; }
           else if (data?.data?.dates_available?.length > 0) { datesAvailable = data.data.dates_available; respObj = data.data; }
           else if (data?.dates_available?.length > 0) { datesAvailable = data.dates_available; respObj = data; }
           else if (Array.isArray(data) && data.length > 0 && data[0]?.date) { datesAvailable = data; respObj = {}; }
           else if (Array.isArray(data?.data) && data.data.length > 0 && data.data[0]?.date) { datesAvailable = data.data; respObj = {}; }
-          
           if (datesAvailable.length > 0) {
             const dates = datesAvailable.slice(0, 5).map((d: any) => ({
               date: d.date, type: d.type_name || d.type || "Padrão", type_code: d.type_code || "", price: d.price || 0,
@@ -122,52 +120,40 @@ Deno.serve(async (req) => {
             }));
             const addr = await fetchViaCep(cleanCep);
             console.log("[CEP] Provider escolhido: logzz, datas:", dates.length);
-            return new Response(
-              JSON.stringify({
-                provider: "logzz", dates, ...addr, zipCode: cleanCep,
-                city: respObj?.city || addr.city, state: respObj?.state || addr.state,
-                operationName: respObj?.local_operation_name,
-              }),
-              { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-            );
+            return {
+              provider: "logzz", dates, ...addr, zipCode: cleanCep,
+              city: respObj?.city || addr.city, state: respObj?.state || addr.state,
+              operationName: respObj?.local_operation_name,
+            };
           }
-          console.log("[CEP] Logzz não atende → tentando Hyppe...");
+          return null;
         } catch (err) {
-          console.log("[CEP] Logzz falhou:", (err as Error).message, "→ tentando Hyppe...");
+          console.log("[CEP] Logzz falhou:", (err as Error).message);
+          return null;
         }
-      }
+      };
 
-      // ── Step 2: Try Hyppe (COD first, then Antecipado) ──
-      if (hyppeToken && hasHyppeOffer) {
+      const tryHyppe = async () => {
+        if (!(hyppeToken && hasHyppeOffer)) return null;
         const hyppeOfferData = checkoutData?.hyppe_offer_data as any;
         const addr = await fetchViaCep(cleanCep);
-
+        // Try COD first
         try {
-          // 2a: Check CEP coverage for COD
-          console.log("[CEP] Chamando Hyppe verificar-cep...");
           const cepRes = await fetch("https://app.hyppe.com.br/api/checkout/verificar-cep", {
             method: "POST",
             headers: { Authorization: hyppeToken, "Content-Type": "application/json" },
             body: JSON.stringify({ cep: cleanCep, tipo: "COD" }),
           });
           const cepData = await cepRes.json();
-          console.log("[CEP] Hyppe verificar-cep:", JSON.stringify(cepData));
-
           if (cepRes.ok && !cepData.error) {
-            // CEP is valid for COD, check stock
             const cityName = `${addr.city || ""} - ${addr.state || ""}`.toUpperCase();
-            console.log("[CEP] Hyppe buscando cidade:", cityName);
-            
             const cidadeRes = await fetch("https://app.hyppe.com.br/api/checkout/cidade", {
               method: "POST",
               headers: { Authorization: hyppeToken, "Content-Type": "application/json" },
               body: JSON.stringify({ cidade: cityName, bairro: addr.neighborhood || "" }),
             });
             const cidadeData = await cidadeRes.json();
-            console.log("[CEP] Hyppe cidade:", JSON.stringify(cidadeData));
-
             if (cidadeData.cidade_id) {
-              // Check COD stock
               const estoqueRes = await fetch("https://app.hyppe.com.br/api/checkout/estoque/cod", {
                 method: "POST",
                 headers: { Authorization: hyppeToken, "Content-Type": "application/json" },
@@ -177,84 +163,72 @@ Deno.serve(async (req) => {
                 }),
               });
               const estoqueData = await estoqueRes.json();
-              console.log("[CEP] Hyppe estoque COD:", JSON.stringify(estoqueData));
-
               if (estoqueRes.ok && estoqueData.code === 200) {
                 console.log("[CEP] Provider escolhido: hyppe_cod");
-                return new Response(
-                  JSON.stringify({
-                    provider: "hyppe_cod",
-                    dates: [], // Hyppe COD uses date scheduling via separate flow
-                    ...addr,
-                    zipCode: cleanCep,
-                    hyppe_cidade_id: cidadeData.cidade_id,
-                    hyppe_bairro_id: cidadeData.bairro_id || null,
-                    message: "Entrega COD disponível via Hyppe",
-                  }),
-                  { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-                );
+                return {
+                  provider: "hyppe_cod", dates: [], ...addr, zipCode: cleanCep,
+                  hyppe_cidade_id: cidadeData.cidade_id, hyppe_bairro_id: cidadeData.bairro_id || null,
+                  message: "Entrega COD disponível via Hyppe",
+                };
               }
             }
           }
         } catch (hErr) {
           console.log("[CEP] Hyppe COD check error:", (hErr as Error).message);
         }
-
-        // 2b: Try Hyppe Antecipado (shipping via Correios)
+        // Try Antecipado
         try {
-          console.log("[CEP] Tentando Hyppe antecipado (fretes)...");
           const fretesRes = await fetch("https://app.hyppe.com.br/api/checkout/fretes", {
             method: "POST",
             headers: { Authorization: hyppeToken, "Content-Type": "application/json" },
             body: JSON.stringify({
               endereco: { cep: cleanCep },
-              produtos: [{
-                produto_id: hyppeOfferData.hyppe_produto_id,
-                oferta: { id: hyppeOfferData.hyppe_offer_id, quantidade: 1 },
-              }],
+              produtos: [{ produto_id: hyppeOfferData.hyppe_produto_id, oferta: { id: hyppeOfferData.hyppe_offer_id, quantidade: 1 } }],
             }),
           });
           const fretesData = await fretesRes.json();
-          console.log("[CEP] Hyppe fretes:", JSON.stringify(fretesData));
-
           if (fretesRes.ok && Array.isArray(fretesData) && fretesData.length > 0) {
-            // Flatten shipping options from all distribution centers
             const shippingOptions: any[] = [];
             for (const cd of fretesData) {
               if (Array.isArray(cd.fretes)) {
                 for (const frete of cd.fretes) {
                   shippingOptions.push({
-                    cd_id: cd.id,
-                    cd_name: cd.nome,
-                    id: frete.id,
-                    name: frete.name,
-                    price: parseFloat(frete.price || "0"),
-                    delivery_time: frete.delivery_time,
+                    cd_id: cd.id, cd_name: cd.nome, id: frete.id, name: frete.name,
+                    price: parseFloat(frete.price || "0"), delivery_time: frete.delivery_time,
                     company: frete.company?.name || "Correios",
                   });
                 }
               }
             }
-
             if (shippingOptions.length > 0) {
-              console.log("[CEP] Provider escolhido: hyppe_antecipado, fretes:", shippingOptions.length);
-              return new Response(
-                JSON.stringify({
-                  provider: "hyppe_antecipado",
-                  dates: [],
-                  shipping_options: shippingOptions,
-                  ...addr,
-                  zipCode: cleanCep,
-                  message: "Entrega antecipada disponível via Hyppe (Correios)",
-                }),
-                { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-              );
+              console.log("[CEP] Provider escolhido: hyppe_antecipado");
+              return {
+                provider: "hyppe_antecipado", dates: [], shipping_options: shippingOptions,
+                ...addr, zipCode: cleanCep, message: "Entrega antecipada disponível via Hyppe (Correios)",
+              };
             }
           }
         } catch (hErr) {
           console.log("[CEP] Hyppe antecipado error:", (hErr as Error).message);
         }
+        return null;
+      };
+
+      // Execute providers in priority order
+      const firstTry = providerPriority === "hyppe_first" ? tryHyppe : tryLogzz;
+      const secondTry = providerPriority === "hyppe_first" ? tryLogzz : tryHyppe;
+
+      const result1 = await firstTry();
+      if (result1) {
+        return new Response(JSON.stringify(result1), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
+      console.log("[CEP] Primeiro provider não atende → tentando segundo...");
+
+      const result2 = await secondTry();
+      if (result2) {
+        return new Response(JSON.stringify(result2), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      console.log("[CEP] Segundo provider não atende → fallback Coinzz...");
 
       // ── Step 3: Fallback to Coinzz ──
       const addr = await fetchViaCep(cleanCep);
@@ -508,6 +482,7 @@ Deno.serve(async (req) => {
           } catch (hyppeErr: any) {
             console.error("[create_order] Hyppe sync error:", hyppeErr.message);
           }
+        }
         try {
           await supabase.from("notifications").insert({
             user_id,

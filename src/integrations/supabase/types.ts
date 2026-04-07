@@ -166,6 +166,7 @@ export type Database = {
           order_bump_enabled: boolean | null
           pixel_facebook: string | null
           pixel_id: string | null
+          provider_priority: string | null
           slug: string | null
           thank_you_page_url: string | null
           type: string | null
@@ -191,6 +192,7 @@ export type Database = {
           order_bump_enabled?: boolean | null
           pixel_facebook?: string | null
           pixel_id?: string | null
+          provider_priority?: string | null
           slug?: string | null
           thank_you_page_url?: string | null
           type?: string | null
@@ -216,6 +218,7 @@ export type Database = {
           order_bump_enabled?: boolean | null
           pixel_facebook?: string | null
           pixel_id?: string | null
+          provider_priority?: string | null
           slug?: string | null
           thank_you_page_url?: string | null
           type?: string | null
