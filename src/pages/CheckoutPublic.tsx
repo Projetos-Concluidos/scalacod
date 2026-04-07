@@ -92,7 +92,11 @@ const CheckoutPublic = () => {
   const [submitting, setSubmitting] = useState(false);
   const [cepLoading, setCepLoading] = useState(false);
   const [step, setStep] = useState(1);
-  const [provider, setProvider] = useState<"logzz" | "coinzz" | null>(null);
+  const [provider, setProvider] = useState<"logzz" | "coinzz" | "hyppe_cod" | "hyppe_antecipado" | null>(null);
+  const [shippingOptions, setShippingOptions] = useState<any[]>([]);
+  const [selectedShipping, setSelectedShipping] = useState<any>(null);
+  const [hyppeCidadeId, setHyppeCidadeId] = useState<number | null>(null);
+  const [hyppeBairroId, setHyppeBairroId] = useState<number | null>(null);
   const [deliveryDates, setDeliveryDates] = useState<DeliveryDate[]>([]);
   const [selectedDate, setSelectedDate] = useState<DeliveryDate | null>(null);
   const [deliveryChecked, setDeliveryChecked] = useState(false);
@@ -222,14 +226,14 @@ const CheckoutPublic = () => {
     fetchKey();
   }, [checkout]);
 
-  // Swap offer based on provider (Logzz vs Coinzz)
+  // Swap offer based on provider (Logzz vs Coinzz — Hyppe uses same offer)
   useEffect(() => {
     if (!originalOffer) return;
     if (provider === "coinzz" && coinzzOffer) {
       console.log("[CheckoutPublic] Trocando para oferta Coinzz — offer_hash:", coinzzOffer.hash, "offer_id:", coinzzOffer.id, "price:", coinzzOffer.price);
       setOffer(coinzzOffer);
     } else {
-      console.log("[CheckoutPublic] Usando oferta Logzz — offer_hash:", originalOffer.hash, "offer_id:", originalOffer.id, "price:", originalOffer.price);
+      console.log("[CheckoutPublic] Usando oferta principal — offer_hash:", originalOffer.hash, "offer_id:", originalOffer.id, "price:", originalOffer.price);
       setOffer(originalOffer);
     }
   }, [provider, originalOffer, coinzzOffer]);
@@ -258,15 +262,19 @@ const CheckoutPublic = () => {
       const res = await fetch(`https://${projectId}.supabase.co/functions/v1/checkout-api`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "check_delivery", user_id: checkout?.user_id, cep: cep.replace(/\D/g, "") }),
+        body: JSON.stringify({
+          action: "check_delivery",
+          user_id: checkout?.user_id,
+          cep: cep.replace(/\D/g, ""),
+          checkout_id: checkout?.id,
+        }),
       });
       const data = await res.json();
       if (import.meta.env.DEV) console.log("[Checkout] Response da edge function checkout-api:", JSON.stringify(data));
-      if (import.meta.env.DEV) console.log("[Checkout] Provider:", data?.provider, "Datas:", data?.dates?.length);
+      if (import.meta.env.DEV) console.log("[Checkout] Provider:", data?.provider);
 
       // Auto-fill address from edge function response (ViaCEP enrichment)
       if (data.street || data.neighborhood || data.city || data.state) {
-        if (import.meta.env.DEV) console.log("[Checkout] Preenchendo endereço:", data.street, data.neighborhood, data.city, data.state);
         setForm((prev) => ({
           ...prev,
           street: data.street || prev.street,
@@ -278,12 +286,22 @@ const CheckoutPublic = () => {
 
       if (data.provider === "logzz" && data.dates?.length > 0) {
         setProvider("logzz"); setDeliveryDates(data.dates);
+        setShippingOptions([]); setSelectedShipping(null);
+      } else if (data.provider === "hyppe_cod") {
+        setProvider("hyppe_cod"); setDeliveryDates([]);
+        setShippingOptions([]); setSelectedShipping(null);
+        setHyppeCidadeId(data.hyppe_cidade_id || null);
+        setHyppeBairroId(data.hyppe_bairro_id || null);
+      } else if (data.provider === "hyppe_antecipado" && data.shipping_options?.length > 0) {
+        setProvider("hyppe_antecipado"); setDeliveryDates([]);
+        setShippingOptions(data.shipping_options);
+        setSelectedShipping(data.shipping_options[0]); // auto-select cheapest
       } else {
         setProvider("coinzz"); setDeliveryDates([]);
+        setShippingOptions([]); setSelectedShipping(null);
       }
     } catch (err) {
       if (import.meta.env.DEV) console.error("[Checkout] Erro ao verificar CEP:", err);
-      // Fallback: try ViaCEP directly
       try {
         const viaCepRes = await fetch(`https://viacep.com.br/ws/${cep.replace(/\D/g, "")}/json/`);
         const viaCepData = await viaCepRes.json();
@@ -292,6 +310,7 @@ const CheckoutPublic = () => {
         }
       } catch { /* ignore */ }
       setProvider("coinzz"); setDeliveryDates([]);
+      setShippingOptions([]); setSelectedShipping(null);
     }
     setDeliveryChecked(true);
   };
@@ -321,14 +340,15 @@ const CheckoutPublic = () => {
   }, [checkout]);
 
   const bumpsTotal = orderBumps.filter((b) => selectedBumps.has(b.id)).reduce((sum, b) => sum + (b.current_price || b.price || 0), 0);
-  const shippingPrice = 0; // Frete grátis
+  const shippingPrice = provider === "hyppe_antecipado" && selectedShipping ? selectedShipping.price : 0;
   const basePrice = (offer?.price || 0) + bumpsTotal + shippingPrice;
-  const mpFeeAmount = provider === "coinzz" && mpFeePercent > 0 ? Math.round(basePrice * mpFeePercent) / 100 : 0;
+  const needsOnlinePayment = provider === "coinzz" || provider === "hyppe_antecipado";
+  const mpFeeAmount = needsOnlinePayment && mpFeePercent > 0 ? Math.round(basePrice * mpFeePercent) / 100 : 0;
   const totalPrice = basePrice + mpFeeAmount;
 
   // Initialize MercadoPago Bricks when credit_card is selected on step 3
   useEffect(() => {
-    if (step !== 3 || provider !== "coinzz" || paymentMethod !== "credit_card" || !mpPublicKey || !offer) return;
+    if (step !== 3 || !needsOnlinePayment || paymentMethod !== "credit_card" || !mpPublicKey || !offer) return;
 
     setBricksReady(false);
 
@@ -418,8 +438,9 @@ const CheckoutPublic = () => {
     };
   }, [step, provider, paymentMethod, mpPublicKey, totalPrice]);
 
-  const totalSteps = provider === "logzz" ? 3 : 4;
-  const progressPercent = provider === "logzz"
+  const isCODProvider = provider === "logzz" || provider === "hyppe_cod";
+  const totalSteps = isCODProvider ? 3 : 4;
+  const progressPercent = isCODProvider
     ? step >= 4 ? 100 : step === 3 ? 75 : step === 2 ? 50 : 25
     : (step / totalSteps) * 100;
 
@@ -473,11 +494,11 @@ const CheckoutPublic = () => {
             shipping_value: shippingPrice,
             status: "Aguardando",
             logistics_type: provider || "logzz",
-            delivery_date: provider === "logzz" && selectedDate ? selectedDate.date : null,
-            delivery_type_code: provider === "logzz" && selectedDate ? selectedDate.type_code || null : null,
-            delivery_type_name: provider === "logzz" && selectedDate ? selectedDate.type || null : null,
-            local_operation_code: provider === "logzz" && selectedDate ? selectedDate.local_operation_code || null : null,
-            payment_method: provider === "logzz" ? "afterpay" : paymentMethod,
+            delivery_date: isCODProvider && selectedDate ? selectedDate.date : null,
+            delivery_type_code: isCODProvider && selectedDate ? selectedDate.type_code || null : null,
+            delivery_type_name: isCODProvider && selectedDate ? selectedDate.type || null : null,
+            local_operation_code: isCODProvider && selectedDate ? selectedDate.local_operation_code || null : null,
+            payment_method: isCODProvider ? "afterpay" : paymentMethod,
             utm_source: utm.utm_source || null,
             utm_medium: utm.utm_medium || null,
             utm_campaign: utm.utm_campaign || null,
@@ -532,11 +553,12 @@ const CheckoutPublic = () => {
     if (!checkout || !offer) return;
     setSubmitting(true);
     track("order_submitted");
-    if (provider === "logzz") {
+    if (isCODProvider) {
+      // COD providers (logzz, hyppe_cod) — create order directly
       const oid = await createOrder();
       if (oid) setStep(4);
     } else {
-      // For coinzz, just move to step 3 (payment) — order created on payment
+      // Online payment providers (coinzz, hyppe_antecipado) — go to payment step
       setStep(3);
     }
     setSubmitting(false);
@@ -740,10 +762,10 @@ const CheckoutPublic = () => {
             </div>
 
             {/* Delivery info */}
-            {provider === "logzz" && (
+            {isCODProvider && (
               <>
                 <div className="rounded-xl bg-emerald-50 border border-emerald-100 p-3 text-sm mb-3">
-                  <p className="text-emerald-700 font-medium">🚚 Entrega via Logzz</p>
+                  <p className="text-emerald-700 font-medium">🚚 Entrega {provider === "hyppe_cod" ? "via Hyppe" : "via Logzz"}</p>
                   <p className="text-emerald-600 text-xs">PAGAMENTO NA ENTREGA</p>
                 </div>
                 {selectedDate && (
@@ -752,6 +774,12 @@ const CheckoutPublic = () => {
                   </div>
                 )}
               </>
+            )}
+            {provider === "hyppe_antecipado" && selectedShipping && (
+              <div className="rounded-xl bg-orange-50 border border-orange-100 p-3 text-sm mb-3">
+                <p className="text-orange-700 font-medium">📦 Entrega via Hyppe ({selectedShipping.name})</p>
+                <p className="text-orange-600 text-xs">Prazo: {selectedShipping.delivery_time} dias úteis · Frete: R$ {selectedShipping.price.toFixed(2)}</p>
+              </div>
             )}
 
             <div className="flex gap-3 mt-6">
@@ -1227,9 +1255,46 @@ const CheckoutPublic = () => {
                         {form.city} - {form.state} - CEP: {form.cep}
                       </motion.div>
                     )}
-                    {deliveryChecked && provider === "logzz" && (
+                    {deliveryChecked && (provider === "logzz" || provider === "hyppe_cod") && (
                       <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-700">
-                        ✅ Entrega disponível — Pagamento na entrega (COD)
+                        ✅ Entrega disponível — Pagamento na entrega (COD) {provider === "hyppe_cod" && <span className="ml-1 text-[10px] bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded-full font-bold">HYPPE</span>}
+                      </motion.div>
+                    )}
+                    {deliveryChecked && provider === "hyppe_antecipado" && (
+                      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="rounded-xl border border-orange-200 bg-orange-50 p-3">
+                        <div className="flex items-start gap-2">
+                          <span className="text-lg">📦</span>
+                          <div>
+                            <p className="font-semibold text-orange-800 text-sm">Entrega via Correios <span className="text-[10px] bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded-full font-bold ml-1">HYPPE</span></p>
+                            <p className="text-orange-700 text-xs mt-0.5">
+                              Pagamento online (PIX, Cartão ou Boleto). Selecione o frete na próxima etapa.
+                            </p>
+                          </div>
+                        </div>
+                        {shippingOptions.length > 0 && (
+                          <div className="mt-3 space-y-2">
+                            <p className="text-xs font-semibold text-orange-800">Opções de frete:</p>
+                            {shippingOptions.map((so, i) => (
+                              <button
+                                key={i}
+                                onClick={() => setSelectedShipping(so)}
+                                className={`w-full rounded-lg border-2 p-2.5 text-left text-xs transition-all ${
+                                  selectedShipping?.id === so.id && selectedShipping?.cd_id === so.cd_id
+                                    ? "border-orange-500 bg-orange-50"
+                                    : "border-gray-200 bg-white hover:border-orange-300"
+                                }`}
+                              >
+                                <div className="flex items-center justify-between">
+                                  <div>
+                                    <p className="font-semibold text-gray-900">{so.name} — {so.company}</p>
+                                    <p className="text-gray-500">Prazo: {so.delivery_time} dias úteis</p>
+                                  </div>
+                                  <p className="font-bold text-orange-600">R$ {so.price.toFixed(2)}</p>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        )}
                       </motion.div>
                     )}
                     {deliveryChecked && provider === "coinzz" && (
@@ -1299,11 +1364,11 @@ const CheckoutPublic = () => {
 
             {/* ── STEP 3: Date (Logzz) or Payment (Coinzz) ── */}
             <AnimatePresence mode="wait">
-            {step === 3 && provider === "logzz" && (
-              <motion.div key="step3-logzz" variants={stepVariants} initial="initial" animate="animate" exit="exit">
+            {step === 3 && isCODProvider && (
+              <motion.div key="step3-cod" variants={stepVariants} initial="initial" animate="animate" exit="exit">
                 <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
                   <div className="mb-4 rounded-xl bg-emerald-500 px-4 py-3 text-white text-sm font-semibold flex items-center gap-2">
-                    <Truck className="h-4 w-4" /> Entrega via Logzz | PAGAMENTO NA ENTREGA
+                    <Truck className="h-4 w-4" /> Entrega {provider === "hyppe_cod" ? "via Hyppe" : "via Logzz"} | PAGAMENTO NA ENTREGA
                   </div>
                   <div className="flex items-center gap-2 mb-4">
                     <div className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 text-white text-xs font-bold">3</div>
@@ -1404,7 +1469,7 @@ const CheckoutPublic = () => {
               </motion.div>
             )}
 
-            {step === 3 && provider === "coinzz" && (
+            {step === 3 && needsOnlinePayment && (
               <motion.div key="step3-coinzz" variants={stepVariants} initial="initial" animate="animate" exit="exit">
                 <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
                   <div className="flex items-center gap-2 mb-4">
