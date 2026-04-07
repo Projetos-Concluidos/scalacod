@@ -65,6 +65,8 @@ const CopyBtn = ({ value, label }: { value: string; label?: string }) => (
 /* ─── Platform Badge ─── */
 const PlatformBadge = ({ type }: { type: string | null }) => {
   if (type === "coinzz") return <Badge className="bg-purple-600 text-white border-0 text-[9px] px-1.5 py-0 font-bold">COINZZ</Badge>;
+  if (type === "hyppe_cod") return <Badge className="bg-orange-500 text-white border-0 text-[9px] px-1.5 py-0 font-bold">HYPPE COD</Badge>;
+  if (type === "hyppe_antecipado") return <Badge className="bg-orange-600 text-white border-0 text-[9px] px-1.5 py-0 font-bold">HYPPE ANT</Badge>;
   return <Badge className="bg-emerald-500 text-white border-0 text-[9px] px-1.5 py-0 font-bold">LOGZZ</Badge>;
 };
 
