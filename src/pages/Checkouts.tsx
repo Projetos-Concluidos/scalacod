@@ -315,6 +315,7 @@ const Checkouts = () => {
       whatsapp_support: formWhatsappSupport || null,
       coinzz_offer_hash: formCoinzzOfferHash || null,
       hyppe_offer_data: formHyppeOfferData || null,
+      provider_priority: formProviderPriority || "logzz_first",
     };
     if (editingCheckout) {
       updateMutation.mutate({ id: editingCheckout.id, ...payload });
