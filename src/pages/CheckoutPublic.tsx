@@ -226,14 +226,14 @@ const CheckoutPublic = () => {
     fetchKey();
   }, [checkout]);
 
-  // Swap offer based on provider (Logzz vs Coinzz)
+  // Swap offer based on provider (Logzz vs Coinzz — Hyppe uses same offer)
   useEffect(() => {
     if (!originalOffer) return;
     if (provider === "coinzz" && coinzzOffer) {
       console.log("[CheckoutPublic] Trocando para oferta Coinzz — offer_hash:", coinzzOffer.hash, "offer_id:", coinzzOffer.id, "price:", coinzzOffer.price);
       setOffer(coinzzOffer);
     } else {
-      console.log("[CheckoutPublic] Usando oferta Logzz — offer_hash:", originalOffer.hash, "offer_id:", originalOffer.id, "price:", originalOffer.price);
+      console.log("[CheckoutPublic] Usando oferta principal — offer_hash:", originalOffer.hash, "offer_id:", originalOffer.id, "price:", originalOffer.price);
       setOffer(originalOffer);
     }
   }, [provider, originalOffer, coinzzOffer]);
