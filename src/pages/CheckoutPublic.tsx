@@ -1463,7 +1463,7 @@ const CheckoutPublic = () => {
               </motion.div>
             )}
 
-            {step === 3 && provider === "coinzz" && (
+            {step === 3 && needsOnlinePayment && (
               <motion.div key="step3-coinzz" variants={stepVariants} initial="initial" animate="animate" exit="exit">
                 <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
                   <div className="flex items-center gap-2 mb-4">
