@@ -254,6 +254,7 @@ const Checkouts = () => {
     setFormBumps([]);
     setBumpSearchQuery("");
     setFormHyppeOfferData(null);
+    setFormProviderPriority("logzz_first");
     setHyppeOffers([]);
   }
 
