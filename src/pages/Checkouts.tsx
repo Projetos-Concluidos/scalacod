@@ -311,6 +311,7 @@ const Checkouts = () => {
       thank_you_page_url: formThankYouUrl || null,
       whatsapp_support: formWhatsappSupport || null,
       coinzz_offer_hash: formCoinzzOfferHash || null,
+      hyppe_offer_data: formHyppeOfferData || null,
     };
     if (editingCheckout) {
       updateMutation.mutate({ id: editingCheckout.id, ...payload });
