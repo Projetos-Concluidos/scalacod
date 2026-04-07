@@ -553,11 +553,12 @@ const CheckoutPublic = () => {
     if (!checkout || !offer) return;
     setSubmitting(true);
     track("order_submitted");
-    if (provider === "logzz") {
+    if (isCODProvider) {
+      // COD providers (logzz, hyppe_cod) — create order directly
       const oid = await createOrder();
       if (oid) setStep(4);
     } else {
-      // For coinzz, just move to step 3 (payment) — order created on payment
+      // Online payment providers (coinzz, hyppe_antecipado) — go to payment step
       setStep(3);
     }
     setSubmitting(false);
