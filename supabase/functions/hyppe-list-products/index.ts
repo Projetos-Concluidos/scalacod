@@ -21,6 +21,7 @@ Deno.serve(async (req) => {
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey, {
       global: { headers: { Authorization: authHeader } },
     });
@@ -33,12 +34,25 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Use service role to bypass RLS and resolve effective user (team context)
+    const adminClient = createClient(supabaseUrl, serviceKey);
+    
+    // Resolve effective user id (owner if team member)
+    const { data: teamMember } = await adminClient
+      .from("team_members")
+      .select("owner_id")
+      .eq("user_id", user.id)
+      .eq("is_active", true)
+      .maybeSingle();
+    const effectiveUserId = teamMember?.owner_id || user.id;
+
     // Get Hyppe integration
-    const { data: integration } = await supabase
+    const { data: integration } = await adminClient
       .from("integrations")
       .select("*")
-      .eq("user_id", user.id)
+      .eq("user_id", effectiveUserId)
       .eq("type", "hyppe")
+      .eq("is_active", true)
       .maybeSingle();
 
     if (!integration) {
