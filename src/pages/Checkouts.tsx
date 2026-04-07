@@ -732,6 +732,20 @@ const Checkouts = () => {
                   </SelectContent>
                 </Select>
               </div>
+              {/* Provider Priority */}
+              {(formOfferId || formHyppeOfferData) && (
+                <div>
+                  <Label>Prioridade de verificação de CEP</Label>
+                  <p className="text-xs text-muted-foreground mb-1.5">Qual provedor logístico será consultado primeiro ao verificar o CEP do cliente</p>
+                  <Select value={formProviderPriority} onValueChange={setFormProviderPriority}>
+                    <SelectTrigger className="bg-input border-border"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="logzz_first">🟢 Logzz primeiro (padrão)</SelectItem>
+                      <SelectItem value="hyppe_first">🟠 Hyppe primeiro</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
           )}
 
