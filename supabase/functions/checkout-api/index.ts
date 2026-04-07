@@ -482,6 +482,7 @@ Deno.serve(async (req) => {
           } catch (hyppeErr: any) {
             console.error("[create_order] Hyppe sync error:", hyppeErr.message);
           }
+        }
         try {
           await supabase.from("notifications").insert({
             user_id,
