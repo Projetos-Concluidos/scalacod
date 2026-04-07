@@ -262,15 +262,19 @@ const CheckoutPublic = () => {
       const res = await fetch(`https://${projectId}.supabase.co/functions/v1/checkout-api`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "check_delivery", user_id: checkout?.user_id, cep: cep.replace(/\D/g, "") }),
+        body: JSON.stringify({
+          action: "check_delivery",
+          user_id: checkout?.user_id,
+          cep: cep.replace(/\D/g, ""),
+          checkout_id: checkout?.id,
+        }),
       });
       const data = await res.json();
       if (import.meta.env.DEV) console.log("[Checkout] Response da edge function checkout-api:", JSON.stringify(data));
-      if (import.meta.env.DEV) console.log("[Checkout] Provider:", data?.provider, "Datas:", data?.dates?.length);
+      if (import.meta.env.DEV) console.log("[Checkout] Provider:", data?.provider);
 
       // Auto-fill address from edge function response (ViaCEP enrichment)
       if (data.street || data.neighborhood || data.city || data.state) {
-        if (import.meta.env.DEV) console.log("[Checkout] Preenchendo endereço:", data.street, data.neighborhood, data.city, data.state);
         setForm((prev) => ({
           ...prev,
           street: data.street || prev.street,
@@ -282,12 +286,22 @@ const CheckoutPublic = () => {
 
       if (data.provider === "logzz" && data.dates?.length > 0) {
         setProvider("logzz"); setDeliveryDates(data.dates);
+        setShippingOptions([]); setSelectedShipping(null);
+      } else if (data.provider === "hyppe_cod") {
+        setProvider("hyppe_cod"); setDeliveryDates([]);
+        setShippingOptions([]); setSelectedShipping(null);
+        setHyppeCidadeId(data.hyppe_cidade_id || null);
+        setHyppeBairroId(data.hyppe_bairro_id || null);
+      } else if (data.provider === "hyppe_antecipado" && data.shipping_options?.length > 0) {
+        setProvider("hyppe_antecipado"); setDeliveryDates([]);
+        setShippingOptions(data.shipping_options);
+        setSelectedShipping(data.shipping_options[0]); // auto-select cheapest
       } else {
         setProvider("coinzz"); setDeliveryDates([]);
+        setShippingOptions([]); setSelectedShipping(null);
       }
     } catch (err) {
       if (import.meta.env.DEV) console.error("[Checkout] Erro ao verificar CEP:", err);
-      // Fallback: try ViaCEP directly
       try {
         const viaCepRes = await fetch(`https://viacep.com.br/ws/${cep.replace(/\D/g, "")}/json/`);
         const viaCepData = await viaCepRes.json();
@@ -296,6 +310,7 @@ const CheckoutPublic = () => {
         }
       } catch { /* ignore */ }
       setProvider("coinzz"); setDeliveryDates([]);
+      setShippingOptions([]); setSelectedShipping(null);
     }
     setDeliveryChecked(true);
   };
