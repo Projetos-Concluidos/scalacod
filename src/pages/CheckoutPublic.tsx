@@ -438,8 +438,9 @@ const CheckoutPublic = () => {
     };
   }, [step, provider, paymentMethod, mpPublicKey, totalPrice]);
 
-  const totalSteps = provider === "logzz" ? 3 : 4;
-  const progressPercent = provider === "logzz"
+  const isCODProvider = provider === "logzz" || provider === "hyppe_cod";
+  const totalSteps = isCODProvider ? 3 : 4;
+  const progressPercent = isCODProvider
     ? step >= 4 ? 100 : step === 3 ? 75 : step === 2 ? 50 : 25
     : (step / totalSteps) * 100;
 
