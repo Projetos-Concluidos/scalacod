@@ -257,6 +257,7 @@ const Configuracoes = () => {
         <TabsContent value="integracoes" className="space-y-6">
           <LogzzTab />
           <CoinzzTab />
+          <HyppeTab />
           <MercadoPagoTab />
         </TabsContent>
         <TabsContent value="api">
