@@ -92,7 +92,11 @@ const CheckoutPublic = () => {
   const [submitting, setSubmitting] = useState(false);
   const [cepLoading, setCepLoading] = useState(false);
   const [step, setStep] = useState(1);
-  const [provider, setProvider] = useState<"logzz" | "coinzz" | null>(null);
+  const [provider, setProvider] = useState<"logzz" | "coinzz" | "hyppe_cod" | "hyppe_antecipado" | null>(null);
+  const [shippingOptions, setShippingOptions] = useState<any[]>([]);
+  const [selectedShipping, setSelectedShipping] = useState<any>(null);
+  const [hyppeCidadeId, setHyppeCidadeId] = useState<number | null>(null);
+  const [hyppeBairroId, setHyppeBairroId] = useState<number | null>(null);
   const [deliveryDates, setDeliveryDates] = useState<DeliveryDate[]>([]);
   const [selectedDate, setSelectedDate] = useState<DeliveryDate | null>(null);
   const [deliveryChecked, setDeliveryChecked] = useState(false);
