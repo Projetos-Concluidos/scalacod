@@ -88,6 +88,7 @@ const Checkouts = () => {
   const [bumpLogzzPopoverOpen, setBumpLogzzPopoverOpen] = useState(false);
   // Hyppe state
   const [formHyppeOfferData, setFormHyppeOfferData] = useState<any>(null);
+  const [formProviderPriority, setFormProviderPriority] = useState("logzz_first");
   const [hyppeOffers, setHyppeOffers] = useState<any[]>([]);
   const [syncingHyppe, setSyncingHyppe] = useState(false);
   const [hyppePopoverOpen, setHyppePopoverOpen] = useState(false);
