@@ -1,96 +1,117 @@
 
 
-## Plano de Implementação: Itens Faltantes e Melhorias do Relatório
+## Plano de Implementacao: Integracao Hyppe + Melhorias no Checkout Hibrido
 
-Baseado na análise completa do projeto, organizei os itens em 4 lotes por prioridade de impacto.
+### Relatorio de Analise
 
----
+**Situacao Atual do Checkout:**
+- O checkout hibrido funciona com 2 provedores: **Logzz** (COD com datas de entrega) e **Coinzz** (Correios/after pay)
+- A decisao Logzz vs Coinzz e automatica via CEP (se Logzz cobre = COD, senao = Coinzz)
+- Logzz tem sincronizacao completa de ofertas (import via API)
+- Coinzz NAO tem sync de ofertas — o hash e inserido manualmente no checkout
+- O checkout armazena `offer_id` (Logzz) e `coinzz_offer_hash` (Coinzz) separadamente
 
-### LOTE 1 — Correções Estruturais (Alta Prioridade)
+**Sobre a Hyppe:**
+- A Hyppe e uma plataforma hibrida que suporta AMBOS: **COD** (pagamento na entrega) e **Antecipado** (pagamento online + Correios)
+- A API da Hyppe tem sync de produtos (GET /api/produtos) com `produto_id` e ofertas
+- Tem endpoints completos: verificar CEP, estoque COD, buscar fretes, criar pedido COD e antecipado
+- Webhook com eventos de status (Agendado, Em Separacao, Roteirizado, etc.)
 
-**1. Exportar Pedidos para CSV**
-- Botao no Kanban para baixar pedidos filtrados como .csv (nome, telefone, status, valor, data, produto, logzz_order_id)
-- Arquivos: `Pedidos.tsx`
+**Respostas as suas duvidas:**
 
-**2. Filtros avançados no Kanban**
-- Filtrar por: data (range), produto, metodo de pagamento, logistics_type (Logzz/Coinzz)
-- Painel colapsavel com chips de filtro ativo
-- Arquivos: `Pedidos.tsx`
+1. **Coinzz no checkout**: Concordo que Coinzz sem sync de ofertas cria fricao. Sugiro manter Coinzz como opcao manual (para quem ja usa), mas priorizar Hyppe como alternativa hibrida nativa. Coinzz continuara funcionando 100% manual como esta.
 
-**3. Busca por nome/telefone em Conversas**
-- Verificar se a busca existente realmente filtra; ajustar para buscar em `contact_name` e `contact_phone`
-- Arquivos: `Conversas.tsx`
+2. **Checkout hibrido obrigatorio**: Sim, para um checkout HIBRIDO funcionar, o assinante PRECISA de pelo menos 1 oferta COD + 1 oferta online. Com Hyppe isso se simplifica: a mesma plataforma oferece ambos os modos. Para Logzz+Coinzz, cada um cobre um modo.
 
-**4. Respostas Rapidas**
-- Tabela `quick_replies` (user_id, shortcut, content)
-- Botao no chat para selecionar resposta pre-salva
-- CRUD inline para gerenciar respostas
-- Arquivos: `Conversas.tsx`, migration SQL
+3. **Forcar selecao de oferta**: Sim, o checkout deve validar que o assinante tenha pelo menos 1 oferta vinculada. Vamos adicionar essa validacao.
 
----
-
-### LOTE 2 — Automacoes e Fluxos (Media Prioridade)
-
-**5. Estatisticas por fluxo individual**
-- Dashboard dentro do card do fluxo: execucoes totais, sucesso, falha, taxa %
-- Query em `flow_executions` agrupado por `flow_id`
-- Arquivos: `Fluxos.tsx`
-
-**6. Duplicar fluxo existente**
-- Botao "Duplicar" no dropdown do fluxo, copia nodes/edges/trigger com nome "(Copia)"
-- Arquivos: `Fluxos.tsx`
-
-**7. Marcar conversa como Resolvida/Arquivada**
-- Botoes de status ja existem parcialmente; garantir que o filtro lateral funcione e mostre contadores
-- Arquivos: `Conversas.tsx`
+4. **Funciona na pratica?**: Sim. Cada checkout tera um campo `logistics_type` implicito baseado nas ofertas importadas. Se importou so Logzz = so Logzz. Se importou so Hyppe = so Hyppe. Se importou ambos = hibrido.
 
 ---
 
-### LOTE 3 — Suporte e Tutoriais (Media Prioridade)
+### Implementacao em 6 Blocos
 
-**8. Tutoriais completos no Suporte**
-- Adicionar secoes faltantes: Conversas, MercadoPago, Coinzz, Equipe, Notas Internas, Order Bump, Pixel/CAPI
-- Cada secao com passo-a-passo detalhado, variaveis disponiveis, dicas
-- Atualizar secoes existentes com novidades (auto-cancelamento 24h, templates COD/Coinzz, janela 24h)
-- Arquivos: `Suporte.tsx`
+#### BLOCO 1 — Configuracoes: Aba Hyppe
+- Criar `src/components/settings/HyppeTab.tsx` (mesmo padrao da CoinzzTab)
+- Token API, switch ativo/inativo, webhook URL, testar conexao
+- Adicionar na aba Integracoes em `Configuracoes.tsx` abaixo da Coinzz
+- Adicionar `hyppe_tenant` no `test-integration` Edge Function (GET /api/produtos para validar token)
+
+#### BLOCO 2 — Sync de Ofertas Hyppe
+- Criar Edge Function `hyppe-list-products/index.ts`
+  - GET /api/produtos com token do assinante
+  - Retorna lista de produtos com ofertas, igual ao logzz-list-products
+- Adicionar botao "Sincronizar Hyppe" no wizard do checkout (Passo 1)
+  - Combobox identico ao da Logzz com badge "HYPPE" em laranja
+  - Upsert produto + oferta no banco com `source: "hyppe"` e `hyppe_produto_id`
+
+#### BLOCO 3 — Checkout Publico: Provider Hyppe
+- No `checkout-api` action `check_delivery`:
+  - Quando CEP informado, verificar PRIMEIRO Logzz, depois Hyppe (POST /api/checkout/verificar-cep + /api/checkout/estoque/cod), fallback Coinzz
+  - Se Hyppe COD tem estoque → provider = "hyppe_cod", buscar datas de agendamento
+  - Se nao tem estoque COD mas Hyppe antecipado ativo → provider = "hyppe_antecipado", buscar fretes
+- No `CheckoutPublic.tsx`:
+  - Provider agora pode ser: "logzz" | "coinzz" | "hyppe_cod" | "hyppe_antecipado"
+  - Hyppe COD: mesmo fluxo do Logzz (selecionar data)
+  - Hyppe Antecipado: exibir opcoes de frete (PAC, SEDEX) com preco e prazo
+
+#### BLOCO 4 — Criar Pedido Hyppe
+- Criar Edge Function `hyppe-create-order/index.ts`
+  - COD: POST /api/checkout/pedidos/cod (com cidade_id, bairro_id via endpoints auxiliares)
+  - Antecipado: POST /api/checkout/pedidos/antecipado (com freteSelecionado)
+  - Salvar `hyppe_order_id` no pedido
+- No `checkout-api` action `create_order`:
+  - Novo branch para `logistics_type === "hyppe_cod"` e `"hyppe_antecipado"`
+  - Delegar para hyppe-create-order
+
+#### BLOCO 5 — Webhook Hyppe
+- Criar Edge Function `hyppe-webhook/index.ts`
+  - Receber eventos de status (print do usuario mostra: Status Alterado, Agendado, Em Separacao, etc.)
+  - Mapear status Hyppe → Kanban ScalaCOD
+  - Atualizar pedido + timeline + disparar trigger-flow
+- Exibir URL do webhook na HyppeTab
+
+#### BLOCO 6 — Checkout: Campo hyppe_offer + Validacao
+- Adicionar coluna `hyppe_offer_data` (jsonb) na tabela `checkouts` para guardar produto_id e oferta_id da Hyppe
+- No wizard Passo 1: secao Hyppe com Combobox (igual Logzz)
+- Validacao: checkout hibrido requer pelo menos 1 oferta de qualquer provedor
+- No `CheckoutPublic.tsx`: carregar oferta Hyppe e decidir provider dinamicamente
 
 ---
 
-### LOTE 4 — Polimentos e UX (Baixa Prioridade)
+### DB Migration
 
-**9. Timeline visual de status do pedido**
-- Ja existe aba Timeline no modal; melhorar com icones, cores por status e timestamps formatados
-- Arquivos: `Pedidos.tsx`
+```sql
+ALTER TABLE public.checkouts 
+ADD COLUMN IF NOT EXISTS hyppe_offer_data jsonb DEFAULT NULL;
 
-**10. Notas internas em Conversas (melhorias)**
-- Ja implementado com persistencia; adicionar indicador visual de quantidade de notas no card da conversa
-- Arquivos: `Conversas.tsx`
+ALTER TABLE public.orders 
+ADD COLUMN IF NOT EXISTS hyppe_order_id text DEFAULT NULL;
+```
 
-**11. Dashboard: metricas de conversas**
-- Card "Conversas abertas" e "Tempo medio de resposta" no Dashboard
-- Arquivos: `Dashboard.tsx`
+### Arquivos Criados/Modificados
 
----
+| Arquivo | Acao |
+|---|---|
+| `src/components/settings/HyppeTab.tsx` | Criar |
+| `src/pages/Configuracoes.tsx` | Adicionar HyppeTab |
+| `supabase/functions/hyppe-list-products/index.ts` | Criar |
+| `supabase/functions/hyppe-create-order/index.ts` | Criar |
+| `supabase/functions/hyppe-webhook/index.ts` | Criar |
+| `supabase/functions/test-integration/index.ts` | Adicionar hyppe_tenant |
+| `supabase/functions/checkout-api/index.ts` | Adicionar provider hyppe |
+| `src/pages/Checkouts.tsx` | Adicionar sync Hyppe no wizard |
+| `src/pages/CheckoutPublic.tsx` | Adicionar provider hyppe_cod/antecipado |
+| `src/pages/Pedidos.tsx` | Link Hyppe no detalhe do pedido |
+| Migration SQL | 2 colunas novas |
 
-### Resumo Tecnico
+### Impacto no Codigo Existente
 
-| Item | Arquivos | DB Migration |
-|---|---|---|
-| Export CSV | Pedidos.tsx | Nao |
-| Filtros avancados | Pedidos.tsx | Nao |
-| Busca Conversas | Conversas.tsx | Nao |
-| Respostas Rapidas | Conversas.tsx | Sim (quick_replies) |
-| Stats por fluxo | Fluxos.tsx | Nao |
-| Duplicar fluxo | Fluxos.tsx | Nao |
-| Status conversa | Conversas.tsx | Nao |
-| Tutoriais Suporte | Suporte.tsx | Nao |
-| Timeline visual | Pedidos.tsx | Nao |
-| Notas indicator | Conversas.tsx | Nao |
-| Metricas conversas | Dashboard.tsx | Nao |
+- **Logzz**: ZERO impacto. Fluxo Logzz permanece identico.
+- **Coinzz**: ZERO impacto. Fluxo Coinzz permanece identico.
+- **Checkout hibrido**: Adicionado como TERCEIRO provider, sem alterar logica dos 2 existentes.
+- **Kanban**: Funciona automaticamente (status mapping no webhook).
 
-### Minha Recomendacao
-
-Implementar os 4 lotes em sequencia. O Lote 1 tem o maior impacto na produtividade diaria (filtros, export, respostas rapidas). O Lote 3 (tutoriais) e essencial para onboarding de novos assinantes. Os lotes 2 e 4 sao melhorias incrementais que consolidam o que ja funciona.
-
-Estimativa: 3-4 mensagens para implementar tudo.
+### Estimativa
+3-4 mensagens para implementar todos os 6 blocos.
 
