@@ -1249,9 +1249,46 @@ const CheckoutPublic = () => {
                         {form.city} - {form.state} - CEP: {form.cep}
                       </motion.div>
                     )}
-                    {deliveryChecked && provider === "logzz" && (
+                    {deliveryChecked && (provider === "logzz" || provider === "hyppe_cod") && (
                       <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-700">
-                        ✅ Entrega disponível — Pagamento na entrega (COD)
+                        ✅ Entrega disponível — Pagamento na entrega (COD) {provider === "hyppe_cod" && <span className="ml-1 text-[10px] bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded-full font-bold">HYPPE</span>}
+                      </motion.div>
+                    )}
+                    {deliveryChecked && provider === "hyppe_antecipado" && (
+                      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="rounded-xl border border-orange-200 bg-orange-50 p-3">
+                        <div className="flex items-start gap-2">
+                          <span className="text-lg">📦</span>
+                          <div>
+                            <p className="font-semibold text-orange-800 text-sm">Entrega via Correios <span className="text-[10px] bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded-full font-bold ml-1">HYPPE</span></p>
+                            <p className="text-orange-700 text-xs mt-0.5">
+                              Pagamento online (PIX, Cartão ou Boleto). Selecione o frete na próxima etapa.
+                            </p>
+                          </div>
+                        </div>
+                        {shippingOptions.length > 0 && (
+                          <div className="mt-3 space-y-2">
+                            <p className="text-xs font-semibold text-orange-800">Opções de frete:</p>
+                            {shippingOptions.map((so, i) => (
+                              <button
+                                key={i}
+                                onClick={() => setSelectedShipping(so)}
+                                className={`w-full rounded-lg border-2 p-2.5 text-left text-xs transition-all ${
+                                  selectedShipping?.id === so.id && selectedShipping?.cd_id === so.cd_id
+                                    ? "border-orange-500 bg-orange-50"
+                                    : "border-gray-200 bg-white hover:border-orange-300"
+                                }`}
+                              >
+                                <div className="flex items-center justify-between">
+                                  <div>
+                                    <p className="font-semibold text-gray-900">{so.name} — {so.company}</p>
+                                    <p className="text-gray-500">Prazo: {so.delivery_time} dias úteis</p>
+                                  </div>
+                                  <p className="font-bold text-orange-600">R$ {so.price.toFixed(2)}</p>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        )}
                       </motion.div>
                     )}
                     {deliveryChecked && provider === "coinzz" && (
