@@ -489,8 +489,25 @@ Deno.serve(async (req) => {
             console.error("[coinzz-auto] Error:", coinzzErr.message);
           }
         }
-
-        // ── Insert notifications: new_order + new_lead ──
+        // If logistics_type is hyppe_cod or hyppe_antecipado, delegate to hyppe-create-order
+        else if (order_data.logistics_type === "hyppe_cod" || order_data.logistics_type === "hyppe_antecipado") {
+          try {
+            const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+            const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+            console.log("[create_order] Delegating to hyppe-create-order for order:", inserted?.id, "type:", order_data.logistics_type);
+            const hyppeRes = await fetch(`${supabaseUrl}/functions/v1/hyppe-create-order`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${serviceKey}`,
+              },
+              body: JSON.stringify({ order_id: inserted?.id, user_id }),
+            });
+            const hyppeResult = await hyppeRes.json();
+            console.log("[create_order] hyppe-create-order result:", JSON.stringify(hyppeResult));
+          } catch (hyppeErr: any) {
+            console.error("[create_order] Hyppe sync error:", hyppeErr.message);
+          }
         try {
           await supabase.from("notifications").insert({
             user_id,
