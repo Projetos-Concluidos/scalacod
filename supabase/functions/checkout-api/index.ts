@@ -1625,6 +1625,43 @@ Deno.serve(async (req) => {
       }
     }
 
+    // ── send_to_hyppe: delegate to dedicated hyppe-create-order function ──
+    if (action === "send_to_hyppe") {
+      const { order_id } = body;
+      if (!order_id) {
+        return new Response(JSON.stringify({ error: "order_id required" }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      try {
+        const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+        const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+        console.log("[send_to_hyppe] Delegating to hyppe-create-order for order:", order_id);
+
+        const hyppeRes = await fetch(`${supabaseUrl}/functions/v1/hyppe-create-order`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${serviceKey}`,
+          },
+          body: JSON.stringify({ order_id, user_id }),
+        });
+
+        const result = await hyppeRes.json();
+        console.log("[send_to_hyppe] Result:", JSON.stringify(result));
+
+        return new Response(JSON.stringify(result), {
+          status: hyppeRes.status,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      } catch (e: any) {
+        return new Response(JSON.stringify({ error: e.message }), {
+          status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
     return new Response(
       JSON.stringify({ error: "Invalid action" }),
       { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
