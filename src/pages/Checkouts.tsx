@@ -638,6 +638,81 @@ const Checkouts = () => {
                    </div>
                  )}
                </div>
+              {/* Hyppe Offer Sync */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] bg-orange-500/15 text-orange-500 px-2 py-0.5 rounded-full font-bold">HYPPE</span>
+                    <Label>Importar da Hyppe</Label>
+                  </div>
+                  <button
+                    onClick={async () => {
+                      setSyncingHyppe(true);
+                      try {
+                        const { data, error } = await supabase.functions.invoke("hyppe-list-products");
+                        if (error) throw error;
+                        if (data?.offers?.length > 0) {
+                          setHyppeOffers(data.offers);
+                          toast.success(`${data.offers.length} ofertas encontradas na Hyppe!`);
+                        } else {
+                          toast.info(data?.message || "Nenhuma oferta encontrada. Verifique o token da Hyppe.");
+                        }
+                      } catch { toast.error("Erro ao buscar ofertas da Hyppe"); }
+                      finally { setSyncingHyppe(false); }
+                    }}
+                    disabled={syncingHyppe}
+                    className="flex items-center gap-1 text-xs text-orange-500 hover:text-orange-400 disabled:opacity-50"
+                  >
+                    {syncingHyppe ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+                    {syncingHyppe ? "Buscando..." : "↻ Sincronizar Hyppe"}
+                  </button>
+                </div>
+                {hyppeOffers.length > 0 ? (
+                  <Popover open={hyppePopoverOpen} onOpenChange={setHyppePopoverOpen}>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" role="combobox" className="w-full justify-between bg-input border-border text-left font-normal h-10">
+                        {formHyppeOfferData
+                          ? <span className="truncate">{formHyppeOfferData.product_name} — {formHyppeOfferData.offer_name} (R$ {formHyppeOfferData.price?.toFixed(2)})</span>
+                          : <span className="text-muted-foreground">Buscar oferta da Hyppe...</span>}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                      <Command>
+                        <CommandInput placeholder="Buscar por nome, preço..." />
+                        <CommandList>
+                          <CommandEmpty>Nenhuma oferta encontrada.</CommandEmpty>
+                          <CommandGroup>
+                            {hyppeOffers.map((o, i) => (
+                              <CommandItem key={o.hyppe_offer_id || i} value={`${o.product_name} ${o.offer_name} ${o.price}`} onSelect={() => {
+                                setFormHyppeOfferData(o);
+                                setHyppePopoverOpen(false);
+                                if (!formName) setFormName(o.offer_name || o.product_name);
+                                toast.success(`Oferta Hyppe "${o.offer_name}" selecionada!`);
+                              }}>
+                                <Check className={`mr-2 h-4 w-4 ${formHyppeOfferData?.hyppe_offer_id === o.hyppe_offer_id ? "opacity-100" : "opacity-0"}`} />
+                                <div className="flex flex-col min-w-0">
+                                  <span className="text-sm font-medium truncate">{o.product_name} — {o.offer_name}</span>
+                                  <span className="text-xs text-muted-foreground">R$ {o.price?.toFixed(2)} · ID: {o.hyppe_offer_id || "N/A"}</span>
+                                </div>
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                ) : (
+                  <p className="text-xs text-muted-foreground">Clique em ↻ para buscar ofertas da Hyppe (COD + Antecipado).</p>
+                )}
+                {formHyppeOfferData && (
+                  <div className="mt-2 flex items-center gap-2">
+                    <span className="text-[10px] bg-orange-500/15 text-orange-500 px-2 py-0.5 rounded-full font-bold">HYPPE</span>
+                    <span className="text-xs font-mono text-muted-foreground">{formHyppeOfferData.offer_name}</span>
+                    <Check className="h-3.5 w-3.5 text-orange-500" />
+                  </div>
+                )}
+              </div>
               <div>
                 <Label>Nome do Checkout</Label>
                 <Input value={formName} onChange={(e) => setFormName(e.target.value)} placeholder="Ex: Checkout Principal" className="bg-input border-border" />
