@@ -650,7 +650,7 @@ const Pedidos = () => {
             const shippingVal = Number(o.shipping_value || 0);
             const offerPrice = detailOffer ? Number(detailOffer.price) : null;
             const bumpsTotal = detailBumps.reduce((s, b) => s + Number(b.current_price || b.price || 0), 0);
-            const isLogzz = o.logistics_type !== "coinzz";
+            const isLogzz = o.logistics_type !== "coinzz" && !o.logistics_type?.startsWith("hyppe");
             return (
               <>
                 <DialogHeader>
