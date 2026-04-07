@@ -993,6 +993,32 @@ const Pedidos = () => {
                             </Button>
                           </div>
                         ) : null}
+                        {/* Hyppe section */}
+                        {(o as any).hyppe_order_id ? (
+                          <div className="col-span-2 flex items-center gap-1.5">
+                            <span className="text-muted-foreground">Pedido Hyppe:</span>
+                            <a href={`https://app.hyppe.com.br/pedido/${(o as any).hyppe_order_id}`} target="_blank" rel="noopener noreferrer" className="text-orange-400 hover:underline font-mono font-medium inline-flex items-center gap-1">#{(o as any).hyppe_order_id}<ExternalLink className="h-3 w-3" /></a>
+                            <CopyBtn value={(o as any).hyppe_order_id} label="ID Hyppe" />
+                          </div>
+                        ) : o.logistics_type?.startsWith("hyppe") && o.status !== "Frustrado" ? (
+                          <div className="col-span-2 space-y-2">
+                            <div className="flex items-center gap-2 rounded-md border border-orange-500/30 bg-orange-500/10 px-3 py-2">
+                              <AlertTriangle className="h-4 w-4 text-orange-400 shrink-0" />
+                              <span className="text-xs text-orange-400 font-medium">Hyppe: Sincronização pendente</span>
+                            </div>
+                            <Button variant="outline" size="sm" className="border-orange-500/30 text-orange-400 hover:bg-orange-500/10 w-full" onClick={async () => {
+                              toast.loading("Enviando para Hyppe...", { id: `hyppe-retry-${o.id}` });
+                              try {
+                                const { data, error } = await supabase.functions.invoke("hyppe-create-order", { body: { order_id: o.id, user_id: user?.id, mode: o.logistics_type } });
+                                if (error) throw error;
+                                if (data?.success) { toast.success(`Pedido enviado! ID: ${data.hyppe_order_id || "OK"}`, { id: `hyppe-retry-${o.id}` }); refetch(); }
+                                else toast.error(`Erro: ${(data?.error || "falha").slice(0, 150)}`, { id: `hyppe-retry-${o.id}` });
+                              } catch (err: any) { toast.error(`Erro: ${err.message}`, { id: `hyppe-retry-${o.id}` }); }
+                            }}>
+                              <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Enviar para Hyppe
+                            </Button>
+                          </div>
+                        ) : null}
                       </div>
                     </div>
                     {/* Labels */}
