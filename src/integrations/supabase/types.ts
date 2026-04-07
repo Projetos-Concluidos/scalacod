@@ -157,6 +157,7 @@ export type Database = {
           google_ads_id: string | null
           google_analytics_id: string | null
           google_conversion_id: string | null
+          hyppe_offer_data: Json | null
           id: string
           is_active: boolean | null
           meta_capi_token: string | null
@@ -181,6 +182,7 @@ export type Database = {
           google_ads_id?: string | null
           google_analytics_id?: string | null
           google_conversion_id?: string | null
+          hyppe_offer_data?: Json | null
           id?: string
           is_active?: boolean | null
           meta_capi_token?: string | null
@@ -205,6 +207,7 @@ export type Database = {
           google_ads_id?: string | null
           google_analytics_id?: string | null
           google_conversion_id?: string | null
+          hyppe_offer_data?: Json | null
           id?: string
           is_active?: boolean | null
           meta_capi_token?: string | null
@@ -1033,6 +1036,7 @@ export type Database = {
           delivery_type_name: string | null
           first_order: boolean | null
           gateway_fee: number | null
+          hyppe_order_id: string | null
           id: string
           label_a4_url: string | null
           label_thermal_url: string | null
@@ -1090,6 +1094,7 @@ export type Database = {
           delivery_type_name?: string | null
           first_order?: boolean | null
           gateway_fee?: number | null
+          hyppe_order_id?: string | null
           id?: string
           label_a4_url?: string | null
           label_thermal_url?: string | null
@@ -1147,6 +1152,7 @@ export type Database = {
           delivery_type_name?: string | null
           first_order?: boolean | null
           gateway_fee?: number | null
+          hyppe_order_id?: string | null
           id?: string
           label_a4_url?: string | null
           label_thermal_url?: string | null

@@ -37,7 +37,7 @@ serve(async (req) => {
     const { provider, credentials } = await req.json();
 
     // Tenant-level providers don't require superadmin
-    const tenantProviders = ["mercadopago_tenant", "coinzz_tenant", "logzz_tenant"];
+    const tenantProviders = ["mercadopago_tenant", "coinzz_tenant", "logzz_tenant", "hyppe_tenant"];
     const isTenantProvider = tenantProviders.includes(provider);
 
     if (!isTenantProvider) {
@@ -196,6 +196,26 @@ serve(async (req) => {
         });
         if (res.ok) {
           testResult = { success: true, message: "✅ Conectado à Logzz! Token válido." };
+        } else if (res.status === 401) {
+          testResult = { success: false, message: "Token inválido ou expirado." };
+        } else {
+          const text = await res.text();
+          testResult = { success: false, message: `Erro ${res.status}: ${text.slice(0, 200)}` };
+        }
+        break;
+      }
+
+      case "hyppe_tenant": {
+        const token = credentials.api_token;
+        if (!token) {
+          testResult = { success: false, message: "API Token é obrigatório" };
+          break;
+        }
+        const res = await fetch("https://app.hyppe.com.br/api/produtos?limite=1", {
+          headers: { Authorization: token, Accept: "application/json" },
+        });
+        if (res.ok) {
+          testResult = { success: true, message: "✅ Conectado à Hyppe! Token válido." };
         } else if (res.status === 401) {
           testResult = { success: false, message: "Token inválido ou expirado." };
         } else {

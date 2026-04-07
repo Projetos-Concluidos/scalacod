@@ -65,6 +65,8 @@ const CopyBtn = ({ value, label }: { value: string; label?: string }) => (
 /* ─── Platform Badge ─── */
 const PlatformBadge = ({ type }: { type: string | null }) => {
   if (type === "coinzz") return <Badge className="bg-purple-600 text-white border-0 text-[9px] px-1.5 py-0 font-bold">COINZZ</Badge>;
+  if (type === "hyppe_cod") return <Badge className="bg-orange-500 text-white border-0 text-[9px] px-1.5 py-0 font-bold">HYPPE COD</Badge>;
+  if (type === "hyppe_antecipado") return <Badge className="bg-orange-600 text-white border-0 text-[9px] px-1.5 py-0 font-bold">HYPPE ANT</Badge>;
   return <Badge className="bg-emerald-500 text-white border-0 text-[9px] px-1.5 py-0 font-bold">LOGZZ</Badge>;
 };
 
@@ -648,7 +650,7 @@ const Pedidos = () => {
             const shippingVal = Number(o.shipping_value || 0);
             const offerPrice = detailOffer ? Number(detailOffer.price) : null;
             const bumpsTotal = detailBumps.reduce((s, b) => s + Number(b.current_price || b.price || 0), 0);
-            const isLogzz = o.logistics_type !== "coinzz";
+            const isLogzz = o.logistics_type !== "coinzz" && !o.logistics_type?.startsWith("hyppe");
             return (
               <>
                 <DialogHeader>
@@ -750,7 +752,11 @@ const Pedidos = () => {
                         <div className="mt-3 p-2.5 rounded-md bg-muted/50 border border-border space-y-2">
                           {isLogzz
                             ? <span className="text-sm font-semibold text-amber-400">💵 PAGAMENTO NA ENTREGA</span>
-                            : (
+                            : o.logistics_type?.startsWith("hyppe") ? (
+                              <span className="text-sm font-semibold text-orange-400">
+                                {o.logistics_type === "hyppe_cod" ? "💵 HYPPE — PAGAMENTO NA ENTREGA" : "💳 HYPPE — PAGAMENTO ANTECIPADO"}
+                              </span>
+                            ) : (
                               <div className="space-y-1.5">
                                 <span className="text-sm font-semibold text-purple-400">💳 PAGAMENTO ONLINE — ENTREGA VIA CORREIOS</span>
 
@@ -984,6 +990,32 @@ const Pedidos = () => {
                               }}
                             >
                               <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Enviar para Coinzz
+                            </Button>
+                          </div>
+                        ) : null}
+                        {/* Hyppe section */}
+                        {(o as any).hyppe_order_id ? (
+                          <div className="col-span-2 flex items-center gap-1.5">
+                            <span className="text-muted-foreground">Pedido Hyppe:</span>
+                            <a href={`https://app.hyppe.com.br/pedido/${(o as any).hyppe_order_id}`} target="_blank" rel="noopener noreferrer" className="text-orange-400 hover:underline font-mono font-medium inline-flex items-center gap-1">#{(o as any).hyppe_order_id}<ExternalLink className="h-3 w-3" /></a>
+                            <CopyBtn value={(o as any).hyppe_order_id} label="ID Hyppe" />
+                          </div>
+                        ) : o.logistics_type?.startsWith("hyppe") && o.status !== "Frustrado" ? (
+                          <div className="col-span-2 space-y-2">
+                            <div className="flex items-center gap-2 rounded-md border border-orange-500/30 bg-orange-500/10 px-3 py-2">
+                              <AlertTriangle className="h-4 w-4 text-orange-400 shrink-0" />
+                              <span className="text-xs text-orange-400 font-medium">Hyppe: Sincronização pendente</span>
+                            </div>
+                            <Button variant="outline" size="sm" className="border-orange-500/30 text-orange-400 hover:bg-orange-500/10 w-full" onClick={async () => {
+                              toast.loading("Enviando para Hyppe...", { id: `hyppe-retry-${o.id}` });
+                              try {
+                                const { data, error } = await supabase.functions.invoke("hyppe-create-order", { body: { order_id: o.id, user_id: user?.id, mode: o.logistics_type } });
+                                if (error) throw error;
+                                if (data?.success) { toast.success(`Pedido enviado! ID: ${data.hyppe_order_id || "OK"}`, { id: `hyppe-retry-${o.id}` }); refetch(); }
+                                else toast.error(`Erro: ${(data?.error || "falha").slice(0, 150)}`, { id: `hyppe-retry-${o.id}` });
+                              } catch (err: any) { toast.error(`Erro: ${err.message}`, { id: `hyppe-retry-${o.id}` }); }
+                            }}>
+                              <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Enviar para Hyppe
                             </Button>
                           </div>
                         ) : null}
