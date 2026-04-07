@@ -262,6 +262,7 @@ const Checkouts = () => {
     setFormType(c.type || "hybrid");
     setFormOfferId(c.offer_id || "");
     setFormCoinzzOfferHash((c as any).coinzz_offer_hash || "");
+    setFormHyppeOfferData((c as any).hyppe_offer_data || null);
     setFormOrderBump(c.order_bump_enabled || false);
     setFormUpsell(c.upsell_enabled || false);
     setFormCustomCss(c.custom_css || "");
