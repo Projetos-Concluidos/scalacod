@@ -1,0 +1,2 @@
+ALTER TABLE public.integrations DROP CONSTRAINT integrations_type_check;
+ALTER TABLE public.integrations ADD CONSTRAINT integrations_type_check CHECK (type = ANY (ARRAY['logzz'::text, 'coinzz'::text, 'mercadopago'::text, 'evolution'::text, 'ycloud'::text, 'meta_whatsapp'::text, 'hyppe'::text]));
