@@ -37,7 +37,7 @@ serve(async (req) => {
     const { provider, credentials } = await req.json();
 
     // Tenant-level providers don't require superadmin
-    const tenantProviders = ["mercadopago_tenant", "coinzz_tenant", "logzz_tenant"];
+    const tenantProviders = ["mercadopago_tenant", "coinzz_tenant", "logzz_tenant", "hyppe_tenant"];
     const isTenantProvider = tenantProviders.includes(provider);
 
     if (!isTenantProvider) {
