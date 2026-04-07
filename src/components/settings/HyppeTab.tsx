@@ -111,9 +111,11 @@ const HyppeTab = () => {
         .eq("type", "hyppe")
         .maybeSingle();
       if (existing) {
-        await supabase.from("integrations").update(payload).eq("id", existing.id);
+        const { error: updateErr } = await supabase.from("integrations").update(payload).eq("id", existing.id);
+        if (updateErr) throw updateErr;
       } else {
-        await supabase.from("integrations").insert(payload);
+        const { error: insertErr } = await supabase.from("integrations").insert(payload);
+        if (insertErr) throw insertErr;
       }
       if (!silent) toast.success("Integração Hyppe salva!");
     } catch {
