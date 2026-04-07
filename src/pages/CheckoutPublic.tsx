@@ -762,10 +762,10 @@ const CheckoutPublic = () => {
             </div>
 
             {/* Delivery info */}
-            {provider === "logzz" && (
+            {isCODProvider && (
               <>
                 <div className="rounded-xl bg-emerald-50 border border-emerald-100 p-3 text-sm mb-3">
-                  <p className="text-emerald-700 font-medium">🚚 Entrega via Logzz</p>
+                  <p className="text-emerald-700 font-medium">🚚 Entrega {provider === "hyppe_cod" ? "via Hyppe" : "via Logzz"}</p>
                   <p className="text-emerald-600 text-xs">PAGAMENTO NA ENTREGA</p>
                 </div>
                 {selectedDate && (
@@ -774,6 +774,12 @@ const CheckoutPublic = () => {
                   </div>
                 )}
               </>
+            )}
+            {provider === "hyppe_antecipado" && selectedShipping && (
+              <div className="rounded-xl bg-orange-50 border border-orange-100 p-3 text-sm mb-3">
+                <p className="text-orange-700 font-medium">📦 Entrega via Hyppe ({selectedShipping.name})</p>
+                <p className="text-orange-600 text-xs">Prazo: {selectedShipping.delivery_time} dias úteis · Frete: R$ {selectedShipping.price.toFixed(2)}</p>
+              </div>
             )}
 
             <div className="flex gap-3 mt-6">
