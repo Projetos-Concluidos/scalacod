@@ -135,7 +135,7 @@ const Dashboard = () => {
       return { v: count };
     });
     setSparkData(spark);
-    setRecentLeads(leadsRes.data || []);
+    setRecentOrders(leadsRes.data || []);
     setQueueCount(queueRes.count || 0);
     setConvMetrics({
       open: convOpenRes.count || 0,
