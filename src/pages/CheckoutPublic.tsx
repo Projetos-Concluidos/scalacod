@@ -776,9 +776,9 @@ const CheckoutPublic = () => {
               </>
             )}
             {provider === "hyppe_antecipado" && selectedShipping && (
-              <div className="rounded-xl bg-orange-50 border border-orange-100 p-3 text-sm mb-3">
-                <p className="text-orange-700 font-medium">📦 Entrega via Hyppe ({selectedShipping.name})</p>
-                <p className="text-orange-600 text-xs">Prazo: {selectedShipping.delivery_time} dias úteis · Frete: R$ {selectedShipping.price.toFixed(2)}</p>
+              <div className="rounded-xl bg-violet-50 border border-violet-100 p-3 text-sm mb-3">
+                <p className="text-violet-700 font-medium">📦 Entrega via Hyppe ({selectedShipping.name})</p>
+                <p className="text-violet-600 text-xs">Prazo: {selectedShipping.delivery_time} dias úteis · Frete: R$ {selectedShipping.price.toFixed(2)}</p>
               </div>
             )}
 
