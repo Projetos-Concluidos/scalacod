@@ -1,37 +1,35 @@
 
+## Plano: Transformar "Leads Recentes" em "Vendas Recentes"
 
-## Plano: Criar Webhook Dedicado da Logzz + Atualizar Pedido #HN3SG6S8
+### O que muda
 
-### Diagnóstico
+A seção lateral do Dashboard será completamente reformulada:
+- **Titulo**: "Leads Recentes" → "Vendas Recentes"
+- **Fonte de dados**: Em vez de buscar da tabela `leads`, buscar da tabela `orders` (pedidos recentes)
+- **Informações exibidas por card**:
+  - Nome do cliente + telefone
+  - Numero do pedido (ex: #HN3SG6S8)
+  - Valor do pedido formatado (R$)
+  - Badge do provider: **Logzz** (laranja), **Hyppe** (roxo), **Coinzz** (azul)
+  - Badge do status do pedido (colorido conforme status)
+  - Data/hora do pedido
+- **Ação ao clicar**: Navegar para `/pedidos` (pagina de pedidos) para ver detalhes
+- **"Ver Todos"**: Link para `/pedidos`
 
-O problema é claro: **não existe um endpoint dedicado para a Logzz enviar atualizações de status**. A lógica `process_logzz_webhook` existe dentro do `checkout-api`, mas requer autenticação e um body específico com `action: "process_logzz_webhook"`. A Logzz não consegue chamar isso automaticamente.
+### Arquivo modificado
 
-A Hyppe já tem um webhook dedicado (`hyppe-webhook`), mas a Logzz não tem equivalente.
-
-### Implementação
-
-**1. Criar Edge Function `logzz-webhook/index.ts`**
-- Endpoint público que a Logzz pode chamar: `{SUPABASE_URL}/functions/v1/logzz-webhook?store={user_id}`
-- Mesmo padrão do `hyppe-webhook`: recebe payload, mapeia status, atualiza pedido, registra timeline, dispara `trigger-flow`
-- Busca o pedido por `logzz_order_id`, `order_number` ou `external_id`
-- Extrai campos extras: `tracking_code`, `delivery_man`, `logistic_operator`, URLs de etiquetas
-
-**2. Exibir URL do webhook na aba Logzz (Configurações)**
-- Adicionar a URL do webhook reverso na interface de configuração da Logzz para que o assinante possa copiar e configurar na plataforma Logzz
-
-**3. Atualizar pedido #HN3SG6S8 manualmente**
-- Chamar `process_logzz_webhook` via `checkout-api` para atualizar o pedido de "Agendado" → "Separado"
-- Isso também dispara o `trigger-flow` para enviar mensagem ao cliente
-
-### Arquivos
-
-| Arquivo | Ação |
+| Arquivo | Alteracao |
 |---|---|
-| `supabase/functions/logzz-webhook/index.ts` | Criar (novo endpoint) |
-| `src/pages/Configuracoes.tsx` ou aba Logzz | Exibir webhook URL |
-| Chamada manual via curl | Atualizar pedido #HN3SG6S8 |
+| `src/pages/Dashboard.tsx` | Query `orders` em vez de `leads`, novo layout dos cards com badges e detalhes |
+
+### Implementacao
+
+1. **Query**: Trocar `supabase.from("leads")` por `supabase.from("orders")` com campos: `id, order_number, client_name, client_phone, order_final_price, status, logistics_type, created_at` — limit 5, order by `created_at desc`
+2. **State**: Trocar `recentLeads` por `recentOrders` (tipado)
+3. **Card redesign**: Cada card mostra avatar com inicial, nome, telefone, numero do pedido, valor em destaque, badge do provider (Logzz/Hyppe/Coinzz) e badge do status
+4. **Click handler**: `navigate('/pedidos')` ao clicar no card
+5. **Empty state**: Trocar icone Users por ShoppingCart e texto para "Nenhuma venda ainda"
 
 ### Impacto
-- Zero alteração no fluxo existente
-- Apenas adiciona o endpoint que faltava para a Logzz enviar atualizações automaticamente
-
+- Zero impacto em outras funcionalidades
+- Apenas altera a seção lateral direita do Dashboard
