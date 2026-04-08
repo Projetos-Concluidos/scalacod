@@ -1,47 +1,37 @@
 
 
-## Plano: Chave de Prioridade de Provider no Checkout
+## Plano: Criar Webhook Dedicado da Logzz + Atualizar Pedido #HN3SG6S8
 
-### Faz sentido?
+### Diagnóstico
 
-Sim, faz total sentido. Hoje a lógica no `checkout-api` verifica **sempre Logzz primeiro, depois Hyppe, depois Coinzz**. Se o assinante trabalha primariamente com Hyppe, ele quer que a Hyppe tenha prioridade — ou seja, se ambas cobrem o CEP, quem "ganha" é a Hyppe.
+O problema é claro: **não existe um endpoint dedicado para a Logzz enviar atualizações de status**. A lógica `process_logzz_webhook` existe dentro do `checkout-api`, mas requer autenticação e um body específico com `action: "process_logzz_webhook"`. A Logzz não consegue chamar isso automaticamente.
 
-A chave ficaria na criação/edição do checkout como um select simples.
-
----
+A Hyppe já tem um webhook dedicado (`hyppe-webhook`), mas a Logzz não tem equivalente.
 
 ### Implementação
 
-**1. Nova coluna no banco**
-```sql
-ALTER TABLE public.checkouts 
-ADD COLUMN IF NOT EXISTS provider_priority text DEFAULT 'logzz_first';
-```
-Valores: `logzz_first` | `hyppe_first`
+**1. Criar Edge Function `logzz-webhook/index.ts`**
+- Endpoint público que a Logzz pode chamar: `{SUPABASE_URL}/functions/v1/logzz-webhook?store={user_id}`
+- Mesmo padrão do `hyppe-webhook`: recebe payload, mapeia status, atualiza pedido, registra timeline, dispara `trigger-flow`
+- Busca o pedido por `logzz_order_id`, `order_number` ou `external_id`
+- Extrai campos extras: `tracking_code`, `delivery_man`, `logistic_operator`, URLs de etiquetas
 
-**2. Checkout Wizard (Checkouts.tsx)**
-- Adicionar um `Select` no Passo 1 do wizard, abaixo das ofertas:
-  - Label: "Prioridade de verificação de CEP"
-  - Opções: "Logzz primeiro (padrão)" / "Hyppe primeiro"
-- Salvar no campo `provider_priority`
+**2. Exibir URL do webhook na aba Logzz (Configurações)**
+- Adicionar a URL do webhook reverso na interface de configuração da Logzz para que o assinante possa copiar e configurar na plataforma Logzz
 
-**3. Checkout API (checkout-api/index.ts)**
-- Na action `check_delivery`, ler `provider_priority` do checkout
-- Se `hyppe_first`: verificar Hyppe COD → Hyppe Antecipado → Logzz → Coinzz
-- Se `logzz_first` (padrão): manter ordem atual (Logzz → Hyppe → Coinzz)
+**3. Atualizar pedido #HN3SG6S8 manualmente**
+- Chamar `process_logzz_webhook` via `checkout-api` para atualizar o pedido de "Agendado" → "Separado"
+- Isso também dispara o `trigger-flow` para enviar mensagem ao cliente
 
-**4. Types update**
-- O campo será adicionado automaticamente ao regenerar types
+### Arquivos
 
-### Arquivos modificados
-
-| Arquivo | Alteração |
+| Arquivo | Ação |
 |---|---|
-| Migration SQL | 1 coluna nova |
-| `src/pages/Checkouts.tsx` | Select de prioridade no wizard |
-| `supabase/functions/checkout-api/index.ts` | Lógica condicional de ordem |
+| `supabase/functions/logzz-webhook/index.ts` | Criar (novo endpoint) |
+| `src/pages/Configuracoes.tsx` ou aba Logzz | Exibir webhook URL |
+| Chamada manual via curl | Atualizar pedido #HN3SG6S8 |
 
 ### Impacto
-- Zero impacto em checkouts existentes (default = `logzz_first`, comportamento atual)
-- Coinzz continua sempre como fallback final
+- Zero alteração no fluxo existente
+- Apenas adiciona o endpoint que faltava para a Logzz enviar atualizações automaticamente
 
