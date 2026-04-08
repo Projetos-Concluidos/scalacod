@@ -58,6 +58,7 @@ async function fetchWithRetry(url: string, token: string, attempt = 1): Promise<
   return res;
 }
 
+Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
