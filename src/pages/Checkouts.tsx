@@ -449,7 +449,10 @@ const Checkouts = () => {
             <div className="space-y-4">
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <Label>Importar da Logzz</Label>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] bg-emerald-500/15 text-emerald-500 px-2 py-0.5 rounded-full font-bold">LOGZZ</span>
+                    <Label>Importar da Logzz</Label>
+                  </div>
                   <button
                     onClick={async () => {
                       setSyncingLogzz(true);
@@ -713,10 +716,6 @@ const Checkouts = () => {
                     <Check className="h-3.5 w-3.5 text-orange-500" />
                   </div>
                 )}
-              </div>
-              <div>
-                <Label>Nome do Checkout</Label>
-                <Input value={formName} onChange={(e) => setFormName(e.target.value)} placeholder="Ex: Checkout Principal" className="bg-input border-border" />
               </div>
               <div>
                 <Label>Tipo</Label>
