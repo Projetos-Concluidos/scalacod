@@ -48,6 +48,7 @@ const LogzzTab = () => {
       if (data) {
         const config = data.config as any;
         setToken(config?.bearer_token || "");
+        setAffiliateId(config?.affiliate_id || "");
         setLogzzWebhookUrl(config?.logzz_webhook_url || "");
         setIsActive(data.is_active ?? false);
       }
