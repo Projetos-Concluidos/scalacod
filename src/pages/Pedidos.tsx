@@ -90,7 +90,7 @@ const Pedidos = () => {
   const [batchMoveTarget, setBatchMoveTarget] = useState<string | null>(null);
   const [syncingLogzz, setSyncingLogzz] = useState(false);
 
-  const handleSyncLogzz = useCallback(async () => {
+  const handleSyncLogzzFn = useCallback(async () => {
     setSyncingLogzz(true);
     try {
       const { data, error } = await supabase.functions.invoke("logzz-sync-status");
@@ -100,7 +100,7 @@ const Pedidos = () => {
           ? `${data.synced} pedido(s) atualizado(s) de ${data.total}`
           : "Todos os pedidos já estão atualizados";
         toast.success(msg);
-        if (data.synced > 0) refetch();
+        if (data.synced > 0) queryClient.invalidateQueries({ queryKey: ["orders"] });
       } else {
         toast.error(data?.error || "Erro ao sincronizar");
       }
@@ -109,7 +109,7 @@ const Pedidos = () => {
     } finally {
       setSyncingLogzz(false);
     }
-  }, []);
+  }, [queryClient]);
 
   const toggleSelect = useCallback((id: string) => {
     setSelectedIds(prev => {
