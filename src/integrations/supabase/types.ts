@@ -858,6 +858,7 @@ export type Database = {
       }
       offers: {
         Row: {
+          affiliate_code: string | null
           checkout_type: string | null
           created_at: string | null
           expedition_checkout_url: string | null
@@ -872,6 +873,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          affiliate_code?: string | null
           checkout_type?: string | null
           created_at?: string | null
           expedition_checkout_url?: string | null
@@ -886,6 +888,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          affiliate_code?: string | null
           checkout_type?: string | null
           created_at?: string | null
           expedition_checkout_url?: string | null
@@ -1013,6 +1016,7 @@ export type Database = {
       }
       orders: {
         Row: {
+          affiliate_code: string | null
           affiliate_commission: number | null
           affiliate_email: string | null
           affiliate_name: string | null
@@ -1071,6 +1075,7 @@ export type Database = {
           utm_term: string | null
         }
         Insert: {
+          affiliate_code?: string | null
           affiliate_commission?: number | null
           affiliate_email?: string | null
           affiliate_name?: string | null
@@ -1129,6 +1134,7 @@ export type Database = {
           utm_term?: string | null
         }
         Update: {
+          affiliate_code?: string | null
           affiliate_commission?: number | null
           affiliate_email?: string | null
           affiliate_name?: string | null
