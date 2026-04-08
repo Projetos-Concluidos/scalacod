@@ -116,6 +116,12 @@ Deno.serve(async (req) => {
 
         if (Array.isArray(productOffers)) {
           for (const offer of productOffers) {
+            const schUrl = offer.scheduling_checkout_url || null;
+            let affiliateCode: string | null = null;
+            if (role === "affiliate" && schUrl) {
+              const payMatch = schUrl.match(/\/pay\/([^/]+)\/[^/]+/);
+              if (payMatch) affiliateCode = payMatch[1];
+            }
             offers.push({
               product_name: productName,
               product_hash: productHash,
@@ -131,12 +137,19 @@ Deno.serve(async (req) => {
               offer_hash: offer.hash || null,
               price: parseFloat(offer.price || "0"),
               original_price: parseFloat(offer.original_price || offer.price || "0"),
-              scheduling_checkout_url: offer.scheduling_checkout_url || null,
+              scheduling_checkout_url: schUrl,
               expedition_checkout_url: offer.expedition_checkout_url || null,
+              affiliate_code: affiliateCode,
               role,
             });
           }
         } else {
+          const schUrl2 = product.scheduling_checkout_url || null;
+          let affiliateCode2: string | null = null;
+          if (role === "affiliate" && schUrl2) {
+            const payMatch2 = schUrl2.match(/\/pay\/([^/]+)\/[^/]+/);
+            if (payMatch2) affiliateCode2 = payMatch2[1];
+          }
           offers.push({
             product_name: productName,
             product_hash: productHash,
@@ -152,8 +165,9 @@ Deno.serve(async (req) => {
             offer_hash: productHash,
             price: parseFloat(product.price || "0"),
             original_price: parseFloat(product.original_price || product.price || "0"),
-            scheduling_checkout_url: null,
+            scheduling_checkout_url: schUrl2,
             expedition_checkout_url: null,
+            affiliate_code: affiliateCode2,
             role,
           });
         }

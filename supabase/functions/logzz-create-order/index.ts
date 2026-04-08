@@ -227,15 +227,17 @@ Deno.serve(async (req) => {
       await admin.from("orders").update({ delivery_date: finalDeliveryDate }).eq("id", order_id);
     }
 
-    // 5. Get offer hash
+    // 5. Get offer hash and affiliate_code
     let offerHash = "";
+    let affiliateCode = "";
     if (order.offer_id) {
       const { data: offerData } = await admin
         .from("offers")
-        .select("hash")
+        .select("hash, affiliate_code")
         .eq("id", order.offer_id)
         .maybeSingle();
       offerHash = offerData?.hash || "";
+      affiliateCode = offerData?.affiliate_code || "";
     }
 
     // 6. Build payload
@@ -254,7 +256,13 @@ Deno.serve(async (req) => {
       delivery_date: finalDeliveryDate,
       offer: offerHash,
       affiliate_email: order.affiliate_email || "",
+      ...(affiliateCode ? { affiliate_code: affiliateCode } : {}),
     };
+
+    // Save affiliate_code on order for traceability
+    if (affiliateCode && !order.affiliate_code) {
+      await admin.from("orders").update({ affiliate_code: affiliateCode }).eq("id", order_id);
+    }
 
     // 7. Fetch order bumps & variations
     if (order.offer_id) {

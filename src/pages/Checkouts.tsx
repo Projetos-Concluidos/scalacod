@@ -51,6 +51,7 @@ type LogzzOffer = {
   original_price: number;
   scheduling_checkout_url: string | null;
   expedition_checkout_url: string | null;
+  affiliate_code?: string | null;
   role: string;
 };
 
@@ -562,6 +563,7 @@ const Checkouts = () => {
                                           original_price: o.original_price || o.price,
                                           scheduling_checkout_url: o.scheduling_checkout_url,
                                           expedition_checkout_url: o.expedition_checkout_url,
+                                          affiliate_code: o.affiliate_code || null,
                                         }).select("id").single();
                                         offerId = newOffer?.id;
                                       } else {
@@ -571,6 +573,7 @@ const Checkouts = () => {
                                           original_price: o.original_price || o.price,
                                           scheduling_checkout_url: o.scheduling_checkout_url,
                                           expedition_checkout_url: o.expedition_checkout_url,
+                                          affiliate_code: o.affiliate_code || null,
                                         }).eq("id", offerId);
                                       }
 
