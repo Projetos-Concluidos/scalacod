@@ -776,9 +776,9 @@ const CheckoutPublic = () => {
               </>
             )}
             {provider === "hyppe_antecipado" && selectedShipping && (
-              <div className="rounded-xl bg-orange-50 border border-orange-100 p-3 text-sm mb-3">
-                <p className="text-orange-700 font-medium">📦 Entrega via Hyppe ({selectedShipping.name})</p>
-                <p className="text-orange-600 text-xs">Prazo: {selectedShipping.delivery_time} dias úteis · Frete: R$ {selectedShipping.price.toFixed(2)}</p>
+              <div className="rounded-xl bg-violet-50 border border-violet-100 p-3 text-sm mb-3">
+                <p className="text-violet-700 font-medium">📦 Entrega via Hyppe ({selectedShipping.name})</p>
+                <p className="text-violet-600 text-xs">Prazo: {selectedShipping.delivery_time} dias úteis · Frete: R$ {selectedShipping.price.toFixed(2)}</p>
               </div>
             )}
 
@@ -1257,7 +1257,7 @@ const CheckoutPublic = () => {
                     )}
                     {deliveryChecked && (provider === "logzz" || provider === "hyppe_cod") && (
                       <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-700">
-                        ✅ Entrega disponível — Pagamento na entrega (COD) {provider === "hyppe_cod" && <span className="ml-1 text-[10px] bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded-full font-bold">HYPPE</span>}
+                        ✅ Entrega disponível — Pagamento na entrega (COD) {provider === "hyppe_cod" && <span className="ml-1 text-[10px] bg-violet-300 text-violet-800 px-1.5 py-0.5 rounded-full font-bold">HYPPE</span>}
                       </motion.div>
                     )}
                     {deliveryChecked && provider === "hyppe_antecipado" && (

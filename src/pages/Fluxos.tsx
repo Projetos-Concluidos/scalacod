@@ -405,7 +405,7 @@ const Fluxos = () => {
         </button>
         <button
           onClick={() => setFlowFilter("coinzz")}
-          className={flowFilter === "coinzz" ? "flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold bg-purple-500/15 text-purple-400 border border-purple-500/30" : "flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground"}
+          className={flowFilter === "coinzz" ? "flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold bg-purple-800/15 text-purple-300 border border-purple-700/30" : "flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground"}
         >
           🟣 Coinzz
         </button>

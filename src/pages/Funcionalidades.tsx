@@ -12,7 +12,7 @@ const features = [
   { icon: RefreshCw, title: "Remarketing Automático", desc: "Recupere vendas frustradas com cadência de 30 dias (D1 a D25). Desconto progressivo, link de checkout personalizado e detecção automática do provider.", color: "from-rose-400 to-red-500" },
   { icon: Code, title: "Webhooks & API", desc: "API completa para integração com qualquer sistema. Webhooks para eventos em tempo real. Documentação completa.", color: "from-gray-400 to-gray-500" },
   { icon: Megaphone, title: "Disparos em Massa", desc: "Campanhas WhatsApp segmentadas por status, tags e comportamento. Agendamento, relatório de entrega e templates personalizados.", color: "from-sky-400 to-blue-500" },
-  { icon: Package, title: "Hyppe Logística", desc: "Terceiro provider de logística totalmente integrado. Mais opções de entrega COD para seus clientes.", color: "from-orange-400 to-amber-500" },
+  { icon: Package, title: "Hyppe Logística", desc: "Terceiro provider de logística totalmente integrado. Mais opções de entrega COD para seus clientes.", color: "from-violet-300 to-violet-500" },
   { icon: UserPlus, title: "Equipe & Permissões", desc: "Convide membros por e-mail e defina papéis (admin/membro). Gestão colaborativa com controle de acesso.", color: "from-violet-400 to-purple-500" },
   { icon: Zap, title: "Vozes com IA", desc: "Clone sua voz e envie áudios personalizados via WhatsApp. Integração nativa com ElevenLabs.", color: "from-yellow-400 to-orange-500" },
 ];

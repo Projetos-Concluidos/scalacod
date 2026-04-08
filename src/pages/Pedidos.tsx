@@ -64,9 +64,9 @@ const CopyBtn = ({ value, label }: { value: string; label?: string }) => (
 
 /* ─── Platform Badge ─── */
 const PlatformBadge = ({ type }: { type: string | null }) => {
-  if (type === "coinzz") return <Badge className="bg-purple-600 text-white border-0 text-[9px] px-1.5 py-0 font-bold">COINZZ</Badge>;
-  if (type === "hyppe_cod") return <Badge className="bg-orange-500 text-white border-0 text-[9px] px-1.5 py-0 font-bold">HYPPE COD</Badge>;
-  if (type === "hyppe_antecipado") return <Badge className="bg-orange-600 text-white border-0 text-[9px] px-1.5 py-0 font-bold">HYPPE ANT</Badge>;
+  if (type === "coinzz") return <Badge className="bg-purple-800 text-white border-0 text-[9px] px-1.5 py-0 font-bold">COINZZ</Badge>;
+  if (type === "hyppe_cod") return <Badge className="bg-violet-400 text-white border-0 text-[9px] px-1.5 py-0 font-bold">HYPPE COD</Badge>;
+  if (type === "hyppe_antecipado") return <Badge className="bg-violet-500 text-white border-0 text-[9px] px-1.5 py-0 font-bold">HYPPE ANT</Badge>;
   return <Badge className="bg-emerald-500 text-white border-0 text-[9px] px-1.5 py-0 font-bold">LOGZZ</Badge>;
 };
 
@@ -997,16 +997,16 @@ const Pedidos = () => {
                         {(o as any).hyppe_order_id ? (
                           <div className="col-span-2 flex items-center gap-1.5">
                             <span className="text-muted-foreground">Pedido Hyppe:</span>
-                            <a href={`https://app.hyppe.com.br/pedido/${(o as any).hyppe_order_id}`} target="_blank" rel="noopener noreferrer" className="text-orange-400 hover:underline font-mono font-medium inline-flex items-center gap-1">#{(o as any).hyppe_order_id}<ExternalLink className="h-3 w-3" /></a>
+                            <a href={`https://app.hyppe.com.br/pedido/${(o as any).hyppe_order_id}`} target="_blank" rel="noopener noreferrer" className="text-violet-400 hover:underline font-mono font-medium inline-flex items-center gap-1">#{(o as any).hyppe_order_id}<ExternalLink className="h-3 w-3" /></a>
                             <CopyBtn value={(o as any).hyppe_order_id} label="ID Hyppe" />
                           </div>
                         ) : o.logistics_type?.startsWith("hyppe") && o.status !== "Frustrado" ? (
                           <div className="col-span-2 space-y-2">
-                            <div className="flex items-center gap-2 rounded-md border border-orange-500/30 bg-orange-500/10 px-3 py-2">
-                              <AlertTriangle className="h-4 w-4 text-orange-400 shrink-0" />
-                              <span className="text-xs text-orange-400 font-medium">Hyppe: Sincronização pendente</span>
+                            <div className="flex items-center gap-2 rounded-md border border-violet-500/30 bg-violet-500/10 px-3 py-2">
+                              <AlertTriangle className="h-4 w-4 text-violet-400 shrink-0" />
+                              <span className="text-xs text-violet-400 font-medium">Hyppe: Sincronização pendente</span>
                             </div>
-                            <Button variant="outline" size="sm" className="border-orange-500/30 text-orange-400 hover:bg-orange-500/10 w-full" onClick={async () => {
+                            <Button variant="outline" size="sm" className="border-violet-500/30 text-violet-400 hover:bg-violet-500/10 w-full" onClick={async () => {
                               toast.loading("Enviando para Hyppe...", { id: `hyppe-retry-${o.id}` });
                               try {
                                 const { data, error } = await supabase.functions.invoke("hyppe-create-order", { body: { order_id: o.id, user_id: user?.id, mode: o.logistics_type } });
