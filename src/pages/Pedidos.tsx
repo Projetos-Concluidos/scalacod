@@ -352,6 +352,9 @@ const Pedidos = () => {
               <CheckSquare className="h-4 w-4 mr-1.5" /> {batchMode ? "Sair seleção" : "Selecionar"}
             </Button>
             <Button variant="outline" size="sm" onClick={exportCSV} className="border-border text-muted-foreground"><Download className="h-4 w-4 mr-1.5" /> Exportar</Button>
+            <Button variant="outline" size="sm" onClick={handleSyncLogzz} disabled={syncingLogzz} className="border-emerald-500/30 text-emerald-500 hover:bg-emerald-500/10">
+              <RefreshCw className={`h-4 w-4 mr-1.5 ${syncingLogzz ? "animate-spin" : ""}`} /> Sync Logzz
+            </Button>
             <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground" onClick={() => refetch()} disabled={isFetching}><RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} /></Button>
           </div>
         }
