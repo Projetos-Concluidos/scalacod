@@ -165,7 +165,8 @@ Deno.serve(async (req) => {
           const schUrl2 = product.scheduling_checkout_url || null;
           let affiliateCode2: string | null = null;
           if (role === "affiliate") {
-            affiliateCode2 = product.affiliate_code || product.affiliate_hash || null;
+            affiliateCode2 = configAffiliateId;
+            if (!affiliateCode2) affiliateCode2 = product.affiliate_code || product.affiliate_hash || null;
             if (!affiliateCode2 && schUrl2) {
               const payMatch2 = schUrl2.match(/\/pay\/([^/]+)\/[^/]+/);
               if (payMatch2) affiliateCode2 = payMatch2[1];
