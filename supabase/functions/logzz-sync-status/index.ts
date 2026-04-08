@@ -127,28 +127,14 @@ async function fetchWithRetry(url: string, token: string, attempt = 1): Promise<
       try {
         // Query Logzz API for order status
         const logzzUrl = `https://app.logzz.com.br/api/v1/orders/${order.logzz_order_id}`;
-        const res = await fetch(logzzUrl, {
-          method: "GET",
-          headers: {
-            ...BROWSER_HEADERS,
-            Authorization: `Bearer ${logzzToken}`,
-          },
-          redirect: "manual",
-        });
+        let res = await fetchWithRetry(logzzUrl, logzzToken);
 
         if (res.status !== 200) {
           // Try alternative endpoint
           const altUrl = `https://app.logzz.com.br/api/v1/pedidos/${order.logzz_order_id}`;
-          const altRes = await fetch(altUrl, {
-            method: "GET",
-            headers: {
-              ...BROWSER_HEADERS,
-              Authorization: `Bearer ${logzzToken}`,
-            },
-            redirect: "manual",
-          });
+          res = await fetchWithRetry(altUrl, logzzToken);
 
-          if (altRes.status !== 200) {
+          if (res.status !== 200) {
             console.warn(`[logzz-sync-status] Could not fetch order ${order.logzz_order_id}: status ${res.status}/${altRes.status}`);
             errors.push(`${order.logzz_order_id}: API ${res.status}`);
             continue;
