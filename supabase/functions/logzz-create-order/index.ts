@@ -256,7 +256,13 @@ Deno.serve(async (req) => {
       delivery_date: finalDeliveryDate,
       offer: offerHash,
       affiliate_email: order.affiliate_email || "",
+      ...(affiliateCode ? { affiliate_code: affiliateCode } : {}),
     };
+
+    // Save affiliate_code on order for traceability
+    if (affiliateCode && !order.affiliate_code) {
+      await admin.from("orders").update({ affiliate_code: affiliateCode }).eq("id", order_id);
+    }
 
     // 7. Fetch order bumps & variations
     if (order.offer_id) {
