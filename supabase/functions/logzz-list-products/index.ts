@@ -97,6 +97,17 @@ Deno.serve(async (req) => {
     const roles = ["producer", "affiliate", "coproducer"];
     const offers: any[] = [];
 
+    // Diagnostic: log hashes per role to investigate affiliate vs producer hash differences
+    for (const r of roles) {
+      const prods = actualData?.[r];
+      if (Array.isArray(prods) && prods.length > 0) {
+        for (const p of prods) {
+          const offerHashes = Array.isArray(p.offers) ? p.offers.map((o: any) => o.hash).join(", ") : "no-offers";
+          console.log(`[logzz-list-products] ROLE=${r} product="${p.name}" hash=${p.hash} offers=[${offerHashes}]`);
+        }
+      }
+    }
+
     for (const role of roles) {
       const products = actualData?.[role];
       if (!Array.isArray(products)) continue;
