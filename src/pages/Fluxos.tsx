@@ -25,7 +25,7 @@ const Fluxos = () => {
   const [builderOpen, setBuilderOpen] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
   const [editingFlow, setEditingFlow] = useState<Flow | null>(null);
-  const [subTab, setSubTab] = useState<"flows" | "templates" | "executions" | "tags">("flows");
+  const [subTab, setSubTab] = useState<"flows" | "templates" | "executions" | "tags" | "remarketing">("flows");
   const [executions, setExecutions] = useState<any[]>([]);
   const [execLoading, setExecLoading] = useState(false);
   const [expanded, setExpanded] = useState(true);
