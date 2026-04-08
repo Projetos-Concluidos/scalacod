@@ -1002,11 +1002,11 @@ const Pedidos = () => {
                           </div>
                         ) : o.logistics_type?.startsWith("hyppe") && o.status !== "Frustrado" ? (
                           <div className="col-span-2 space-y-2">
-                            <div className="flex items-center gap-2 rounded-md border border-orange-500/30 bg-orange-500/10 px-3 py-2">
-                              <AlertTriangle className="h-4 w-4 text-orange-400 shrink-0" />
-                              <span className="text-xs text-orange-400 font-medium">Hyppe: Sincronização pendente</span>
+                            <div className="flex items-center gap-2 rounded-md border border-violet-500/30 bg-violet-500/10 px-3 py-2">
+                              <AlertTriangle className="h-4 w-4 text-violet-400 shrink-0" />
+                              <span className="text-xs text-violet-400 font-medium">Hyppe: Sincronização pendente</span>
                             </div>
-                            <Button variant="outline" size="sm" className="border-orange-500/30 text-orange-400 hover:bg-orange-500/10 w-full" onClick={async () => {
+                            <Button variant="outline" size="sm" className="border-violet-500/30 text-violet-400 hover:bg-violet-500/10 w-full" onClick={async () => {
                               toast.loading("Enviando para Hyppe...", { id: `hyppe-retry-${o.id}` });
                               try {
                                 const { data, error } = await supabase.functions.invoke("hyppe-create-order", { body: { order_id: o.id, user_id: user?.id, mode: o.logistics_type } });
