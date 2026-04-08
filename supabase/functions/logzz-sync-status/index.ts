@@ -5,6 +5,20 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+const BROWSER_HEADERS: Record<string, string> = {
+  "Accept": "application/json",
+  "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+  "Accept-Language": "pt-BR,pt;q=0.9,en;q=0.8",
+  "Origin": "https://app.logzz.com.br",
+  "Referer": "https://app.logzz.com.br/",
+  "sec-ch-ua": '"Chromium";v="122", "Not(A:Brand";v="24"',
+  "sec-ch-ua-mobile": "?0",
+  "sec-ch-ua-platform": '"Windows"',
+  "Sec-Fetch-Dest": "empty",
+  "Sec-Fetch-Mode": "cors",
+  "Sec-Fetch-Site": "same-origin",
+};
+
 const STATUS_MAP: Record<string, string> = {
   "AGENDADO": "Agendado",
   "PENDENTE": "Aguardando",
