@@ -375,13 +375,19 @@ const LogzzTab = () => {
                 <Copy className="h-4 w-4" />
               </Button>
             </div>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Configure em{" "}
-              <a href="https://app.logzz.com.br" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                app.logzz.com.br <ExternalLink className="inline h-3 w-3" />
-              </a>{" "}
-              → Configurações → Webhook → Eventos: Pedidos, Expedição Tradicional
-            </p>
+            <div className="mt-2 rounded-lg border border-warning/30 bg-warning/5 p-3">
+              <p className="text-xs font-semibold text-warning mb-1">⚠️ IMPORTANTE — Configure este webhook na Logzz!</p>
+              <p className="text-xs text-muted-foreground">
+                Sem este webhook, as atualizações de status dos pedidos (Em Rota, Entregue, Cancelado, etc.) <strong>não serão sincronizadas</strong> automaticamente.
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Acesse{" "}
+                <a href="https://app.logzz.com.br" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-medium">
+                  app.logzz.com.br <ExternalLink className="inline h-3 w-3" />
+                </a>{" "}
+                → Configurações → Webhook → Cole a URL acima → Marque todos os eventos (Pedidos, Expedição, Status)
+              </p>
+            </div>
           </div>
         </div>
       )}
