@@ -1,89 +1,73 @@
 
 
-## Relatório: Atribuição de Afiliado na Logzz
+## Relatorio: Por que o pedido nao foi atribuido ao afiliado na Logzz
 
-### O Problema
+### Diagnostico
 
-Quando o pedido #HN3SG6S8 foi enviado para a Logzz via webhook de importação, o campo `affiliate_email` estava **vazio** e **não foi enviado nenhum identificador de afiliado**. Por isso, a Logzz registrou o pedido como sendo do **produtor**, sem gerar comissão para o afiliado.
-
-A URL do afiliado revela o padrão:
+Analisei o pedido #Q03XR8SB (ID: `046a0eca-121c-4f99-b235-d51db83fd44d`) e o payload enviado:
 
 ```text
-https://entrega.logzz.com.br/pay/memdn8lr0/1-organic-lizz-97-1
-                                 ^^^^^^^^^^
-                                 ID do afiliado na Logzz
+Payload enviado para Logzz:
+- offer: "sal6oxlk"           ← hash da oferta (correto)
+- affiliate_code: "memdn8lr0" ← campo CUSTOMIZADO que adicionamos
+- affiliate_email: null        ← campo vazio
+- Resposta: 200 "Webhook processado com sucesso!"
 ```
 
-Enquanto a URL do produtor seria:
+### Causa raiz identificada
+
+O campo `affiliate_code` que estamos enviando **nao e um campo reconhecido pela API de importacao de pedidos da Logzz**. A Logzz aceita e ignora campos desconhecidos — por isso retorna sucesso (200), mas nao atribui ao afiliado.
+
+Analisando a documentacao da API de produtos que voce compartilhou, a estrutura e:
+
 ```text
-https://entrega.logzz.com.br/pay/1-organic-lizz-97-1
-                                 (sem ID de afiliado)
+data.producer[]   → produtos do produtor (com offers[].hash)
+data.affiliate[]  → produtos do afiliado (com offers[].hash)
+data.coproducer[] → produtos do coprodutor (com offers[].hash)
 ```
 
-### Análise do Fluxo Atual
+A questao critica: **a Logzz pode retornar hashes de oferta DIFERENTES** para cada papel. O hash `sal6oxlk` pode ser o hash do produtor, nao o hash do afiliado. Quando o pedido chega com o hash do produtor, a Logzz atribui ao produtor.
 
-| Etapa | O que acontece | Problema |
-|---|---|---|
-| 1. Sincronização de ofertas (`logzz-list-products`) | Busca produtos da Logzz API. Para afiliados, a resposta vem dentro de `data.affiliate[].offers[]` com `scheduling_checkout_url` contendo o ID do afiliado | A `scheduling_checkout_url` salva no banco **não contém** o segmento do afiliado — todas as URLs salvas são do padrão produtor |
-| 2. Checkout público (`checkout-api`) | O cliente faz o pedido. Não coleta nenhum `affiliate_id` | **Não tem campo** para armazenar o ID do afiliado da Logzz |
-| 3. Envio para Logzz (`logzz-create-order`) | Envia payload com `offer` (hash) e `affiliate_email` (vazio) | **Faltam dois campos**: o `affiliate_email` nunca é preenchido e não existe campo para o ID/código do afiliado |
-| 4. Logzz processa | Recebe o pedido mas sem identificação de afiliado | **Comissão não é gerada** |
+Alem disso, o campo que a Logzz reconhece para atribuicao de afiliado no webhook de importacao e provavelmente `affiliate_email` (email da conta do afiliado na Logzz), que esta sendo enviado como `null`.
 
-### Dados no Banco (Pedido #HN3SG6S8)
+### Dados confirmados no banco
 
-- `affiliate_email`: **NULL**
-- `affiliate_name`: **NULL**
-- `offer_id`: `2d9c3e8e-...` → offer hash: `sal6oxlk`
-- `scheduling_checkout_url` da oferta: `https://entrega.logzz.com.br/pay/1-uni-organic-lizz-107` (sem ID afiliado)
-
-### Solução Proposta
-
-#### 1. Novo campo na tabela `offers`: `affiliate_code`
-Armazena o identificador do afiliado extraído da `scheduling_checkout_url` durante a sincronização.
-
-**Lógica de extração**: Se a URL tiver o padrão `/pay/{affiliate_code}/{product-slug}` (dois segmentos após `/pay/`), o primeiro segmento é o `affiliate_code`. Se tiver apenas um segmento (`/pay/{product-slug}`), é uma oferta de produtor e o campo fica vazio.
-
-#### 2. Atualizar `logzz-list-products` e sync no `checkout-api`
-Ao importar ofertas da Logzz, se o `role === "affiliate"`, extrair o `affiliate_code` da `scheduling_checkout_url` e salvar no campo novo.
-
-#### 3. Atualizar `logzz-create-order`
-Ao montar o payload para a Logzz, buscar o `affiliate_code` da oferta e incluir no payload:
-```json
-{
-  "offer": "sal6oxlk",
-  "affiliate_code": "memdn8lr0"
-}
-```
-
-#### 4. Atualizar tabela `orders` com `affiliate_code`
-Salvar também no pedido para rastreabilidade.
-
-### Arquivos Impactados
-
-| Arquivo | Mudança |
+| Campo | Valor |
 |---|---|
-| **Migration SQL** | Adicionar coluna `affiliate_code` em `offers` e `orders` |
-| `supabase/functions/logzz-list-products/index.ts` | Extrair `affiliate_code` da URL ao importar |
-| `supabase/functions/checkout-api/index.ts` | Salvar `affiliate_code` no sync e no upsert de ofertas |
-| `supabase/functions/logzz-create-order/index.ts` | Buscar `affiliate_code` da oferta e incluir no payload para Logzz |
+| offer hash | sal6oxlk |
+| affiliate_code | memdn8lr0 (salvo, mas ignorado pela Logzz) |
+| scheduling_checkout_url | `https://entrega.logzz.com.br/pay/1-uni-organic-lizz-107` (URL de PRODUTOR, sem ID afiliado) |
+| URL esperada afiliado | `https://entrega.logzz.com.br/pay/memdn8lr0/1-uni-organic-lizz-107` |
 
-### Como vai funcionar depois
+A URL armazenada e do produtor (sem segmento de afiliado), o que confirma que a API da Logzz retorna URLs de produtor mesmo para o array `affiliate`.
 
-```text
-1. Sync Logzz → API retorna affiliate.offers[].scheduling_checkout_url
-   "https://entrega.logzz.com.br/pay/memdn8lr0/1-organic-lizz-97-1"
-   → Extrai: affiliate_code = "memdn8lr0"
-   → Salva na tabela offers
+### Solucao proposta (3 acoes)
 
-2. Cliente compra → Pedido criado com offer_id vinculado
+**1. Adicionar campo "Email do Afiliado" nas configuracoes Logzz**
+- Novo campo no `LogzzTab.tsx` para o usuario informar o email da conta Logzz do afiliado
+- Salvar como `affiliate_email` no config da integracao
 
-3. logzz-create-order → Busca offer → Encontra affiliate_code = "memdn8lr0"
-   → Payload: { offer: "sal6oxlk", affiliate_code: "memdn8lr0" }
-   → Logzz reconhece o afiliado → Comissão gerada!
-```
+**2. Enviar `affiliate_email` preenchido no payload**
+- Em `logzz-create-order`, buscar o `affiliate_email` da integracao e enviar no payload
+- Campo `affiliate_email` ja existe no payload, so esta `null`
 
-### Impacto
-- Correção definitiva para atribuição de comissões de afiliado
-- Zero impacto em pedidos de produtor (campo fica vazio)
-- Retrocompatível com ofertas existentes (basta re-sincronizar)
+**3. Investigar hashes de oferta por papel**
+- Em `logzz-list-products`, logar os hashes separados por role (producer vs affiliate)
+- Se a Logzz retornar hashes diferentes para afiliados, armazenar essa distincao
+- Usar o hash correto do afiliado ao enviar o pedido
+
+### Arquivos impactados
+
+| Arquivo | Mudanca |
+|---|---|
+| `src/components/settings/LogzzTab.tsx` | Adicionar campo "Email do Afiliado Logzz" |
+| `supabase/functions/logzz-create-order/index.ts` | Preencher `affiliate_email` do config |
+| `supabase/functions/logzz-list-products/index.ts` | Logar hashes por role para diagnostico |
+
+### Recomendacao imediata
+
+Para confirmar qual campo a Logzz reconhece, sugiro:
+1. Implementar o envio do `affiliate_email` (email da sua conta Logzz de afiliado)
+2. Fazer um pedido teste
+3. Se ainda nao atribuir, o proximo passo seria testar com um hash de oferta diferente (se existir um hash especifico do afiliado)
 
