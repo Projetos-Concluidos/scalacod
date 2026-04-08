@@ -135,21 +135,10 @@ async function fetchWithRetry(url: string, token: string, attempt = 1): Promise<
           res = await fetchWithRetry(altUrl, logzzToken);
 
           if (res.status !== 200) {
-            console.warn(`[logzz-sync-status] Could not fetch order ${order.logzz_order_id}: status ${res.status}/${altRes.status}`);
+            console.warn(`[logzz-sync-status] Could not fetch order ${order.logzz_order_id}: status ${res.status}`);
             errors.push(`${order.logzz_order_id}: API ${res.status}`);
             continue;
           }
-
-          const contentType = altRes.headers.get("content-type") || "";
-          if (!contentType.includes("json")) {
-            errors.push(`${order.logzz_order_id}: resposta não-JSON`);
-            continue;
-          }
-
-          const altBody = await altRes.json();
-          await processLogzzResponse(admin, supabaseUrl, serviceKey, order, altBody, user.id);
-          synced++;
-          continue;
         }
 
         const contentType = res.headers.get("content-type") || "";
