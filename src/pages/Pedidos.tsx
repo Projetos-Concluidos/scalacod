@@ -88,6 +88,31 @@ const Pedidos = () => {
   const [batchMode, setBatchMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [batchMoveTarget, setBatchMoveTarget] = useState<string | null>(null);
+  const [syncingLogzz, setSyncingLogzz] = useState(false);
+
+  const handleSyncLogzzFn = useCallback(async () => {
+    setSyncingLogzz(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("logzz-sync-status");
+      if (error) throw error;
+      if (data?.success) {
+        if (data.synced > 0) {
+          toast.success(`${data.synced} pedido(s) atualizado(s) de ${data.total}`);
+          queryClient.invalidateQueries({ queryKey: ["orders"] });
+        } else if (data.errors?.length > 0) {
+          toast.info("A Logzz bloqueou a consulta (Cloudflare). Configure o webhook reverso nas configurações da Logzz para sincronização automática.", { duration: 8000 });
+        } else {
+          toast.success("Todos os pedidos já estão atualizados");
+        }
+      } else {
+        toast.error(data?.error || "Erro ao sincronizar");
+      }
+    } catch (err: any) {
+      toast.error(`Erro: ${err.message}`);
+    } finally {
+      setSyncingLogzz(false);
+    }
+  }, [queryClient]);
 
   const toggleSelect = useCallback((id: string) => {
     setSelectedIds(prev => {
@@ -330,6 +355,9 @@ const Pedidos = () => {
               <CheckSquare className="h-4 w-4 mr-1.5" /> {batchMode ? "Sair seleção" : "Selecionar"}
             </Button>
             <Button variant="outline" size="sm" onClick={exportCSV} className="border-border text-muted-foreground"><Download className="h-4 w-4 mr-1.5" /> Exportar</Button>
+            <Button variant="outline" size="sm" onClick={handleSyncLogzzFn} disabled={syncingLogzz} className="border-emerald-500/30 text-emerald-500 hover:bg-emerald-500/10">
+              <RefreshCw className={`h-4 w-4 mr-1.5 ${syncingLogzz ? "animate-spin" : ""}`} /> Sync Logzz
+            </Button>
             <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground" onClick={() => refetch()} disabled={isFetching}><RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} /></Button>
           </div>
         }

@@ -49,15 +49,17 @@ Deno.serve(async (req) => {
     const admin = createClient(supabaseUrl, serviceKey);
 
     // Extract fields from Logzz webhook payload (multiple formats)
-    const externalId = body?.external_id || body?.pedido?.external_id || body?.data?.external_id || null;
-    const logzzOrderId = body?.order_id || body?.pedido_id || body?.id || body?.pedido?.id || body?.data?.id || null;
-    const orderNumber = body?.order_number || body?.pedido?.order_number || body?.numero_pedido || null;
-    const rawStatus = body?.status || body?.pedido?.status || body?.data?.status || null;
-    const trackingCode = body?.tracking_code || body?.codigo_rastreio || body?.pedido?.tracking_code || null;
-    const deliveryMan = body?.delivery_man || body?.entregador || body?.pedido?.delivery_man || null;
-    const logisticOperator = body?.logistic_operator || body?.operador_logistico || body?.pedido?.logistic_operator || null;
-    const labelA4 = body?.label_a4_url || body?.etiqueta_a4 || body?.pedido?.label_a4_url || null;
-    const labelThermal = body?.label_thermal_url || body?.etiqueta_termica || body?.pedido?.label_thermal_url || null;
+    const nested = body?.pedido || body?.data || body?.order || {};
+    const externalId = body?.external_id || nested?.external_id || null;
+    const logzzOrderId = body?.order_id || body?.pedido_id || body?.id || nested?.id || body?.order_hash || nested?.order_hash || null;
+    const orderNumber = body?.order_number || nested?.order_number || body?.numero_pedido || nested?.numero_pedido || null;
+    const rawStatus = body?.status || nested?.status || null;
+    const trackingCode = body?.tracking_code || body?.codigo_rastreio || nested?.tracking_code || nested?.codigo_rastreio || null;
+    const deliveryMan = body?.delivery_man || body?.entregador || nested?.delivery_man || nested?.entregador || null;
+    const logisticOperator = body?.logistic_operator || body?.operador_logistico || nested?.logistic_operator || nested?.operador_logistico || null;
+    const labelA4 = body?.label_a4_url || body?.etiqueta_a4 || nested?.label_a4_url || nested?.etiqueta_a4 || null;
+    const labelThermal = body?.label_thermal_url || body?.etiqueta_termica || nested?.label_thermal_url || nested?.etiqueta_termica || null;
+    const statusDescription = body?.status_description || body?.motivo || nested?.status_description || nested?.motivo || nested?.reason || null;
 
     // Find order: try external_id → logzz_order_id → order_number
     let order = null;
@@ -125,7 +127,7 @@ Deno.serve(async (req) => {
 
     if (newStatus && newStatus !== prevStatus) {
       updatePayload.status = newStatus;
-      updatePayload.status_description = `Logzz: ${rawStatus}`;
+      updatePayload.status_description = statusDescription ? `Logzz: ${statusDescription}` : `Logzz: ${rawStatus}`;
     }
 
     if (trackingCode) updatePayload.tracking_code = trackingCode;
