@@ -127,7 +127,7 @@ Deno.serve(async (req) => {
 
     if (newStatus && newStatus !== prevStatus) {
       updatePayload.status = newStatus;
-      updatePayload.status_description = `Logzz: ${rawStatus}`;
+      updatePayload.status_description = statusDescription ? `Logzz: ${statusDescription}` : `Logzz: ${rawStatus}`;
     }
 
     if (trackingCode) updatePayload.tracking_code = trackingCode;
