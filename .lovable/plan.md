@@ -1,61 +1,93 @@
-## Módulo de Remarketing — Plano Completo
 
-### 1. Database (Migration)
 
-**Tabela `remarketing_campaigns`** — Configuração das campanhas
-- `user_id`, `name`, `description`, `is_active`
-- `trigger_status` (ex: "Frustrado", "Cancelado")
-- `flow_type` (logzz, coinzz, hyppe ou all)
-- `checkout_id` (link do checkout para enviar nas mensagens)
-- `discount_enabled`, `discount_type` (percentage/fixed), `discount_progressive` (boolean)
-- `total_enrolled`, `total_converted`, `total_revenue_recovered`
+## Relatório de Status do Projeto ScalaCOD
 
-**Tabela `remarketing_steps`** — Cadência dos disparos
-- `campaign_id`, `step_order` (1,2,3...)
-- `delay_days` (D1, D2, D5, D10, D15, D25)
-- `send_hour` (19:00, 19:30, 20:00...)
-- `message_template` (texto com variáveis {{cliente_nome}}, {{produto}}, {{checkout_link}}, {{cupom}}, {{desconto_valor}})
-- `discount_value` (desconto específico deste step, ex: 5%, 10%, 15%)
+### Módulos Implementados (Funcionais)
 
-**Tabela `remarketing_enrollments`** — Pedidos que entraram no funil
-- `campaign_id`, `order_id`, `user_id`
-- `enrolled_at`, `current_step` (qual step está)
-- `status` (active, converted, cancelled, completed)
-- `converted_at`, `converted_order_id`
-
-### 2. Edge Function `process-remarketing`
-- Chamada via cron a cada hora
-- Busca enrollments ativos onde o próximo step está no horário
-- Verifica se o pedido ainda está frustrado (safety check)
-- Interpola variáveis: `{{cliente_nome}}`, `{{produto}}`, `{{checkout_link}}`, `{{cupom}}`, `{{desconto_valor}}`
-- Insere na `message_queue` para envio via WhatsApp
-- Atualiza `current_step` do enrollment
-
-### 3. Enrollment automático via `trigger-flow`
-- Quando um pedido muda para status "Frustrado", verificar se existe campanha de remarketing ativa
-- Criar enrollment automaticamente
-
-### 4. UI — Nova aba "Remarketing" na página Fluxos
-- **Lista de campanhas** com cards mostrando: nome, status, enrolled/converted, taxa de conversão
-- **Criar/Editar campanha**: formulário com nome, trigger, checkout vinculado, tipo de desconto
-- **Timeline visual**: timeline horizontal mostrando cada step (D1, D2, D5...) com horário e preview da mensagem
-- **Editor de mensagem por step**: textarea com variáveis disponíveis
-- **Dashboard mini**: total enrolled, converted, taxa de conversão, receita recuperada
-
-### 5. Arquivos modificados/criados
-
-| Arquivo | Ação |
+| Modulo | Status |
 |---|---|
-| Migration SQL | 3 tabelas novas |
-| `src/pages/Fluxos.tsx` | Adicionar aba "Remarketing" |
-| `src/components/remarketing/RemarketingTab.tsx` | Lista + dashboard |
-| `src/components/remarketing/RemarketingCampaignForm.tsx` | Criar/editar campanha |
-| `src/components/remarketing/RemarketingTimeline.tsx` | Timeline visual dos steps |
-| `src/components/remarketing/RemarketingStepEditor.tsx` | Editor de mensagem por step |
-| `supabase/functions/process-remarketing/index.ts` | Processamento dos disparos |
-| `supabase/functions/trigger-flow/index.ts` | Auto-enrollment |
+| Checkout Hibrido (Logzz + Coinzz + Hyppe) | Completo |
+| Prioridade de Provider por checkout | Completo |
+| Kanban de Pedidos (realtime) | Completo |
+| Dashboard com "Vendas Recentes" | Completo |
+| Leads / CRM | Completo |
+| Conversas WhatsApp | Completo |
+| Fluxos (Builder + IA + Templates) | Completo |
+| Remarketing Vendas Frustradas | Completo |
+| Vozes IA (ElevenLabs) | Completo |
+| Disparos em massa | Completo |
+| WhatsApp Cloud (Meta/Evolution) | Completo |
+| Pixel Analytics (FB CAPI) | Completo |
+| Webhooks Logzz / Hyppe / Coinzz | Completo |
+| Planos + Assinaturas (MercadoPago) | Completo |
+| Admin Panel | Completo |
+| Equipe / Convites | Completo |
+| Paginas publicas (Home, Funcionalidades, Planos, FAQ, Ajuda, Status, Termos) | Completo |
+| Auth (Login, Registro, Reset senha) | Completo |
 
-### 6. Impacto
-- Zero impacto em fluxos existentes
-- Remarketing é um módulo independente
-- Usa a `message_queue` existente para envio
+---
+
+### O que falta atualizar na Pagina Inicial (Home)
+
+**1. Secao "Tools" (Ecossistema Completo) - DESATUALIZADA**
+
+Atualmente mostra apenas 6 ferramentas. Faltam:
+
+| Ferramenta | Descricao sugerida | Badge |
+|---|---|---|
+| Remarketing | Recupere vendas frustradas com cadencia automatica de 30 dias. Desconto progressivo. | NOVO |
+| Disparos em Massa | Campanhas WhatsApp para toda sua base. Segmentacao por status e tags. | BROADCAST |
+| Hyppe Logistica | Terceiro provider de logistica integrado. Mais opcoes de entrega. | NOVO |
+| Equipe & Permissoes | Convide membros, defina papeis (admin/membro). Gestao colaborativa. | TEAM |
+
+**2. Secao "Features" (blocos alternados) - INCOMPLETA**
+
+Atualmente mostra 3 features (WhatsApp, Kanban, Pixel). Faltam blocos para:
+- Remarketing Automatico (novo modulo)
+- Checkout Hibrido com 3 providers (Logzz + Coinzz + Hyppe)
+- Disparos em Massa
+
+**3. Secao "Checkout Hibrido" - DESATUALIZADA**
+
+Menciona apenas "Logzz + Coinzz". Falta incluir **Hyppe** como terceiro provider e a chave de prioridade.
+
+**4. Pagina /funcionalidades - DESATUALIZADA**
+
+Tem 8 cards estaticos. Faltam mencoes a:
+- Hyppe como provider
+- Remarketing com desconto progressivo
+- Disparos em massa
+- Equipe/Permissoes
+
+**5. FAQ - INCOMPLETO**
+
+Nao menciona Hyppe, Remarketing nem Disparos.
+
+---
+
+### Itens tecnicos pendentes para producao
+
+| Item | Prioridade |
+|---|---|
+| Cron job `process-remarketing` - verificar se esta ativo no banco | Alta |
+| Testar fluxo completo de remarketing end-to-end (frustrar pedido → enrollment → disparo) | Alta |
+| Testar webhook Hyppe recebendo atualizacoes de status | Alta |
+| Verificar se `delivery-reminders` cron esta configurado | Media |
+| Verificar se `expire-unpaid-orders` cron esta configurado | Media |
+| Imagens/screenshots nas secoes de features da Home (todos mostram placeholder) | Media |
+| OG Image para SEO (campo vazio no banco) | Baixa |
+
+---
+
+### Resumo
+
+**Backend: ~95% pronto.** Todos os modulos funcionais estao implementados. Falta validar crons e testar remarketing end-to-end.
+
+**Frontend (app interno): 100% pronto.** Todas as paginas e funcionalidades estao acessiveis.
+
+**Pagina inicial / copy publica: ~70%.** A Home e a pagina de Funcionalidades nao mencionam Hyppe, Remarketing, Disparos nem Equipe. Precisa atualizar as secoes "Tools", "Features", "Checkout Hibrido" e FAQ para refletir todas as ferramentas atuais.
+
+### Proximo passo recomendado
+
+Atualizar a copy da Home (tools, features, checkout section, FAQ) e da pagina /funcionalidades para incluir todas as ferramentas que ja existem no sistema.
+
