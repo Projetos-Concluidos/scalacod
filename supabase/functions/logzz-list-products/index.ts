@@ -144,6 +144,12 @@ Deno.serve(async (req) => {
             });
           }
         } else {
+          const schUrl2 = product.scheduling_checkout_url || null;
+          let affiliateCode2: string | null = null;
+          if (role === "affiliate" && schUrl2) {
+            const payMatch2 = schUrl2.match(/\/pay\/([^/]+)\/[^/]+/);
+            if (payMatch2) affiliateCode2 = payMatch2[1];
+          }
           offers.push({
             product_name: productName,
             product_hash: productHash,
@@ -159,8 +165,9 @@ Deno.serve(async (req) => {
             offer_hash: productHash,
             price: parseFloat(product.price || "0"),
             original_price: parseFloat(product.original_price || product.price || "0"),
-            scheduling_checkout_url: null,
+            scheduling_checkout_url: schUrl2,
             expedition_checkout_url: null,
+            affiliate_code: affiliateCode2,
             role,
           });
         }
