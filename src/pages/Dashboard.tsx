@@ -50,6 +50,7 @@ function getDateRange(period: string): { from: string; to: string } {
 const Dashboard = () => {
   const { user } = useAuth();
   const { effectiveUserId } = useTeamContext();
+  const navigate = useNavigate();
   const [activePeriod, setActivePeriod] = useState("Hoje");
   const [customDateFrom, setCustomDateFrom] = useState<Date | undefined>();
   const [customDateTo, setCustomDateTo] = useState<Date | undefined>();
@@ -62,7 +63,7 @@ const Dashboard = () => {
     Array.from({ length: 24 }, (_, i) => ({ name: `${String(i).padStart(2, "0")}h`, visitantes: 0, pedidos: 0, views: 0, interacoes: 0 }))
   );
   const [sparkData, setSparkData] = useState(Array.from({ length: 12 }, () => ({ v: 0 })));
-  const [recentLeads, setRecentLeads] = useState<any[]>([]);
+  const [recentOrders, setRecentOrders] = useState<any[]>([]);
   const [queueCount, setQueueCount] = useState(0);
   const [convMetrics, setConvMetrics] = useState({ open: 0, resolved: 0, total: 0 });
 
