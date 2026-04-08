@@ -265,7 +265,7 @@ Deno.serve(async (req) => {
       complement: order.client_address_comp || "",
       delivery_date: finalDeliveryDate,
       offer: offerHash,
-      affiliate_email: order.affiliate_email || "",
+      affiliate_email: order.affiliate_email || logzzCfg?.affiliate_email || "",
       ...(affiliateCode ? { affiliate_code: affiliateCode } : {}),
     };
 

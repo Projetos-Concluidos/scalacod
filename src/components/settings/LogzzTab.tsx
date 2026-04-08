@@ -20,6 +20,7 @@ const LogzzTab = () => {
   const { user } = useAuth();
   const [token, setToken] = useState("");
   const [affiliateId, setAffiliateId] = useState("");
+  const [affiliateEmail, setAffiliateEmail] = useState("");
   const [logzzWebhookUrl, setLogzzWebhookUrl] = useState("");
   const [showToken, setShowToken] = useState(false);
   const [isActive, setIsActive] = useState(false);
@@ -49,6 +50,7 @@ const LogzzTab = () => {
         const config = data.config as any;
         setToken(config?.bearer_token || "");
         setAffiliateId(config?.affiliate_id || "");
+        setAffiliateEmail(config?.affiliate_email || "");
         setLogzzWebhookUrl(config?.logzz_webhook_url || "");
         setIsActive(data.is_active ?? false);
       }
@@ -140,7 +142,7 @@ const LogzzTab = () => {
       const payload = {
         user_id: user.id,
         type: "logzz" as const,
-        config: { bearer_token: token, logzz_webhook_url: logzzWebhookUrl, affiliate_id: affiliateId || null } as any,
+        config: { bearer_token: token, logzz_webhook_url: logzzWebhookUrl, affiliate_id: affiliateId || null, affiliate_email: affiliateEmail || null } as any,
         is_active: finalActive,
       };
 
@@ -288,6 +290,23 @@ const LogzzTab = () => {
           <p className="mt-1 text-xs text-muted-foreground">
             Seu identificador de afiliado na Logzz. Encontre na URL: <code className="bg-muted px-1 rounded">app.logzz.com.br/produtos/afiliacoes/<strong>SEU_ID</strong>/...</code>. 
             Necessário para que os pedidos gerem comissão de afiliado.
+          </p>
+        </div>
+
+        {/* Email do Afiliado Logzz */}
+        <div className="mb-4 max-w-xl">
+          <label className="text-sm font-medium text-foreground">Email do Afiliado Logzz (opcional)</label>
+          <div className="relative mt-1.5">
+            <input
+              type="email"
+              value={affiliateEmail}
+              onChange={(e) => setAffiliateEmail(e.target.value.trim())}
+              placeholder="seu-email@logzz.com"
+              className="h-10 w-full rounded-lg border border-border bg-input px-4 text-sm text-foreground focus:border-primary focus:outline-none"
+            />
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Email da sua conta de afiliado na Logzz. A Logzz usa este email para atribuir comissões ao afiliado nos pedidos importados via webhook.
           </p>
         </div>
 
