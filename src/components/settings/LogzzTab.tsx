@@ -273,7 +273,22 @@ const LogzzTab = () => {
           </p>
         </div>
 
-        {/* Test result */}
+        {/* ID do Afiliado Logzz */}
+        <div className="mb-4 max-w-xl">
+          <label className="text-sm font-medium text-foreground">ID do Afiliado (opcional)</label>
+          <div className="relative mt-1.5">
+            <input
+              type="text"
+              value={affiliateId}
+              onChange={(e) => setAffiliateId(e.target.value.trim())}
+              placeholder="Ex: memdn8lr0"
+              className="h-10 w-full rounded-lg border border-border bg-input px-4 text-sm text-foreground font-mono focus:border-primary focus:outline-none"
+            />
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Seu identificador de afiliado na Logzz. Encontre na URL: <code className="bg-muted px-1 rounded">app.logzz.com.br/produtos/afiliacoes/<strong>SEU_ID</strong>/...</code>. 
+            Necessário para que os pedidos gerem comissão de afiliado.
+          </p>
         {testResult && (
           <div className={`mb-4 rounded-lg border p-3 text-sm ${testResult.success ? "border-success/30 bg-success/10 text-success" : "border-destructive/30 bg-destructive/10 text-destructive"}`}>
             {testResult.success ? <CheckCircle className="inline h-4 w-4 mr-1" /> : <XCircle className="inline h-4 w-4 mr-1" />}
