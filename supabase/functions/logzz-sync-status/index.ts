@@ -124,8 +124,8 @@ Deno.serve(async (req) => {
           const altRes = await fetch(altUrl, {
             method: "GET",
             headers: {
+              ...BROWSER_HEADERS,
               Authorization: `Bearer ${logzzToken}`,
-              Accept: "application/json",
             },
             redirect: "manual",
           });
