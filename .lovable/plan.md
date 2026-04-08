@@ -1,93 +1,89 @@
 
 
-## Relatório de Status do Projeto ScalaCOD
+## Relatório: Atribuição de Afiliado na Logzz
 
-### Módulos Implementados (Funcionais)
+### O Problema
 
-| Modulo | Status |
-|---|---|
-| Checkout Hibrido (Logzz + Coinzz + Hyppe) | Completo |
-| Prioridade de Provider por checkout | Completo |
-| Kanban de Pedidos (realtime) | Completo |
-| Dashboard com "Vendas Recentes" | Completo |
-| Leads / CRM | Completo |
-| Conversas WhatsApp | Completo |
-| Fluxos (Builder + IA + Templates) | Completo |
-| Remarketing Vendas Frustradas | Completo |
-| Vozes IA (ElevenLabs) | Completo |
-| Disparos em massa | Completo |
-| WhatsApp Cloud (Meta/Evolution) | Completo |
-| Pixel Analytics (FB CAPI) | Completo |
-| Webhooks Logzz / Hyppe / Coinzz | Completo |
-| Planos + Assinaturas (MercadoPago) | Completo |
-| Admin Panel | Completo |
-| Equipe / Convites | Completo |
-| Paginas publicas (Home, Funcionalidades, Planos, FAQ, Ajuda, Status, Termos) | Completo |
-| Auth (Login, Registro, Reset senha) | Completo |
+Quando o pedido #HN3SG6S8 foi enviado para a Logzz via webhook de importação, o campo `affiliate_email` estava **vazio** e **não foi enviado nenhum identificador de afiliado**. Por isso, a Logzz registrou o pedido como sendo do **produtor**, sem gerar comissão para o afiliado.
 
----
+A URL do afiliado revela o padrão:
 
-### O que falta atualizar na Pagina Inicial (Home)
+```text
+https://entrega.logzz.com.br/pay/memdn8lr0/1-organic-lizz-97-1
+                                 ^^^^^^^^^^
+                                 ID do afiliado na Logzz
+```
 
-**1. Secao "Tools" (Ecossistema Completo) - DESATUALIZADA**
+Enquanto a URL do produtor seria:
+```text
+https://entrega.logzz.com.br/pay/1-organic-lizz-97-1
+                                 (sem ID de afiliado)
+```
 
-Atualmente mostra apenas 6 ferramentas. Faltam:
+### Análise do Fluxo Atual
 
-| Ferramenta | Descricao sugerida | Badge |
+| Etapa | O que acontece | Problema |
 |---|---|---|
-| Remarketing | Recupere vendas frustradas com cadencia automatica de 30 dias. Desconto progressivo. | NOVO |
-| Disparos em Massa | Campanhas WhatsApp para toda sua base. Segmentacao por status e tags. | BROADCAST |
-| Hyppe Logistica | Terceiro provider de logistica integrado. Mais opcoes de entrega. | NOVO |
-| Equipe & Permissoes | Convide membros, defina papeis (admin/membro). Gestao colaborativa. | TEAM |
+| 1. Sincronização de ofertas (`logzz-list-products`) | Busca produtos da Logzz API. Para afiliados, a resposta vem dentro de `data.affiliate[].offers[]` com `scheduling_checkout_url` contendo o ID do afiliado | A `scheduling_checkout_url` salva no banco **não contém** o segmento do afiliado — todas as URLs salvas são do padrão produtor |
+| 2. Checkout público (`checkout-api`) | O cliente faz o pedido. Não coleta nenhum `affiliate_id` | **Não tem campo** para armazenar o ID do afiliado da Logzz |
+| 3. Envio para Logzz (`logzz-create-order`) | Envia payload com `offer` (hash) e `affiliate_email` (vazio) | **Faltam dois campos**: o `affiliate_email` nunca é preenchido e não existe campo para o ID/código do afiliado |
+| 4. Logzz processa | Recebe o pedido mas sem identificação de afiliado | **Comissão não é gerada** |
 
-**2. Secao "Features" (blocos alternados) - INCOMPLETA**
+### Dados no Banco (Pedido #HN3SG6S8)
 
-Atualmente mostra 3 features (WhatsApp, Kanban, Pixel). Faltam blocos para:
-- Remarketing Automatico (novo modulo)
-- Checkout Hibrido com 3 providers (Logzz + Coinzz + Hyppe)
-- Disparos em Massa
+- `affiliate_email`: **NULL**
+- `affiliate_name`: **NULL**
+- `offer_id`: `2d9c3e8e-...` → offer hash: `sal6oxlk`
+- `scheduling_checkout_url` da oferta: `https://entrega.logzz.com.br/pay/1-uni-organic-lizz-107` (sem ID afiliado)
 
-**3. Secao "Checkout Hibrido" - DESATUALIZADA**
+### Solução Proposta
 
-Menciona apenas "Logzz + Coinzz". Falta incluir **Hyppe** como terceiro provider e a chave de prioridade.
+#### 1. Novo campo na tabela `offers`: `affiliate_code`
+Armazena o identificador do afiliado extraído da `scheduling_checkout_url` durante a sincronização.
 
-**4. Pagina /funcionalidades - DESATUALIZADA**
+**Lógica de extração**: Se a URL tiver o padrão `/pay/{affiliate_code}/{product-slug}` (dois segmentos após `/pay/`), o primeiro segmento é o `affiliate_code`. Se tiver apenas um segmento (`/pay/{product-slug}`), é uma oferta de produtor e o campo fica vazio.
 
-Tem 8 cards estaticos. Faltam mencoes a:
-- Hyppe como provider
-- Remarketing com desconto progressivo
-- Disparos em massa
-- Equipe/Permissoes
+#### 2. Atualizar `logzz-list-products` e sync no `checkout-api`
+Ao importar ofertas da Logzz, se o `role === "affiliate"`, extrair o `affiliate_code` da `scheduling_checkout_url` e salvar no campo novo.
 
-**5. FAQ - INCOMPLETO**
+#### 3. Atualizar `logzz-create-order`
+Ao montar o payload para a Logzz, buscar o `affiliate_code` da oferta e incluir no payload:
+```json
+{
+  "offer": "sal6oxlk",
+  "affiliate_code": "memdn8lr0"
+}
+```
 
-Nao menciona Hyppe, Remarketing nem Disparos.
+#### 4. Atualizar tabela `orders` com `affiliate_code`
+Salvar também no pedido para rastreabilidade.
 
----
+### Arquivos Impactados
 
-### Itens tecnicos pendentes para producao
-
-| Item | Prioridade |
+| Arquivo | Mudança |
 |---|---|
-| Cron job `process-remarketing` - verificar se esta ativo no banco | Alta |
-| Testar fluxo completo de remarketing end-to-end (frustrar pedido → enrollment → disparo) | Alta |
-| Testar webhook Hyppe recebendo atualizacoes de status | Alta |
-| Verificar se `delivery-reminders` cron esta configurado | Media |
-| Verificar se `expire-unpaid-orders` cron esta configurado | Media |
-| Imagens/screenshots nas secoes de features da Home (todos mostram placeholder) | Media |
-| OG Image para SEO (campo vazio no banco) | Baixa |
+| **Migration SQL** | Adicionar coluna `affiliate_code` em `offers` e `orders` |
+| `supabase/functions/logzz-list-products/index.ts` | Extrair `affiliate_code` da URL ao importar |
+| `supabase/functions/checkout-api/index.ts` | Salvar `affiliate_code` no sync e no upsert de ofertas |
+| `supabase/functions/logzz-create-order/index.ts` | Buscar `affiliate_code` da oferta e incluir no payload para Logzz |
 
----
+### Como vai funcionar depois
 
-### Resumo
+```text
+1. Sync Logzz → API retorna affiliate.offers[].scheduling_checkout_url
+   "https://entrega.logzz.com.br/pay/memdn8lr0/1-organic-lizz-97-1"
+   → Extrai: affiliate_code = "memdn8lr0"
+   → Salva na tabela offers
 
-**Backend: ~95% pronto.** Todos os modulos funcionais estao implementados. Falta validar crons e testar remarketing end-to-end.
+2. Cliente compra → Pedido criado com offer_id vinculado
 
-**Frontend (app interno): 100% pronto.** Todas as paginas e funcionalidades estao acessiveis.
+3. logzz-create-order → Busca offer → Encontra affiliate_code = "memdn8lr0"
+   → Payload: { offer: "sal6oxlk", affiliate_code: "memdn8lr0" }
+   → Logzz reconhece o afiliado → Comissão gerada!
+```
 
-**Pagina inicial / copy publica: ~70%.** A Home e a pagina de Funcionalidades nao mencionam Hyppe, Remarketing, Disparos nem Equipe. Precisa atualizar as secoes "Tools", "Features", "Checkout Hibrido" e FAQ para refletir todas as ferramentas atuais.
-
-### Proximo passo recomendado
-
-Atualizar a copy da Home (tools, features, checkout section, FAQ) e da pagina /funcionalidades para incluir todas as ferramentas que ja existem no sistema.
+### Impacto
+- Correção definitiva para atribuição de comissões de afiliado
+- Zero impacto em pedidos de produtor (campo fica vazio)
+- Retrocompatível com ofertas existentes (basta re-sincronizar)
 
