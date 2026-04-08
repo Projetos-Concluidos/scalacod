@@ -43,6 +43,7 @@ Deno.serve(async (req) => {
 
     const logzz = integrations?.[0];
     const logzzToken = (logzz?.config as any)?.bearer_token;
+    const configAffiliateId = (logzz?.config as any)?.affiliate_id || null;
 
     if (!logzzToken) {
       return new Response(
@@ -118,9 +119,16 @@ Deno.serve(async (req) => {
           for (const offer of productOffers) {
             const schUrl = offer.scheduling_checkout_url || null;
             let affiliateCode: string | null = null;
-            if (role === "affiliate" && schUrl) {
-              const payMatch = schUrl.match(/\/pay\/([^/]+)\/[^/]+/);
-              if (payMatch) affiliateCode = payMatch[1];
+            if (role === "affiliate") {
+              // Primary: use affiliate_id from integration config
+              affiliateCode = configAffiliateId;
+              // Fallback: try direct fields from API
+              if (!affiliateCode) affiliateCode = offer.affiliate_code || offer.affiliate_hash || product.affiliate_code || product.affiliate_hash || null;
+              // Fallback: extract from scheduling_checkout_url
+              if (!affiliateCode && schUrl) {
+                const payMatch = schUrl.match(/\/pay\/([^/]+)\/[^/]+/);
+                if (payMatch) affiliateCode = payMatch[1];
+              }
             }
             offers.push({
               product_name: productName,
@@ -146,9 +154,13 @@ Deno.serve(async (req) => {
         } else {
           const schUrl2 = product.scheduling_checkout_url || null;
           let affiliateCode2: string | null = null;
-          if (role === "affiliate" && schUrl2) {
-            const payMatch2 = schUrl2.match(/\/pay\/([^/]+)\/[^/]+/);
-            if (payMatch2) affiliateCode2 = payMatch2[1];
+          if (role === "affiliate") {
+            affiliateCode2 = configAffiliateId;
+            if (!affiliateCode2) affiliateCode2 = product.affiliate_code || product.affiliate_hash || null;
+            if (!affiliateCode2 && schUrl2) {
+              const payMatch2 = schUrl2.match(/\/pay\/([^/]+)\/[^/]+/);
+              if (payMatch2) affiliateCode2 = payMatch2[1];
+            }
           }
           offers.push({
             product_name: productName,

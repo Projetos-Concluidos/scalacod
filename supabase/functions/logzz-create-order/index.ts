@@ -239,6 +239,16 @@ Deno.serve(async (req) => {
       offerHash = offerData?.hash || "";
       affiliateCode = offerData?.affiliate_code || "";
     }
+    // Fallback: read affiliate_id from integration config
+    if (!affiliateCode) {
+      const { data: logzzInteg } = await admin
+        .from("integrations")
+        .select("config")
+        .eq("user_id", order.user_id)
+        .eq("type", "logzz")
+        .maybeSingle();
+      affiliateCode = (logzzInteg?.config as any)?.affiliate_id || "";
+    }
 
     // 6. Build payload
     const logzzPayload: Record<string, unknown> = {
