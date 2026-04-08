@@ -112,8 +112,8 @@ Deno.serve(async (req) => {
         const res = await fetch(logzzUrl, {
           method: "GET",
           headers: {
+            ...BROWSER_HEADERS,
             Authorization: `Bearer ${logzzToken}`,
-            Accept: "application/json",
           },
           redirect: "manual",
         });
