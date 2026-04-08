@@ -26,11 +26,13 @@ function FAQItem({ q, a }: { q: string; a: string }) {
 const fallbackFaqs = [
   { q: "O que é COD (Cash on Delivery)?", a: "COD é o modelo de venda onde o cliente paga na entrega do produto. É o modelo mais usado por afiliados no Brasil para vender produtos físicos." },
   { q: "Preciso de CNPJ para usar o ScalaCOD?", a: "Não necessariamente. Você pode começar como pessoa física. Para volumes maiores, recomendamos ter um CNPJ para facilitar a logística." },
-  { q: "Como funciona o checkout híbrido?", a: "O checkout detecta automaticamente se o CEP do cliente tem cobertura Logzz (COD). Se sim, processa como COD. Se não, redireciona para Coinzz + Correios com pagamento antecipado." },
+  { q: "Como funciona o checkout híbrido?", a: "O checkout verifica automaticamente se o CEP do cliente tem cobertura em 3 providers (Logzz, Hyppe, Coinzz), seguindo a prioridade que você configurou. Sempre há uma opção de entrega disponível." },
   { q: "Posso testar antes de pagar?", a: "Sim! Todos os planos incluem 7 dias grátis sem precisar de cartão de crédito." },
   { q: "Como funciona a automação de WhatsApp?", a: "Você conecta seu WhatsApp via Evolution API ou Meta Cloud API. Depois, cria fluxos automáticos que enviam mensagens baseadas no status do pedido (confirmação, rastreio, follow-up, etc)." },
-  { q: "Vocês integram com quais logísticas?", a: "Integramos nativamente com Logzz (para COD) e Coinzz (para expedição). Também suportamos webhooks para outras integrações." },
-  { q: "O que acontece se o pedido não tiver cobertura COD?", a: "O checkout híbrido automaticamente redireciona para o modelo de expedição via Coinzz + Correios, garantindo que nenhum pedido seja perdido." },
+  { q: "Vocês integram com quais logísticas?", a: "Integramos nativamente com Logzz (COD), Coinzz (expedição) e Hyppe (COD). Também suportamos webhooks para outras integrações." },
+  { q: "O que é o Remarketing de Vendas Frustradas?", a: "É um módulo automático que envia mensagens de recuperação via WhatsApp durante 30 dias após um pedido ser frustrado. Inclui descontos progressivos e link de checkout personalizado." },
+  { q: "Como funcionam os Disparos em Massa?", a: "Você cria campanhas de WhatsApp segmentadas por status, tags ou comportamento. Pode agendar envios e acompanhar entrega em tempo real." },
+  { q: "Posso convidar minha equipe?", a: "Sim! Convide membros por e-mail e defina papéis (admin ou membro). Cada membro acessa o painel com suas permissões." },
   { q: "Posso cancelar a qualquer momento?", a: "Sim, você pode cancelar sua assinatura a qualquer momento sem multa ou taxa de cancelamento." },
 ];
 
