@@ -302,6 +302,7 @@ const LogzzTab = () => {
               value={affiliateEmail}
               onChange={(e) => setAffiliateEmail(e.target.value.trim())}
               placeholder="seu-email@logzz.com"
+              required
               className="h-10 w-full rounded-lg border border-border bg-input px-4 text-sm text-foreground focus:border-primary focus:outline-none"
             />
           </div>
