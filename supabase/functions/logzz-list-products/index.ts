@@ -43,6 +43,7 @@ Deno.serve(async (req) => {
 
     const logzz = integrations?.[0];
     const logzzToken = (logzz?.config as any)?.bearer_token;
+    const configAffiliateId = (logzz?.config as any)?.affiliate_id || null;
 
     if (!logzzToken) {
       return new Response(
