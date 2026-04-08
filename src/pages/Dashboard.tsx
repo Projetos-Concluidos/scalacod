@@ -437,11 +437,11 @@ const Dashboard = () => {
               <div className="space-y-3">
                 {recentOrders.map((order) => {
                   const providerLabel = order.logistics_type === "hyppe" ? "Hyppe" : order.logistics_type === "coinzz" ? "Coinzz" : "Logzz";
-                  const providerColor = order.logistics_type === "hyppe"
-                    ? "bg-purple-500/15 text-purple-600 border-purple-500/20"
+                   const providerColor = order.logistics_type === "hyppe"
+                    ? "bg-violet-400/15 text-violet-400 border-violet-400/20"
                     : order.logistics_type === "coinzz"
-                    ? "bg-blue-500/15 text-blue-600 border-blue-500/20"
-                    : "bg-orange-500/15 text-orange-600 border-orange-500/20";
+                    ? "bg-purple-700/15 text-purple-700 border-purple-700/20"
+                    : "bg-emerald-500/15 text-emerald-500 border-emerald-500/20";
                   const statusColor =
                     order.status === "Entregue" ? "bg-success/15 text-success"
                     : order.status === "Aprovado" ? "bg-success/15 text-success"
