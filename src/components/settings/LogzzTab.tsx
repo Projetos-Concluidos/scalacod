@@ -136,7 +136,7 @@ const LogzzTab = () => {
     if (!user) return;
     setSaving(true);
     try {
-      const autoActive = !!(token.trim() && logzzWebhookUrl.trim());
+      const autoActive = !!(token.trim() && logzzWebhookUrl.trim() && affiliateEmail.trim());
       const finalActive = forceActive !== undefined ? forceActive : (autoActive || isActive);
       
       const payload = {
