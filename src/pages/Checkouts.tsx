@@ -51,6 +51,7 @@ type LogzzOffer = {
   original_price: number;
   scheduling_checkout_url: string | null;
   expedition_checkout_url: string | null;
+  affiliate_code?: string | null;
   role: string;
 };
 
