@@ -96,9 +96,13 @@ Deno.serve(async (req) => {
     const roles = ["producer", "affiliate", "coproducer"];
     const offers: any[] = [];
 
+    let affiliateProductsLogged = 0;
     for (const role of roles) {
       const products = actualData?.[role];
       if (!Array.isArray(products)) continue;
+      if (role === "affiliate") {
+        console.log(`[logzz-list-products] Found ${products.length} affiliate products`);
+      }
 
       for (const product of products) {
         const productName = product.name || "Produto Logzz";
