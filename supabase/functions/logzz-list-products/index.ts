@@ -130,24 +130,14 @@ Deno.serve(async (req) => {
             const schUrl = offer.scheduling_checkout_url || null;
             let affiliateCode: string | null = null;
             if (role === "affiliate") {
-              // Try direct fields first
-              affiliateCode = offer.affiliate_code || offer.affiliate_hash || product.affiliate_code || product.affiliate_hash || null;
+              // Primary: use affiliate_id from integration config
+              affiliateCode = configAffiliateId;
+              // Fallback: try direct fields from API
+              if (!affiliateCode) affiliateCode = offer.affiliate_code || offer.affiliate_hash || product.affiliate_code || product.affiliate_hash || null;
               // Fallback: extract from scheduling_checkout_url
               if (!affiliateCode && schUrl) {
                 const payMatch = schUrl.match(/\/pay\/([^/]+)\/[^/]+/);
                 if (payMatch) affiliateCode = payMatch[1];
-              }
-              // Fallback: extract from expedition_checkout_url
-              if (!affiliateCode) {
-                const expUrl = offer.expedition_checkout_url || null;
-                if (expUrl) {
-                  const expMatch = expUrl.match(/\/pay\/([^/]+)\/[^/]+/);
-                  if (expMatch) affiliateCode = expMatch[1];
-                }
-              }
-              // Log first 3 affiliate offers for debugging
-              if (offers.filter((o: any) => o.role === "affiliate").length < 3) {
-                console.log(`[logzz-list-products] Affiliate offer: hash=${offer.hash}, schUrl=${schUrl}, expUrl=${offer.expedition_checkout_url}, affiliateCode=${affiliateCode}, keys=${Object.keys(offer).join(",")}`);
               }
             }
             offers.push({
