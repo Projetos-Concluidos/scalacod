@@ -227,15 +227,17 @@ Deno.serve(async (req) => {
       await admin.from("orders").update({ delivery_date: finalDeliveryDate }).eq("id", order_id);
     }
 
-    // 5. Get offer hash
+    // 5. Get offer hash and affiliate_code
     let offerHash = "";
+    let affiliateCode = "";
     if (order.offer_id) {
       const { data: offerData } = await admin
         .from("offers")
-        .select("hash")
+        .select("hash, affiliate_code")
         .eq("id", order.offer_id)
         .maybeSingle();
       offerHash = offerData?.hash || "";
+      affiliateCode = offerData?.affiliate_code || "";
     }
 
     // 6. Build payload
