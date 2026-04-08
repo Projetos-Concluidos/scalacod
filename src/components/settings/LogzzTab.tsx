@@ -291,6 +291,23 @@ const LogzzTab = () => {
           </p>
         </div>
 
+        {/* Email do Afiliado Logzz */}
+        <div className="mb-4 max-w-xl">
+          <label className="text-sm font-medium text-foreground">Email do Afiliado Logzz (opcional)</label>
+          <div className="relative mt-1.5">
+            <input
+              type="email"
+              value={affiliateEmail}
+              onChange={(e) => setAffiliateEmail(e.target.value.trim())}
+              placeholder="seu-email@logzz.com"
+              className="h-10 w-full rounded-lg border border-border bg-input px-4 text-sm text-foreground focus:border-primary focus:outline-none"
+            />
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Email da sua conta de afiliado na Logzz. A Logzz usa este email para atribuir comissões ao afiliado nos pedidos importados via webhook.
+          </p>
+        </div>
+
         {testResult && (
           <div className={`mb-4 rounded-lg border p-3 text-sm ${testResult.success ? "border-success/30 bg-success/10 text-success" : "border-destructive/30 bg-destructive/10 text-destructive"}`}>
             {testResult.success ? <CheckCircle className="inline h-4 w-4 mr-1" /> : <XCircle className="inline h-4 w-4 mr-1" />}
