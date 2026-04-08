@@ -614,6 +614,10 @@ const Fluxos = () => {
             <button className="mt-3 text-sm text-primary hover:underline">Criar primeira tag</button>
           </div>
         )}
+
+        {subTab === "remarketing" && (
+          <RemarketingTab />
+        )}
       </div>
 
       {/* Modals */}
