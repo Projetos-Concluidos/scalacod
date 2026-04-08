@@ -715,10 +715,6 @@ const Checkouts = () => {
                 )}
               </div>
               <div>
-                <Label>Nome do Checkout</Label>
-                <Input value={formName} onChange={(e) => setFormName(e.target.value)} placeholder="Ex: Checkout Principal" className="bg-input border-border" />
-              </div>
-              <div>
                 <Label>Tipo</Label>
                 <Select value={formType} onValueChange={setFormType}>
                   <SelectTrigger className="bg-input border-border"><SelectValue /></SelectTrigger>
