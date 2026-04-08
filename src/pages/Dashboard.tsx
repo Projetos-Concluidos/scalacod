@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { useNavigate } from "react-router-dom";
 import {
-  Eye, TrendingUp, Package, Users, BarChart3, MousePointerClick,
+  Eye, TrendingUp, Package, BarChart3, MousePointerClick,
   ShoppingCart, AlertTriangle, Coins, Calendar as CalendarIcon, FileText, MessageCircle
 } from "lucide-react";
 import {
