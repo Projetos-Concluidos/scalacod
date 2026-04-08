@@ -295,7 +295,7 @@ const LogzzTab = () => {
 
         {/* Email do Afiliado Logzz */}
         <div className="mb-4 max-w-xl">
-          <label className="text-sm font-medium text-foreground">Email do Afiliado Logzz (opcional)</label>
+          <label className="text-sm font-medium text-foreground">Email do Afiliado Logzz <span className="text-destructive">*</span></label>
           <div className="relative mt-1.5">
             <input
               type="email"
