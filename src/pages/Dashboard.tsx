@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { useNavigate } from "react-router-dom";
 import {
-  Eye, TrendingUp, Package, Users, BarChart3, MousePointerClick,
+  Eye, TrendingUp, Package, BarChart3, MousePointerClick,
   ShoppingCart, AlertTriangle, Coins, Calendar as CalendarIcon, FileText, MessageCircle
 } from "lucide-react";
 import {
@@ -49,6 +50,7 @@ function getDateRange(period: string): { from: string; to: string } {
 const Dashboard = () => {
   const { user } = useAuth();
   const { effectiveUserId } = useTeamContext();
+  const navigate = useNavigate();
   const [activePeriod, setActivePeriod] = useState("Hoje");
   const [customDateFrom, setCustomDateFrom] = useState<Date | undefined>();
   const [customDateTo, setCustomDateTo] = useState<Date | undefined>();
@@ -61,7 +63,7 @@ const Dashboard = () => {
     Array.from({ length: 24 }, (_, i) => ({ name: `${String(i).padStart(2, "0")}h`, visitantes: 0, pedidos: 0, views: 0, interacoes: 0 }))
   );
   const [sparkData, setSparkData] = useState(Array.from({ length: 12 }, () => ({ v: 0 })));
-  const [recentLeads, setRecentLeads] = useState<any[]>([]);
+  const [recentOrders, setRecentOrders] = useState<any[]>([]);
   const [queueCount, setQueueCount] = useState(0);
   const [convMetrics, setConvMetrics] = useState({ open: 0, resolved: 0, total: 0 });
 
@@ -84,7 +86,7 @@ const Dashboard = () => {
       supabase.from("pixel_events").select("event_type, created_at").gte("created_at", from).lt("created_at", to),
       supabase.from("orders").select("order_final_price, created_at, status").gte("created_at", from).lt("created_at", to),
       supabase.from("orders").select("id", { count: "exact", head: true }).eq("logistics_type", "coinzz").in("status", ["Aprovado", "Entregue"]).gte("created_at", from).lt("created_at", to),
-      supabase.from("leads").select("id, name, phone, status, created_at").order("created_at", { ascending: false }).limit(5),
+      supabase.from("orders").select("id, order_number, client_name, client_phone, order_final_price, status, logistics_type, created_at").order("created_at", { ascending: false }).limit(5),
       supabase.from("message_queue").select("id", { count: "exact", head: true }).eq("status", "pending"),
       supabase.from("conversations").select("id", { count: "exact", head: true }).or("status.is.null,status.eq.open"),
       supabase.from("conversations").select("id", { count: "exact", head: true }).eq("status", "resolved"),
@@ -133,7 +135,7 @@ const Dashboard = () => {
       return { v: count };
     });
     setSparkData(spark);
-    setRecentLeads(leadsRes.data || []);
+    setRecentOrders(leadsRes.data || []);
     setQueueCount(queueRes.count || 0);
     setConvMetrics({
       open: convOpenRes.count || 0,
@@ -418,30 +420,68 @@ const Dashboard = () => {
         <div className="lg:col-span-4 space-y-6">
           <div className="ninja-card">
             <div className="mb-5 flex items-center justify-between">
-              <h3 className="text-lg font-bold text-foreground">Leads Recentes</h3>
-              <button className="text-xs font-bold uppercase tracking-wide text-primary hover:underline">
+              <h3 className="text-lg font-bold text-foreground">Vendas Recentes</h3>
+              <button
+                onClick={() => navigate("/pedidos")}
+                className="text-xs font-bold uppercase tracking-wide text-primary hover:underline"
+              >
                 Ver Todos
               </button>
             </div>
-            {recentLeads.length === 0 ? (
+            {recentOrders.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-10 text-center">
-                <Users className="h-12 w-12 text-muted-foreground/40 mb-3" />
-                <p className="text-sm font-semibold text-foreground">Nenhum lead ainda</p>
+                <ShoppingCart className="h-12 w-12 text-muted-foreground/40 mb-3" />
+                <p className="text-sm font-semibold text-foreground">Nenhuma venda ainda</p>
               </div>
             ) : (
               <div className="space-y-3">
-                {recentLeads.map((lead) => (
-                  <div key={lead.id} className="flex items-center gap-3 rounded-lg border border-border bg-secondary/30 p-3">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary text-sm font-bold">
-                      {lead.name?.charAt(0)?.toUpperCase() || "?"}
+                {recentOrders.map((order) => {
+                  const providerLabel = order.logistics_type === "hyppe" ? "Hyppe" : order.logistics_type === "coinzz" ? "Coinzz" : "Logzz";
+                  const providerColor = order.logistics_type === "hyppe"
+                    ? "bg-purple-500/15 text-purple-600 border-purple-500/20"
+                    : order.logistics_type === "coinzz"
+                    ? "bg-blue-500/15 text-blue-600 border-blue-500/20"
+                    : "bg-orange-500/15 text-orange-600 border-orange-500/20";
+                  const statusColor =
+                    order.status === "Entregue" ? "bg-success/15 text-success"
+                    : order.status === "Aprovado" ? "bg-success/15 text-success"
+                    : order.status === "Cancelado" || order.status === "Devolvido" ? "bg-destructive/15 text-destructive"
+                    : order.status === "Em Rota" || order.status === "Separado" ? "bg-primary/15 text-primary"
+                    : "bg-muted text-muted-foreground";
+
+                  return (
+                    <div
+                      key={order.id}
+                      onClick={() => navigate("/pedidos")}
+                      className="flex items-center gap-3 rounded-lg border border-border bg-secondary/30 p-3 cursor-pointer hover:bg-secondary/50 transition-colors"
+                    >
+                      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary text-sm font-bold shrink-0">
+                        {order.client_name?.charAt(0)?.toUpperCase() || "?"}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-semibold text-foreground truncate">{order.client_name}</p>
+                          <span className={cn("inline-flex items-center rounded-full border px-1.5 py-0.5 text-[9px] font-bold uppercase", providerColor)}>
+                            {providerLabel}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <p className="text-xs text-muted-foreground">
+                            {order.order_number ? `#${order.order_number}` : "—"} · {order.client_phone}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <p className="text-sm font-bold text-foreground">
+                          R$ {Number(order.order_final_price || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                        </p>
+                        <span className={cn("inline-flex items-center rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase mt-0.5", statusColor)}>
+                          {order.status}
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-foreground truncate">{lead.name}</p>
-                      <p className="text-xs text-muted-foreground">{lead.phone}</p>
-                    </div>
-                    <span className="text-[10px] font-bold uppercase text-muted-foreground">{lead.status}</span>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
