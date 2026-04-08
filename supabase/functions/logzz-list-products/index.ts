@@ -163,9 +163,12 @@ Deno.serve(async (req) => {
         } else {
           const schUrl2 = product.scheduling_checkout_url || null;
           let affiliateCode2: string | null = null;
-          if (role === "affiliate" && schUrl2) {
-            const payMatch2 = schUrl2.match(/\/pay\/([^/]+)\/[^/]+/);
-            if (payMatch2) affiliateCode2 = payMatch2[1];
+          if (role === "affiliate") {
+            affiliateCode2 = product.affiliate_code || product.affiliate_hash || null;
+            if (!affiliateCode2 && schUrl2) {
+              const payMatch2 = schUrl2.match(/\/pay\/([^/]+)\/[^/]+/);
+              if (payMatch2) affiliateCode2 = payMatch2[1];
+            }
           }
           offers.push({
             product_name: productName,
