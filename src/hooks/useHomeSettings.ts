@@ -186,12 +186,16 @@ const defaults: HomeSettings = {
     section_title: "Uma plataforma.",
     section_subtitle: "Zero limitações.",
     items: [
-      { icon: "🛒", name: "Checkout Híbrido", description: "Logzz + Coinzz. CEP inteligente. COD ou Correios automático.", badge: "EXCLUSIVO" },
+      { icon: "🛒", name: "Checkout Híbrido", description: "Logzz + Coinzz + Hyppe. CEP inteligente. COD ou Correios automático com prioridade configurável.", badge: "EXCLUSIVO" },
       { icon: "📱", name: "WhatsApp Cloud", description: "YCloud, Meta ou Evolution API. Mensagens reais, entregadas.", badge: "API OFICIAL" },
       { icon: "🤖", name: "Fluxos com IA", description: "Builder visual. IA gera fluxos completos em segundos.", badge: "IA NATIVO" },
       { icon: "🎤", name: "Vozes IA", description: "Clone sua voz. Áudios personalizados no WhatsApp.", badge: "ELEVENLABS" },
       { icon: "📊", name: "Pixel Analytics", description: "FB + Google + UTM + Conversion API server-side.", badge: "CAPI NATIVO" },
       { icon: "👥", name: "CRM de Leads", description: "Base de clientes, tags, histórico e receita acumulada.", badge: "CRM COD" },
+      { icon: "🔄", name: "Remarketing", description: "Recupere vendas frustradas com cadência automática de 30 dias. Desconto progressivo.", badge: "NOVO" },
+      { icon: "📣", name: "Disparos em Massa", description: "Campanhas WhatsApp para toda sua base. Segmentação por status e tags.", badge: "BROADCAST" },
+      { icon: "🚀", name: "Hyppe Logística", description: "Terceiro provider de logística integrado. Mais opções de entrega COD.", badge: "NOVO" },
+      { icon: "👨‍👩‍👧‍👦", name: "Equipe & Permissões", description: "Convide membros, defina papéis (admin/membro). Gestão colaborativa.", badge: "TEAM" },
     ],
   },
   faqs: {
