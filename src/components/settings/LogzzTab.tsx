@@ -289,6 +289,8 @@ const LogzzTab = () => {
             Seu identificador de afiliado na Logzz. Encontre na URL: <code className="bg-muted px-1 rounded">app.logzz.com.br/produtos/afiliacoes/<strong>SEU_ID</strong>/...</code>. 
             Necessário para que os pedidos gerem comissão de afiliado.
           </p>
+        </div>
+
         {testResult && (
           <div className={`mb-4 rounded-lg border p-3 text-sm ${testResult.success ? "border-success/30 bg-success/10 text-success" : "border-destructive/30 bg-destructive/10 text-destructive"}`}>
             {testResult.success ? <CheckCircle className="inline h-4 w-4 mr-1" /> : <XCircle className="inline h-4 w-4 mr-1" />}
