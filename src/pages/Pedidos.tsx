@@ -997,7 +997,7 @@ const Pedidos = () => {
                         {(o as any).hyppe_order_id ? (
                           <div className="col-span-2 flex items-center gap-1.5">
                             <span className="text-muted-foreground">Pedido Hyppe:</span>
-                            <a href={`https://app.hyppe.com.br/pedido/${(o as any).hyppe_order_id}`} target="_blank" rel="noopener noreferrer" className="text-orange-400 hover:underline font-mono font-medium inline-flex items-center gap-1">#{(o as any).hyppe_order_id}<ExternalLink className="h-3 w-3" /></a>
+                            <a href={`https://app.hyppe.com.br/pedido/${(o as any).hyppe_order_id}`} target="_blank" rel="noopener noreferrer" className="text-violet-400 hover:underline font-mono font-medium inline-flex items-center gap-1">#{(o as any).hyppe_order_id}<ExternalLink className="h-3 w-3" /></a>
                             <CopyBtn value={(o as any).hyppe_order_id} label="ID Hyppe" />
                           </div>
                         ) : o.logistics_type?.startsWith("hyppe") && o.status !== "Frustrado" ? (
