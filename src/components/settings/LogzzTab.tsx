@@ -140,7 +140,7 @@ const LogzzTab = () => {
       const payload = {
         user_id: user.id,
         type: "logzz" as const,
-        config: { bearer_token: token, logzz_webhook_url: logzzWebhookUrl } as any,
+        config: { bearer_token: token, logzz_webhook_url: logzzWebhookUrl, affiliate_id: affiliateId || null } as any,
         is_active: finalActive,
       };
 
