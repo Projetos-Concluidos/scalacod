@@ -204,10 +204,13 @@ const defaults: HomeSettings = {
   faqs: {
     title: "Perguntas sobre o ScalaCOD",
     items: [
-      { q: "O que é o checkout híbrido Logzz + Coinzz?", a: "Quando o cliente digita o CEP no checkout, o ScalaCOD verifica automaticamente se a Logzz atende aquela região. Se sim, o pedido é COD. Se não, redireciona para Coinzz + Correios." },
-      { q: "Preciso ter conta na Logzz e Coinzz separadamente?", a: "Sim. O ScalaCOD integra com suas contas existentes via tokens de API." },
+      { q: "O que é o checkout híbrido Logzz + Coinzz + Hyppe?", a: "Quando o cliente digita o CEP no checkout, o ScalaCOD verifica automaticamente qual provider atende aquela região (Logzz, Hyppe ou Coinzz), seguindo a prioridade que você configurou. Zero pedido perdido." },
+      { q: "Preciso ter conta na Logzz, Coinzz e Hyppe separadamente?", a: "Sim. O ScalaCOD integra com suas contas existentes via tokens de API. Você pode usar 1, 2 ou os 3 providers." },
       { q: "Como funciona a automação de WhatsApp?", a: "Você cria fluxos no builder visual. Quando um pedido muda de status, o WhatsApp dispara automaticamente." },
-      { q: "Posso usar para vender como afiliado?", a: "Sim. Importe as ofertas direto da Logzz, crie seu checkout em minutos e comece a vender." },
+      { q: "O que é o Remarketing de Vendas Frustradas?", a: "É um módulo que envia automaticamente mensagens de recuperação por WhatsApp durante 30 dias após um pedido ser frustrado. Inclui descontos progressivos e link do checkout personalizado." },
+      { q: "Como funcionam os Disparos em Massa?", a: "Você cria campanhas de WhatsApp segmentadas por status, tags ou comportamento. Pode agendar envios e acompanhar entrega em tempo real." },
+      { q: "Posso convidar minha equipe?", a: "Sim. Convide membros por e-mail e defina papéis (admin ou membro). Cada membro acessa o painel com suas permissões." },
+      { q: "Posso usar para vender como afiliado?", a: "Sim. Importe as ofertas direto da Logzz ou Hyppe, crie seu checkout em minutos e comece a vender." },
       { q: "Os 7 dias de trial são realmente grátis?", a: "Sim. Nenhum cartão necessário. Teste todas as funcionalidades." },
     ],
   },
