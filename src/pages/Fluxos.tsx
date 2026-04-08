@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tables } from "@/integrations/supabase/types";
+import RemarketingTab from "@/components/remarketing/RemarketingTab";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
