@@ -188,7 +188,7 @@ const RemarketingTab = () => {
                     {c.is_active ? (
                       <NinjaBadge variant="success">Ativa</NinjaBadge>
                     ) : (
-                      <NinjaBadge variant="neutral">Inativa</NinjaBadge>
+                      <NinjaBadge variant="default">Inativa</NinjaBadge>
                     )}
                     {c.flow_type !== "all" && (
                       <NinjaBadge variant={c.flow_type === "cod" ? "success" : c.flow_type === "coinzz" ? "info" : "warning"}>
