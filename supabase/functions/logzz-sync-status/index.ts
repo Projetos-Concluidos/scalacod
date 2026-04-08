@@ -126,29 +126,53 @@ Deno.serve(async (req) => {
 
     for (const order of orders) {
       try {
-        // Query Logzz API for order status
-        const logzzUrl = `https://app.logzz.com.br/api/v1/orders/${order.logzz_order_id}`;
-        let res = await fetchWithRetry(logzzUrl, logzzToken);
+        // Try multiple Logzz API endpoints
+        const endpoints = [
+          `https://app.logzz.com.br/api/v1/orders/${order.logzz_order_id}`,
+          `https://app.logzz.com.br/api/v1/pedidos/${order.logzz_order_id}`,
+          `https://app.logzz.com.br/api/importacao-de-pedidos/${order.logzz_order_id}`,
+        ];
 
-        if (res.status !== 200) {
-          // Try alternative endpoint
-          const altUrl = `https://app.logzz.com.br/api/v1/pedidos/${order.logzz_order_id}`;
-          res = await fetchWithRetry(altUrl, logzzToken);
+        let body = null;
+        for (const url of endpoints) {
+          try {
+            const res = await fetch(url, {
+              method: "GET",
+              headers: {
+                Authorization: `Bearer ${logzzToken}`,
+                Accept: "application/json",
+              },
+              redirect: "manual",
+            });
 
-          if (res.status !== 200) {
-            console.warn(`[logzz-sync-status] Could not fetch order ${order.logzz_order_id}: status ${res.status}`);
-            errors.push(`${order.logzz_order_id}: API ${res.status}`);
-            continue;
+            if (res.status === 200) {
+              const ct = res.headers.get("content-type") || "";
+              if (ct.includes("json")) {
+                body = await res.json();
+                console.log(`[logzz-sync-status] Got response from ${url}`);
+                break;
+              }
+            }
+          } catch { /* try next endpoint */ }
+        }
+
+        if (!body) {
+          // Last resort: try with browser headers
+          const res = await fetchWithRetry(`https://app.logzz.com.br/api/v1/orders/${order.logzz_order_id}`, logzzToken);
+          if (res.status === 200) {
+            const ct = res.headers.get("content-type") || "";
+            if (ct.includes("json")) {
+              body = await res.json();
+            }
           }
         }
 
-        const contentType = res.headers.get("content-type") || "";
-        if (!contentType.includes("json")) {
-          errors.push(`${order.logzz_order_id}: resposta não-JSON`);
+        if (!body) {
+          console.warn(`[logzz-sync-status] Could not fetch order ${order.logzz_order_id} from any endpoint`);
+          errors.push(`${order.logzz_order_id}: API inacessível`);
           continue;
         }
 
-        const body = await res.json();
         await processLogzzResponse(admin, supabaseUrl, serviceKey, order, body, user.id);
         synced++;
       } catch (e: any) {
