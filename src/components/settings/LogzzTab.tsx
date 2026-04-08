@@ -31,7 +31,7 @@ const LogzzTab = () => {
   const [cepResult, setCepResult] = useState<CepResult | null>(null);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
 
-  const isConfigured = !!(token.trim() && logzzWebhookUrl.trim());
+  const isConfigured = !!(token.trim() && logzzWebhookUrl.trim() && affiliateEmail.trim());
 
   const webhookUrl = user
     ? `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/logzz-webhook?store=${user.id}`
@@ -136,7 +136,7 @@ const LogzzTab = () => {
     if (!user) return;
     setSaving(true);
     try {
-      const autoActive = !!(token.trim() && logzzWebhookUrl.trim());
+      const autoActive = !!(token.trim() && logzzWebhookUrl.trim() && affiliateEmail.trim());
       const finalActive = forceActive !== undefined ? forceActive : (autoActive || isActive);
       
       const payload = {
@@ -295,13 +295,14 @@ const LogzzTab = () => {
 
         {/* Email do Afiliado Logzz */}
         <div className="mb-4 max-w-xl">
-          <label className="text-sm font-medium text-foreground">Email do Afiliado Logzz (opcional)</label>
+          <label className="text-sm font-medium text-foreground">Email do Afiliado Logzz <span className="text-destructive">*</span></label>
           <div className="relative mt-1.5">
             <input
               type="email"
               value={affiliateEmail}
               onChange={(e) => setAffiliateEmail(e.target.value.trim())}
               placeholder="seu-email@logzz.com"
+              required
               className="h-10 w-full rounded-lg border border-border bg-input px-4 text-sm text-foreground focus:border-primary focus:outline-none"
             />
           </div>
