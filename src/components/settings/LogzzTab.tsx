@@ -20,6 +20,7 @@ const LogzzTab = () => {
   const { user } = useAuth();
   const [token, setToken] = useState("");
   const [affiliateId, setAffiliateId] = useState("");
+  const [affiliateEmail, setAffiliateEmail] = useState("");
   const [logzzWebhookUrl, setLogzzWebhookUrl] = useState("");
   const [showToken, setShowToken] = useState(false);
   const [isActive, setIsActive] = useState(false);
