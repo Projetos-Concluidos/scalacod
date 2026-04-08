@@ -50,6 +50,7 @@ const LogzzTab = () => {
         const config = data.config as any;
         setToken(config?.bearer_token || "");
         setAffiliateId(config?.affiliate_id || "");
+        setAffiliateEmail(config?.affiliate_email || "");
         setLogzzWebhookUrl(config?.logzz_webhook_url || "");
         setIsActive(data.is_active ?? false);
       }
