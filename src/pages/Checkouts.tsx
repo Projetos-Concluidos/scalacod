@@ -611,21 +611,26 @@ const Checkouts = () => {
                 ) : (
                   <p className="text-xs text-muted-foreground">Clique em ↻ para buscar ofertas da Logzz (produtor, afiliado, coprodutor).</p>
                 )}
-                {selectedLogzzOffer && (
+                {selectedLogzzOffer && (() => {
+                  // Fallback: extract affiliate code from URL if not in response
+                  const affCode = selectedLogzzOffer.affiliate_code
+                    || (selectedLogzzOffer.role === "affiliate" && selectedLogzzOffer.scheduling_checkout_url
+                      ? selectedLogzzOffer.scheduling_checkout_url.match(/\/pay\/([^/]+)\/[^/]+/)?.[1] ?? null
+                      : null);
+                  return (
                   <div className="flex flex-wrap items-center gap-2 mt-1.5 text-[11px] text-muted-foreground font-mono">
                     <span className="inline-flex items-center gap-1 bg-muted/50 rounded px-1.5 py-0.5">
                       Hash: <span className="text-foreground/80 font-semibold">{selectedLogzzOffer.offer_hash || "—"}</span>
                     </span>
-                    {selectedLogzzOffer.affiliate_code && (
-                      <span className="inline-flex items-center gap-1 bg-success/10 rounded px-1.5 py-0.5 text-success">
-                        ID Afiliado: <span className="font-semibold">{selectedLogzzOffer.affiliate_code}</span>
-                      </span>
-                    )}
+                    <span className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 ${affCode ? "bg-success/10 text-success" : "bg-muted/50"}`}>
+                      ID Afiliado: <span className="font-semibold">{affCode || "N/A (produtor)"}</span>
+                    </span>
                     <span className={`inline-flex items-center rounded px-1.5 py-0.5 font-semibold uppercase ${selectedLogzzOffer.role === "affiliate" ? "bg-success/10 text-success" : selectedLogzzOffer.role === "coproducer" ? "bg-primary/10 text-primary" : "bg-warning/10 text-warning"}`}>
                       {selectedLogzzOffer.role === "affiliate" ? "afiliado" : selectedLogzzOffer.role === "coproducer" ? "coprodutor" : "produtor"}
                     </span>
                   </div>
-                )}
+                  );
+                })()}
               </div>
               <div>
                 <Label>Nome do Checkout</Label>
