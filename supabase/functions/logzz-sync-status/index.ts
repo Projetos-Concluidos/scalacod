@@ -39,7 +39,25 @@ const STATUS_MAP: Record<string, string> = {
   "REAGENDAR": "Reagendar",
 };
 
-Deno.serve(async (req) => {
+async function fetchWithRetry(url: string, token: string, attempt = 1): Promise<Response> {
+  const res = await fetch(url, {
+    method: "GET",
+    headers: { ...BROWSER_HEADERS, Authorization: `Bearer ${token}` },
+    redirect: "manual",
+  });
+
+  if (res.status === 403 && attempt < 3) {
+    const text = await res.text();
+    if (text.includes("cf-browser-verification") || text.includes("challenge-platform") || text.includes("<!DOCTYPE html>")) {
+      const delay = Math.pow(2, attempt) * 1000 + Math.random() * 1000;
+      console.log(`[logzz-sync-status] CF challenge, retrying in ${Math.round(delay)}ms...`);
+      await new Promise(r => setTimeout(r, delay));
+      return fetchWithRetry(url, token, attempt + 1);
+    }
+  }
+  return res;
+}
+
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
