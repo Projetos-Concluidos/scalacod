@@ -97,21 +97,11 @@ Deno.serve(async (req) => {
     const roles = ["producer", "affiliate", "coproducer"];
     const offers: any[] = [];
 
-    let affiliateProductsLogged = 0;
     for (const role of roles) {
       const products = actualData?.[role];
       if (!Array.isArray(products)) continue;
-      if (role === "affiliate") {
-        console.log(`[logzz-list-products] Found ${products.length} affiliate products`);
-      }
 
       for (const product of products) {
-        // Log first 2 affiliate products with ALL fields for debugging
-        if (role === "affiliate" && affiliateProductsLogged < 2) {
-          affiliateProductsLogged++;
-          const sanitized = { ...product, description: undefined };
-          console.log(`[logzz-list-products] Affiliate product #${affiliateProductsLogged}: ${JSON.stringify(sanitized).substring(0, 800)}`);
-        }
         const productName = product.name || "Produto Logzz";
         const productHash = product.hash || null;
         const productDescription = product.description || null;
