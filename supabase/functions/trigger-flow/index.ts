@@ -55,6 +55,59 @@ Deno.serve(async (req) => {
       } catch (e: any) { console.warn("[trigger-flow] Notif error:", e.message); }
     }
 
+    // ── Auto-enroll in remarketing campaigns for frustrated orders ──
+    if (lowerStatus.includes("frustrad") || lowerStatus.includes("cancelad") || lowerStatus.includes("devolvid")) {
+      try {
+        const triggerStatusMap: Record<string, string> = {};
+        if (lowerStatus.includes("frustrad")) triggerStatusMap["Frustrado"] = "Frustrado";
+        if (lowerStatus.includes("cancelad")) triggerStatusMap["Cancelado"] = "Cancelado";
+        if (lowerStatus.includes("devolvid")) triggerStatusMap["Devolvido"] = "Devolvido";
+
+        const { data: activeCampaigns } = await supabase
+          .from("remarketing_campaigns")
+          .select("id, trigger_status, flow_type")
+          .eq("is_active", true)
+          .eq("user_id", userId);
+
+        if (activeCampaigns && activeCampaigns.length > 0) {
+          // Get order logistics_type for matching
+          const { data: orderData } = await supabase.from("orders").select("logistics_type").eq("id", orderId).single();
+          const orderFlowType = orderData?.logistics_type === "coinzz" ? "coinzz" : orderData?.logistics_type === "hyppe" ? "hyppe" : "cod";
+
+          for (const camp of activeCampaigns) {
+            // Check trigger status matches
+            if (!triggerStatusMap[camp.trigger_status]) continue;
+            // Check flow_type matches
+            if (camp.flow_type !== "all" && camp.flow_type !== orderFlowType) continue;
+
+            const { error: enrollError } = await supabase
+              .from("remarketing_enrollments")
+              .upsert({
+                campaign_id: camp.id,
+                order_id: orderId,
+                user_id: userId,
+                status: "active",
+                current_step: 0,
+                enrolled_at: new Date().toISOString(),
+              }, { onConflict: "campaign_id,order_id" });
+
+            if (enrollError) {
+              console.warn(`[trigger-flow] Remarketing enrollment error for campaign ${camp.id}:`, enrollError.message);
+            } else {
+              // Increment total_enrolled
+              await supabase.rpc("increment_remarketing_enrolled" as any, { p_campaign_id: camp.id }).catch(() => {
+                // Fallback: manual increment
+                supabase.from("remarketing_campaigns")
+                  .update({ total_enrolled: (camp as any).total_enrolled + 1 })
+                  .eq("id", camp.id).then(() => {});
+              });
+              console.log(`[trigger-flow] Enrolled order ${orderId} in remarketing campaign ${camp.id}`);
+            }
+          }
+        }
+      } catch (e: any) { console.warn("[trigger-flow] Remarketing enrollment error:", e.message); }
+    }
+
     // Determine flow_type based on order's logistics_type
     let flowType: string | null = null;
     if (orderId) {

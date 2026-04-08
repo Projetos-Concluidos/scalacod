@@ -1552,6 +1552,172 @@ export type Database = {
         }
         Relationships: []
       }
+      remarketing_campaigns: {
+        Row: {
+          checkout_id: string | null
+          created_at: string
+          description: string | null
+          discount_enabled: boolean
+          discount_progressive: boolean
+          discount_type: string
+          flow_type: string
+          id: string
+          is_active: boolean
+          name: string
+          total_converted: number
+          total_enrolled: number
+          total_revenue_recovered: number
+          trigger_status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          checkout_id?: string | null
+          created_at?: string
+          description?: string | null
+          discount_enabled?: boolean
+          discount_progressive?: boolean
+          discount_type?: string
+          flow_type?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          total_converted?: number
+          total_enrolled?: number
+          total_revenue_recovered?: number
+          trigger_status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          checkout_id?: string | null
+          created_at?: string
+          description?: string | null
+          discount_enabled?: boolean
+          discount_progressive?: boolean
+          discount_type?: string
+          flow_type?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          total_converted?: number
+          total_enrolled?: number
+          total_revenue_recovered?: number
+          trigger_status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "remarketing_campaigns_checkout_id_fkey"
+            columns: ["checkout_id"]
+            isOneToOne: false
+            referencedRelation: "checkouts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      remarketing_enrollments: {
+        Row: {
+          campaign_id: string
+          converted_at: string | null
+          converted_order_id: string | null
+          created_at: string
+          current_step: number
+          enrolled_at: string
+          id: string
+          order_id: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          campaign_id: string
+          converted_at?: string | null
+          converted_order_id?: string | null
+          created_at?: string
+          current_step?: number
+          enrolled_at?: string
+          id?: string
+          order_id: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          campaign_id?: string
+          converted_at?: string | null
+          converted_order_id?: string | null
+          created_at?: string
+          current_step?: number
+          enrolled_at?: string
+          id?: string
+          order_id?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "remarketing_enrollments_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "remarketing_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "remarketing_enrollments_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      remarketing_steps: {
+        Row: {
+          campaign_id: string
+          created_at: string
+          delay_days: number
+          discount_value: number | null
+          id: string
+          message_template: string
+          send_hour: string
+          step_order: number
+          updated_at: string
+        }
+        Insert: {
+          campaign_id: string
+          created_at?: string
+          delay_days?: number
+          discount_value?: number | null
+          id?: string
+          message_template?: string
+          send_hour?: string
+          step_order?: number
+          updated_at?: string
+        }
+        Update: {
+          campaign_id?: string
+          created_at?: string
+          delay_days?: number
+          discount_value?: number | null
+          id?: string
+          message_template?: string
+          send_hour?: string
+          step_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "remarketing_steps_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "remarketing_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       stores: {
         Row: {
           business_hours: Json | null

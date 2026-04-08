@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { GitBranch, Zap, Folder, Plus, MessageCircle, Tag, ChevronDown, ChevronRight, Pencil, SlidersHorizontal, Sparkles, MoreHorizontal, XCircle, Star, CheckCircle, Loader2, Power, PowerOff, Trash2, History, AlertTriangle, Clock, LayoutTemplate, X, Download, Upload, Copy, BarChart3 } from "lucide-react";
+import { GitBranch, Zap, Folder, Plus, MessageCircle, Tag, ChevronDown, ChevronRight, Pencil, SlidersHorizontal, Sparkles, MoreHorizontal, XCircle, Star, CheckCircle, Loader2, Power, PowerOff, Trash2, History, AlertTriangle, Clock, LayoutTemplate, X, Download, Upload, Copy, BarChart3, Target } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import PageHeader from "@/components/PageHeader";
 import StatCard from "@/components/StatCard";
@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tables } from "@/integrations/supabase/types";
+import RemarketingTab from "@/components/remarketing/RemarketingTab";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -25,7 +26,7 @@ const Fluxos = () => {
   const [builderOpen, setBuilderOpen] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
   const [editingFlow, setEditingFlow] = useState<Flow | null>(null);
-  const [subTab, setSubTab] = useState<"flows" | "templates" | "executions" | "tags">("flows");
+  const [subTab, setSubTab] = useState<"flows" | "templates" | "executions" | "tags" | "remarketing">("flows");
   const [executions, setExecutions] = useState<any[]>([]);
   const [execLoading, setExecLoading] = useState(false);
   const [expanded, setExpanded] = useState(true);
@@ -429,6 +430,9 @@ const Fluxos = () => {
           <button onClick={() => setSubTab("tags")} className={`flex items-center gap-2 text-sm font-medium ${subTab === "tags" ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}>
             <Tag className="h-4 w-4" /> Tags
           </button>
+          <button onClick={() => setSubTab("remarketing")} className={`flex items-center gap-2 text-sm font-medium ${subTab === "remarketing" ? "text-primary font-bold" : "text-muted-foreground hover:text-foreground"}`}>
+            <Target className="h-4 w-4" /> Remarketing
+          </button>
         </div>
 
         {subTab === "flows" && (
@@ -610,6 +614,10 @@ const Fluxos = () => {
             <p className="text-sm text-muted-foreground">Nenhuma tag criada ainda</p>
             <button className="mt-3 text-sm text-primary hover:underline">Criar primeira tag</button>
           </div>
+        )}
+
+        {subTab === "remarketing" && (
+          <RemarketingTab />
         )}
       </div>
 
