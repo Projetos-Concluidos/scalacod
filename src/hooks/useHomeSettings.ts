@@ -176,9 +176,9 @@ const defaults: HomeSettings = {
     highlight: "Automático. Invisível. Perfeito.",
     steps: [
       { icon: "📍", step: "1", title: "Cliente digita CEP", sub: "No checkout público" },
-      { icon: "⚡", step: "2", title: "ScalaCOD verifica", sub: "API Logzz em tempo real" },
-      { icon: "🚚", step: "3A", title: "Logzz disponível", sub: "COD. Paga na entrega." },
-      { icon: "📦", step: "3B", title: "Sem cobertura", sub: "Coinzz Correios. Paga agora." },
+      { icon: "⚡", step: "2", title: "ScalaCOD verifica", sub: "APIs Logzz, Hyppe e Coinzz" },
+      { icon: "🚚", step: "3A", title: "Provider prioritário", sub: "COD. Paga na entrega." },
+      { icon: "🚀", step: "3B", title: "Fallback automático", sub: "Próximo provider ou Correios." },
     ],
     result_number: "0%",
     result_title: "Taxa de pedidos perdidos por CEP",
