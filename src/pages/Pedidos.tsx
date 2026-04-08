@@ -96,11 +96,14 @@ const Pedidos = () => {
       const { data, error } = await supabase.functions.invoke("logzz-sync-status");
       if (error) throw error;
       if (data?.success) {
-        const msg = data.synced > 0
-          ? `${data.synced} pedido(s) atualizado(s) de ${data.total}`
-          : "Todos os pedidos já estão atualizados";
-        toast.success(msg);
-        if (data.synced > 0) queryClient.invalidateQueries({ queryKey: ["orders"] });
+        if (data.synced > 0) {
+          toast.success(`${data.synced} pedido(s) atualizado(s) de ${data.total}`);
+          queryClient.invalidateQueries({ queryKey: ["orders"] });
+        } else if (data.errors?.length > 0) {
+          toast.info("A Logzz bloqueou a consulta (Cloudflare). Configure o webhook reverso nas configurações da Logzz para sincronização automática.", { duration: 8000 });
+        } else {
+          toast.success("Todos os pedidos já estão atualizados");
+        }
       } else {
         toast.error(data?.error || "Erro ao sincronizar");
       }
