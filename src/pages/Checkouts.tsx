@@ -232,24 +232,21 @@ const Checkouts = () => {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { count } = await supabase.from("orders").select("id", { count: "exact", head: true }).eq("checkout_id", id);
-      if (count && count > 0) throw new Error(`LINKED_ORDERS:${count}`);
+      // Cascade: delete related orders and leads first
+      await supabase.from("orders").delete().eq("checkout_id", id);
+      await supabase.from("pixel_events").delete().eq("checkout_id", id);
       const { error } = await supabase.from("checkouts").delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["checkouts"] });
+      queryClient.invalidateQueries({ queryKey: ["checkout-order-counts"] });
       toast.success("Checkout excluído com sucesso!");
+      setDeleteModalOpen(false);
+      setDeletingCheckout(null);
     },
     onError: (e: any) => {
-      if (e.message?.startsWith("LINKED_ORDERS:")) {
-        const count = e.message.split(":")[1];
-        toast.warning(`Este checkout possui ${count} pedido(s) vinculado(s) e não pode ser excluído. Desative-o em vez disso.`, { duration: 7000 });
-      } else if (e.message?.includes("foreign key")) {
-        toast.warning("Não é possível excluir: existem pedidos vinculados. Desative-o em vez disso.", { duration: 7000 });
-      } else {
-        toast.error(`Erro ao excluir: ${e.message}`);
-      }
+      toast.error(`Erro ao excluir: ${e.message}`);
     },
   });
 
