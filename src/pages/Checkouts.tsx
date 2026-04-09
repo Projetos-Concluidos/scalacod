@@ -995,6 +995,13 @@ const Checkouts = () => {
 function OrderBumpsTab() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const [createOpen, setCreateOpen] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newPrice, setNewPrice] = useState("");
+  const [newDesc, setNewDesc] = useState("");
+  const [newImageUrl, setNewImageUrl] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const { data: bumps = [], isLoading } = useQuery({
     queryKey: ["all-order-bumps"],
@@ -1004,6 +1011,20 @@ function OrderBumpsTab() {
       return data;
     },
     enabled: !!user,
+  });
+
+  const createBumpMutation = useMutation({
+    mutationFn: async (payload: any) => {
+      const { error } = await supabase.from("order_bumps").insert(payload);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["all-order-bumps"] });
+      toast.success("Order bump criado!");
+      setCreateOpen(false);
+      setNewName(""); setNewPrice(""); setNewDesc(""); setNewImageUrl("");
+    },
+    onError: (e: any) => toast.error(e.message),
   });
 
   const deleteBumpMutation = useMutation({
@@ -1018,11 +1039,50 @@ function OrderBumpsTab() {
     onError: (e: any) => toast.error(e.message),
   });
 
+  async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) { toast.error("Máx 5MB"); return; }
+    setUploading(true);
+    try {
+      const ext = file.name.split(".").pop();
+      const path = `bumps/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      const { error } = await supabase.storage.from("checkout-assets").upload(path, file);
+      if (error) throw error;
+      const { data: urlData } = supabase.storage.from("checkout-assets").getPublicUrl(path);
+      setNewImageUrl(urlData.publicUrl);
+      toast.success("Imagem enviada!");
+    } catch (err: any) { toast.error(err.message); }
+    setUploading(false);
+    if (fileRef.current) fileRef.current.value = "";
+  }
+
+  function handleCreate() {
+    if (!newName.trim() || !newPrice) return toast.error("Nome e preço são obrigatórios");
+    // We need an offer_id — for general bumps we'll create a placeholder
+    // For now, we require at least one offer to exist
+    createBumpMutation.mutate({
+      name: newName.trim(),
+      price: Number(newPrice),
+      current_price: Number(newPrice),
+      description: newDesc || null,
+      image_url: newImageUrl || null,
+      label_bump: "OFERTA ESPECIAL",
+      is_active: true,
+      offer_id: bumps[0]?.offer_id || null, // will be linked when attached to checkout
+    });
+  }
+
   return (
     <div className="ninja-card">
-      <div className="mb-6">
-        <h2 className="text-lg font-bold text-foreground mb-1">Order Bumps & Upsells</h2>
-        <p className="text-sm text-muted-foreground">Gerencie todos os order bumps e upsells cadastrados nos seus checkouts.</p>
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-bold text-foreground mb-1">Order Bumps Cadastrados</h2>
+          <p className="text-sm text-muted-foreground">Gerencie order bumps para vincular aos seus checkouts.</p>
+        </div>
+        <Button onClick={() => setCreateOpen(true)} className="gradient-primary text-primary-foreground">
+          <Plus className="h-4 w-4 mr-1" /> Novo Order Bump
+        </Button>
       </div>
 
       {isLoading ? (
@@ -1031,24 +1091,28 @@ function OrderBumpsTab() {
         <EmptyState
           icon={<ShoppingBag className="h-12 w-12" />}
           title="Nenhum Order Bump"
-          description="Adicione order bumps ao criar ou editar um checkout."
+          description="Crie order bumps para oferecer produtos complementares nos seus checkouts."
           className="border border-dashed border-border shadow-none"
+          action={<Button onClick={() => setCreateOpen(true)} className="gradient-primary text-primary-foreground"><Plus className="h-4 w-4 mr-1" /> Criar Order Bump</Button>}
         />
       ) : (
         <div className="space-y-3">
           {bumps.map((bump: any) => (
             <div key={bump.id} className="flex items-center justify-between p-4 rounded-xl border border-border bg-secondary/50">
               <div className="flex items-center gap-3 flex-1 min-w-0">
-                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                  <ShoppingBag className="h-5 w-5 text-primary" />
-                </div>
+                {bump.image_url ? (
+                  <img src={bump.image_url} alt={bump.name} className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
+                ) : (
+                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                    <ShoppingBag className="h-5 w-5 text-primary" />
+                  </div>
+                )}
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-foreground truncate">{bump.name}</p>
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     <span className="text-primary font-semibold">R$ {(bump.current_price || bump.price || 0).toFixed(2)}</span>
                     {bump.label_bump && <Badge variant="outline" className="text-[10px]">{bump.label_bump}</Badge>}
                     {bump.offers?.name && <span>· Oferta: {bump.offers.name}</span>}
-                    {bump.hash && <span className="font-mono">· {bump.hash}</span>}
                   </div>
                 </div>
               </div>
@@ -1064,6 +1128,62 @@ function OrderBumpsTab() {
           ))}
         </div>
       )}
+
+      {/* Create Bump Dialog */}
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent className="sm:max-w-[500px] bg-card border-border">
+          <DialogHeader>
+            <DialogTitle className="text-foreground">Novo Order Bump</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Nome *</Label>
+                <Input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Ex: Acesso VIP" className="bg-input border-border mt-1" />
+              </div>
+              <div>
+                <Label>Preço (R$) *</Label>
+                <Input type="number" step="0.01" value={newPrice} onChange={(e) => setNewPrice(e.target.value)} placeholder="19.90" className="bg-input border-border mt-1" />
+              </div>
+            </div>
+            <div>
+              <Label>Descrição</Label>
+              <Textarea value={newDesc} onChange={(e) => setNewDesc(e.target.value)} placeholder="Descrição que aparecerá no checkout" className="bg-input border-border mt-1" />
+            </div>
+            <div>
+              <Label>Imagem</Label>
+              <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={handleImageUpload} className="hidden" />
+              {newImageUrl ? (
+                <div className="mt-2 relative">
+                  <img src={newImageUrl} alt="Preview" className="w-full h-32 object-cover rounded-xl border border-border" />
+                  <button onClick={() => setNewImageUrl("")} className="absolute top-2 right-2 p-1 bg-destructive/90 text-destructive-foreground rounded-full"><X className="h-3.5 w-3.5" /></button>
+                </div>
+              ) : (
+                <button onClick={() => fileRef.current?.click()} disabled={uploading}
+                  className="mt-2 w-full flex flex-col items-center justify-center gap-2 p-6 rounded-xl border-2 border-dashed border-border bg-secondary/30 hover:border-primary/30 transition-all">
+                  {uploading ? <span className="text-sm text-muted-foreground animate-pulse">Enviando...</span> : (
+                    <>
+                      <ImageIcon className="h-8 w-8 text-muted-foreground/50" />
+                      <span className="text-sm text-primary font-medium">Clique ou arraste uma imagem</span>
+                      <span className="text-[11px] text-muted-foreground">JPG, PNG, WebP ou GIF (máx. 5MB)</span>
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <span>Status:</span>
+              <Badge className="bg-success/20 text-success border-success/30">✓ Ativo</Badge>
+            </div>
+            <div className="flex gap-3 pt-2">
+              <Button variant="outline" onClick={() => setCreateOpen(false)} className="flex-1">Cancelar</Button>
+              <Button onClick={handleCreate} disabled={createBumpMutation.isPending} className="flex-1 gradient-primary text-primary-foreground">
+                {createBumpMutation.isPending ? "Criando..." : "Criar Order Bump"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
