@@ -1033,7 +1033,7 @@ const CheckoutPublic = () => {
         <div className="checkout-trust-badges mt-4 space-y-2 pt-3 border-t border-gray-100">
           <div className="flex items-center gap-2 text-xs text-gray-500"><Lock className="h-3.5 w-3.5 text-emerald-400" /> Proteção SSL 256-bit</div>
           <div className="flex items-center gap-2 text-xs text-gray-500"><Truck className="h-3.5 w-3.5 text-emerald-400" /> Entrega Garantida</div>
-          <div className="flex items-center gap-2 text-xs text-gray-500"><CreditCard className="h-3.5 w-3.5 text-emerald-400" /> Pague na Entrega</div>
+          <div className="flex items-center gap-2 text-xs text-gray-500"><CreditCard className="h-3.5 w-3.5 text-emerald-400" /> {isCheckoutGeneral ? "Pagamento Seguro" : "Pague na Entrega"}</div>
           <div className="flex items-center gap-2 text-xs text-gray-500"><ShieldCheck className="h-3.5 w-3.5 text-emerald-400" /> 7 dias de garantia</div>
         </div>
       </div>
