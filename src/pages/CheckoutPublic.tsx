@@ -1008,9 +1008,13 @@ const CheckoutPublic = () => {
           )}
           <div className="flex justify-between">
             <span className="text-gray-500">Frete</span>
-            <span className="inline-flex items-center gap-1 text-emerald-600 font-medium">
-              <Truck className="h-3 w-3" /> Grátis
-            </span>
+            {shippingPrice > 0 ? (
+              <span className="text-gray-900 font-medium">R$ {shippingPrice.toFixed(2)}</span>
+            ) : (
+              <span className="inline-flex items-center gap-1 text-emerald-600 font-medium">
+                <Truck className="h-3 w-3" /> Grátis
+              </span>
+            )}
           </div>
           {mpFeeAmount > 0 && (
             <div className="flex justify-between"><span className="text-gray-500">Taxa de processamento</span><span className="text-gray-900">R$ {mpFeeAmount.toFixed(2)}</span></div>
