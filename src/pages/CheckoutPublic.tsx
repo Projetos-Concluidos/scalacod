@@ -466,16 +466,21 @@ const CheckoutPublic = () => {
     };
   }, [step, provider, paymentMethod, mpPublicKey, totalPrice]);
 
-  const isCODProvider = provider === "logzz" || provider === "hyppe_cod";
-  const totalSteps = isCODProvider ? 3 : 4;
-  const progressPercent = isCODProvider
-    ? step >= 4 ? 100 : step === 3 ? 75 : step === 2 ? 50 : 25
-    : (step / totalSteps) * 100;
+  const isGeneralCheckout = (checkout as any)?.checkout_category === "general";
+  const isDigitalPM = isGeneralCheckout && ((checkout as any)?.product_type === "curso" || (checkout as any)?.product_type === "info_produto" || (checkout as any)?.product_type === "servico");
+  const isCODProvider = !isGeneralCheckout && (provider === "logzz" || provider === "hyppe_cod");
+  const needsAddress = !isDigitalPM; // dropshipping PM still needs address
+  const totalSteps = isDigitalPM ? 3 : isCODProvider ? 3 : 4;
+  const progressPercent = isDigitalPM
+    ? step >= 4 ? 100 : step === 3 ? 66 : step === 2 ? 33 : 15
+    : isCODProvider
+      ? step >= 4 ? 100 : step === 3 ? 75 : step === 2 ? 50 : 25
+      : (step / totalSteps) * 100;
 
   const cpfValid = validateCpf(form.cpf);
-  const cpfApproved = cpfValid && cpfResult?.valid === true && cpfResult?.status !== "blocked";
+  const cpfApproved = isGeneralCheckout ? cpfValid : (cpfValid && cpfResult?.valid === true && cpfResult?.status !== "blocked");
   const step1Valid = form.name.length >= 2 && form.phone.replace(/\D/g, "").length >= 10 && cpfApproved && !cpfValidating;
-  const step2Valid = form.cep.replace(/\D/g, "").length === 8 && form.street && form.number && form.district && form.city && form.state && deliveryChecked;
+  const step2Valid = !needsAddress || (form.cep.replace(/\D/g, "").length === 8 && form.street && form.number && form.district && form.city && form.state && deliveryChecked);
 
   const goToStep = (s: number) => {
     if (s === 2 && !step1Valid) { toast.error("Preencha todos os campos obrigatórios"); return; }
