@@ -370,7 +370,7 @@ const Checkouts = () => {
               onClick={() => { setEditingGeneralCheckout(null); setGeneralWizardOpen(true); }}
               className="gradient-primary flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold text-primary-foreground transition-all hover:opacity-90"
             >
-              <Zap className="h-4 w-4" /> Novo Checkout Geral
+              <Zap className="h-4 w-4" /> Novo Checkout PM
             </button>
           </div>
         }
