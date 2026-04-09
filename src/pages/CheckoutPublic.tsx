@@ -707,6 +707,9 @@ const CheckoutPublic = () => {
   }
 
   const quantity = extractQty(checkout.name);
+  const isGeneral = (checkout as any).checkout_category === "general";
+  const productTypePM = (checkout as any).product_type;
+  const isDigitalProduct = productTypePM === "curso" || productTypePM === "info_produto" || productTypePM === "servico";
 
   // ── STEP 4: CONFIRMATION PAGE ──
   if (step === 4) {
