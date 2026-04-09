@@ -1,7 +1,7 @@
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { ShoppingCart, BookOpen, FileText, Wrench, Upload, X, ImageIcon, Check } from "lucide-react";
+import { ShoppingCart, BookOpen, FileText, Wrench, Upload, X, Image as ImageIcon, Check } from "lucide-react";
 import { useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
