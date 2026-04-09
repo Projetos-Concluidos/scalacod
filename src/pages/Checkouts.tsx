@@ -324,10 +324,15 @@ const Checkouts = () => {
   }
 
   function handleGeneralSave(data: any) {
+    const normalizedData = {
+      ...data,
+      product_type: data.product_type === "pedidos_manuais" ? "dropshipping" : data.product_type,
+    };
+
     if (editingGeneralCheckout) {
-      generalUpdateMutation.mutate({ id: editingGeneralCheckout.id, ...data });
+      generalUpdateMutation.mutate({ id: editingGeneralCheckout.id, ...normalizedData });
     } else {
-      generalCreateMutation.mutate(data);
+      generalCreateMutation.mutate(normalizedData);
     }
   }
 
@@ -353,7 +358,7 @@ const Checkouts = () => {
   const generalCount = checkouts.filter((c) => (c as any).checkout_category === "general").length;
 
   const typeLabel: Record<string, string> = { standard: "Padrão", express: "Express", hybrid: "Híbrido" };
-  const productTypeLabel: Record<string, string> = { pedidos_manuais: "Pedidos Manuais", dropshipping: "Dropshipping", curso: "Curso", info_produto: "Info Produto", servico: "Serviço" };
+  const productTypeLabel: Record<string, string> = { pedidos_manuais: "Pedidos Manuais", dropshipping: "Pedidos Manuais", curso: "Curso", info_produto: "Info Produto", servico: "Serviço" };
 
   return (
     <div>
