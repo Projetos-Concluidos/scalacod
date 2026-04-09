@@ -150,10 +150,15 @@ export type Database = {
       }
       checkouts: {
         Row: {
+          banner_images: Json | null
+          checkout_category: string
           coinzz_offer_hash: string | null
           config: Json | null
           created_at: string | null
+          cta_config: Json | null
           custom_css: string | null
+          download_url: string | null
+          font_family: string | null
           google_ads_id: string | null
           google_analytics_id: string | null
           google_conversion_id: string | null
@@ -166,7 +171,11 @@ export type Database = {
           order_bump_enabled: boolean | null
           pixel_facebook: string | null
           pixel_id: string | null
+          primary_color: string | null
+          product_cover_url: string | null
+          product_type: string | null
           provider_priority: string | null
+          scarcity_timer_config: Json | null
           slug: string | null
           thank_you_page_url: string | null
           type: string | null
@@ -176,10 +185,15 @@ export type Database = {
           whatsapp_support: string | null
         }
         Insert: {
+          banner_images?: Json | null
+          checkout_category?: string
           coinzz_offer_hash?: string | null
           config?: Json | null
           created_at?: string | null
+          cta_config?: Json | null
           custom_css?: string | null
+          download_url?: string | null
+          font_family?: string | null
           google_ads_id?: string | null
           google_analytics_id?: string | null
           google_conversion_id?: string | null
@@ -192,7 +206,11 @@ export type Database = {
           order_bump_enabled?: boolean | null
           pixel_facebook?: string | null
           pixel_id?: string | null
+          primary_color?: string | null
+          product_cover_url?: string | null
+          product_type?: string | null
           provider_priority?: string | null
+          scarcity_timer_config?: Json | null
           slug?: string | null
           thank_you_page_url?: string | null
           type?: string | null
@@ -202,10 +220,15 @@ export type Database = {
           whatsapp_support?: string | null
         }
         Update: {
+          banner_images?: Json | null
+          checkout_category?: string
           coinzz_offer_hash?: string | null
           config?: Json | null
           created_at?: string | null
+          cta_config?: Json | null
           custom_css?: string | null
+          download_url?: string | null
+          font_family?: string | null
           google_ads_id?: string | null
           google_analytics_id?: string | null
           google_conversion_id?: string | null
@@ -218,7 +241,11 @@ export type Database = {
           order_bump_enabled?: boolean | null
           pixel_facebook?: string | null
           pixel_id?: string | null
+          primary_color?: string | null
+          product_cover_url?: string | null
+          product_type?: string | null
           provider_priority?: string | null
+          scarcity_timer_config?: Json | null
           slug?: string | null
           thank_you_page_url?: string | null
           type?: string | null

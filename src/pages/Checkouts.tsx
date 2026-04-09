@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { ShoppingCart, CheckCircle, PauseCircle, Package, Plus, Search, Copy, Pencil, Trash2, ToggleLeft, ToggleRight, ExternalLink, RefreshCw, Loader2, ShoppingBag } from "lucide-react";
+import { ShoppingCart, CheckCircle, PauseCircle, Package, Plus, Search, Copy, Pencil, Trash2, ToggleLeft, ToggleRight, ExternalLink, RefreshCw, Loader2, ShoppingBag, Zap } from "lucide-react";
 import PageHeader from "@/components/PageHeader";
 import StatCard from "@/components/StatCard";
 import EmptyState from "@/components/EmptyState";
@@ -17,7 +17,9 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Check, ChevronsUpDown } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
+import CheckoutWizardGeneral from "@/components/checkout/CheckoutWizardGeneral";
 
 type CheckoutWithOffer = {
   id: string;
@@ -32,6 +34,8 @@ type CheckoutWithOffer = {
   config: any;
   offer_id: string | null;
   created_at: string | null;
+  checkout_category?: string;
+  product_type?: string;
 };
 
 type LogzzOffer = {
@@ -62,17 +66,19 @@ const Checkouts = () => {
   const [wizardOpen, setWizardOpen] = useState(false);
   const [wizardStep, setWizardStep] = useState(1);
   const [editingCheckout, setEditingCheckout] = useState<CheckoutWithOffer | null>(null);
+  const [generalWizardOpen, setGeneralWizardOpen] = useState(false);
+  const [editingGeneralCheckout, setEditingGeneralCheckout] = useState<any>(null);
+  const [activeTab, setActiveTab] = useState("checkouts");
+  const [filterCategory, setFilterCategory] = useState<"all" | "cod" | "general">("all");
 
-  // Form state
+  // Form state (COD wizard)
   const [formName, setFormName] = useState("");
   const [formType, setFormType] = useState("hybrid");
   const [formOfferId, setFormOfferId] = useState("");
   const [formCoinzzOfferHash, setFormCoinzzOfferHash] = useState("");
-  
   const [formOrderBump, setFormOrderBump] = useState(false);
   const [formUpsell, setFormUpsell] = useState(false);
   const [formCustomCss, setFormCustomCss] = useState("");
-  // Tracking fields
   const [formPixelFacebook, setFormPixelFacebook] = useState("");
   const [formMetaCapiToken, setFormMetaCapiToken] = useState("");
   const [formGoogleAdsId, setFormGoogleAdsId] = useState("");
@@ -87,7 +93,6 @@ const Checkouts = () => {
   const [formBumps, setFormBumps] = useState<Array<{ offer_id: string; name: string; price: number; label_bump: string; description: string; hash: string | null; image_url: string | null; role?: string }>>([]);
   const [bumpSearchQuery, setBumpSearchQuery] = useState("");
   const [bumpLogzzPopoverOpen, setBumpLogzzPopoverOpen] = useState(false);
-  // Hyppe state
   const [formHyppeOfferData, setFormHyppeOfferData] = useState<any>(null);
   const [formProviderPriority, setFormProviderPriority] = useState("logzz_first");
   const [hyppeOffers, setHyppeOffers] = useState<any[]>([]);
@@ -145,7 +150,6 @@ const Checkouts = () => {
     mutationFn: async (payload: any) => {
       const { data, error } = await supabase.from("checkouts").insert(payload).select("id, offer_id").single();
       if (error) throw error;
-      // Save order bumps if enabled
       if (payload.order_bump_enabled && payload.offer_id && formBumps.length > 0) {
         await saveBumps(payload.offer_id);
       }
@@ -163,11 +167,9 @@ const Checkouts = () => {
     mutationFn: async ({ id, ...payload }: any) => {
       const { error } = await supabase.from("checkouts").update(payload).eq("id", id);
       if (error) throw error;
-      // Save order bumps if enabled
       if (payload.order_bump_enabled && payload.offer_id && formBumps.length > 0) {
         await saveBumps(payload.offer_id);
       } else if (!payload.order_bump_enabled && payload.offer_id) {
-        // Remove bumps if disabled
         await supabase.from("order_bumps").delete().eq("offer_id", payload.offer_id);
       }
     },
@@ -179,8 +181,37 @@ const Checkouts = () => {
     onError: (e: any) => toast.error(e.message),
   });
 
+  // General checkout create/update
+  const generalCreateMutation = useMutation({
+    mutationFn: async (payload: any) => {
+      const { data, error } = await supabase.from("checkouts").insert({ ...payload, user_id: user!.id }).select("id").single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["checkouts"] });
+      toast.success("Checkout Geral criado com sucesso!");
+      setGeneralWizardOpen(false);
+      setEditingGeneralCheckout(null);
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const generalUpdateMutation = useMutation({
+    mutationFn: async ({ id, ...payload }: any) => {
+      const { error } = await supabase.from("checkouts").update(payload).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["checkouts"] });
+      toast.success("Checkout Geral atualizado!");
+      setGeneralWizardOpen(false);
+      setEditingGeneralCheckout(null);
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
   async function saveBumps(offerId: string) {
-    // Delete existing bumps for this offer, then re-insert
     await supabase.from("order_bumps").delete().eq("offer_id", offerId);
     if (formBumps.length > 0) {
       const bumpsToInsert = formBumps.map(b => ({
@@ -198,14 +229,8 @@ const Checkouts = () => {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      // Check for linked orders first
-      const { count } = await supabase
-        .from("orders")
-        .select("id", { count: "exact", head: true })
-        .eq("checkout_id", id);
-      if (count && count > 0) {
-        throw new Error(`LINKED_ORDERS:${count}`);
-      }
+      const { count } = await supabase.from("orders").select("id", { count: "exact", head: true }).eq("checkout_id", id);
+      if (count && count > 0) throw new Error(`LINKED_ORDERS:${count}`);
       const { error } = await supabase.from("checkouts").delete().eq("id", id);
       if (error) throw error;
     },
@@ -218,9 +243,9 @@ const Checkouts = () => {
         const count = e.message.split(":")[1];
         toast.warning(`Este checkout possui ${count} pedido(s) vinculado(s) e não pode ser excluído. Desative-o em vez disso.`, { duration: 7000 });
       } else if (e.message?.includes("foreign key")) {
-        toast.warning("Não é possível excluir: existem pedidos vinculados a este checkout. Desative-o em vez disso.", { duration: 7000 });
+        toast.warning("Não é possível excluir: existem pedidos vinculados. Desative-o em vez disso.", { duration: 7000 });
       } else {
-        toast.error(`Erro ao excluir checkout: ${e.message}`);
+        toast.error(`Erro ao excluir: ${e.message}`);
       }
     },
   });
@@ -238,52 +263,35 @@ const Checkouts = () => {
     setWizardOpen(false);
     setWizardStep(1);
     setEditingCheckout(null);
-    setFormName("");
-    setFormType("hybrid");
-    setFormOfferId("");
-    setFormCoinzzOfferHash("");
-    setFormOrderBump(false);
-    setFormUpsell(false);
-    setFormCustomCss("");
-    setFormPixelFacebook("");
-    setFormMetaCapiToken("");
-    setFormGoogleAdsId("");
-    setFormGoogleConversionId("");
-    setFormGoogleAnalyticsId("");
-    setFormThankYouUrl("");
-    setFormWhatsappSupport("");
-    setFormBumps([]);
-    setBumpSearchQuery("");
-    setFormHyppeOfferData(null);
-    setFormProviderPriority("logzz_first");
-    setHyppeOffers([]);
+    setFormName(""); setFormType("hybrid"); setFormOfferId(""); setFormCoinzzOfferHash("");
+    setFormOrderBump(false); setFormUpsell(false); setFormCustomCss("");
+    setFormPixelFacebook(""); setFormMetaCapiToken(""); setFormGoogleAdsId("");
+    setFormGoogleConversionId(""); setFormGoogleAnalyticsId(""); setFormThankYouUrl("");
+    setFormWhatsappSupport(""); setFormBumps([]); setBumpSearchQuery("");
+    setFormHyppeOfferData(null); setFormProviderPriority("logzz_first"); setHyppeOffers([]);
   }
 
   function openEdit(c: CheckoutWithOffer) {
+    // Check if it's a general checkout
+    if ((c as any).checkout_category === "general") {
+      setEditingGeneralCheckout(c);
+      setGeneralWizardOpen(true);
+      return;
+    }
     setEditingCheckout(c);
-    setFormName(c.name);
-    setFormType(c.type || "hybrid");
-    setFormOfferId(c.offer_id || "");
+    setFormName(c.name); setFormType(c.type || "hybrid"); setFormOfferId(c.offer_id || "");
     setFormCoinzzOfferHash((c as any).coinzz_offer_hash || "");
     setFormHyppeOfferData((c as any).hyppe_offer_data || null);
     setFormProviderPriority((c as any).provider_priority || "logzz_first");
-    setFormOrderBump(c.order_bump_enabled || false);
-    setFormUpsell(c.upsell_enabled || false);
-    setFormCustomCss(c.custom_css || "");
-    setFormPixelFacebook((c as any).pixel_facebook || "");
-    setFormMetaCapiToken((c as any).meta_capi_token || "");
-    setFormGoogleAdsId((c as any).google_ads_id || "");
-    setFormGoogleConversionId((c as any).google_conversion_id || "");
-    setFormGoogleAnalyticsId((c as any).google_analytics_id || "");
-    setFormThankYouUrl((c as any).thank_you_page_url || "");
-    setFormWhatsappSupport((c as any).whatsapp_support || "");
-    setWizardStep(1);
-    setWizardOpen(true);
-    // Load existing order bumps for this checkout
+    setFormOrderBump(c.order_bump_enabled || false); setFormUpsell(c.upsell_enabled || false);
+    setFormCustomCss(c.custom_css || ""); setFormPixelFacebook((c as any).pixel_facebook || "");
+    setFormMetaCapiToken((c as any).meta_capi_token || ""); setFormGoogleAdsId((c as any).google_ads_id || "");
+    setFormGoogleConversionId((c as any).google_conversion_id || ""); setFormGoogleAnalyticsId((c as any).google_analytics_id || "");
+    setFormThankYouUrl((c as any).thank_you_page_url || ""); setFormWhatsappSupport((c as any).whatsapp_support || "");
+    setWizardStep(1); setWizardOpen(true);
     if (c.offer_id) {
       supabase.from("order_bumps").select("id, name, price, current_price, hash, description, label_bump, offer_id")
-        .eq("offer_id", c.offer_id)
-        .then(({ data }) => {
+        .eq("offer_id", c.offer_id).then(({ data }) => {
           if (data) setFormBumps(data.map(b => ({
             offer_id: b.offer_id, name: b.name, price: b.current_price || b.price || 0,
             label_bump: b.label_bump || "OFERTA ESPECIAL", description: b.description || "",
@@ -298,30 +306,28 @@ const Checkouts = () => {
     const offerSuffix = selectedLogzzOffer?.offer_hash || formOfferId?.slice(0, 7) || Math.random().toString(36).slice(2, 9);
     const slug = `${formName.trim()}-${offerSuffix}`.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "").replace(/-+/g, "-").replace(/^-|-$/g, "").slice(0, 80);
     const payload: any = {
-      name: formName.trim(),
-      slug,
-      type: formType,
-      offer_id: formOfferId || null,
-      pixel_id: formPixelFacebook || null,
-      order_bump_enabled: formOrderBump,
-      upsell_enabled: formUpsell,
-      custom_css: formCustomCss || null,
-      user_id: user!.id,
-      pixel_facebook: formPixelFacebook || null,
-      meta_capi_token: formMetaCapiToken || null,
-      google_ads_id: formGoogleAdsId || null,
-      google_conversion_id: formGoogleConversionId || null,
-      google_analytics_id: formGoogleAnalyticsId || null,
-      thank_you_page_url: formThankYouUrl || null,
-      whatsapp_support: formWhatsappSupport || null,
-      coinzz_offer_hash: formCoinzzOfferHash || null,
-      hyppe_offer_data: formHyppeOfferData || null,
-      provider_priority: formProviderPriority || "logzz_first",
+      name: formName.trim(), slug, type: formType, offer_id: formOfferId || null,
+      pixel_id: formPixelFacebook || null, order_bump_enabled: formOrderBump, upsell_enabled: formUpsell,
+      custom_css: formCustomCss || null, user_id: user!.id,
+      pixel_facebook: formPixelFacebook || null, meta_capi_token: formMetaCapiToken || null,
+      google_ads_id: formGoogleAdsId || null, google_conversion_id: formGoogleConversionId || null,
+      google_analytics_id: formGoogleAnalyticsId || null, thank_you_page_url: formThankYouUrl || null,
+      whatsapp_support: formWhatsappSupport || null, coinzz_offer_hash: formCoinzzOfferHash || null,
+      hyppe_offer_data: formHyppeOfferData || null, provider_priority: formProviderPriority || "logzz_first",
+      checkout_category: "cod",
     };
     if (editingCheckout) {
       updateMutation.mutate({ id: editingCheckout.id, ...payload });
     } else {
       createMutation.mutate(payload);
+    }
+  }
+
+  function handleGeneralSave(data: any) {
+    if (editingGeneralCheckout) {
+      generalUpdateMutation.mutate({ id: editingGeneralCheckout.id, ...data });
+    } else {
+      generalCreateMutation.mutate(data);
     }
   }
 
@@ -332,12 +338,20 @@ const Checkouts = () => {
     toast.success("URL copiada!");
   }
 
-  const filtered = checkouts.filter((c) => c.name.toLowerCase().includes(search.toLowerCase()));
+  const filtered = checkouts.filter((c) => {
+    const matchSearch = c.name.toLowerCase().includes(search.toLowerCase());
+    const cat = (c as any).checkout_category || "cod";
+    const matchCategory = filterCategory === "all" || cat === filterCategory;
+    return matchSearch && matchCategory;
+  });
+
   const activeCount = checkouts.filter((c) => c.is_active).length;
   const inactiveCount = checkouts.filter((c) => !c.is_active).length;
-  const productCount = products.length;
+  const codCount = checkouts.filter((c) => ((c as any).checkout_category || "cod") === "cod").length;
+  const generalCount = checkouts.filter((c) => (c as any).checkout_category === "general").length;
 
   const typeLabel: Record<string, string> = { standard: "Padrão", express: "Express", hybrid: "Híbrido" };
+  const productTypeLabel: Record<string, string> = { dropshipping: "Dropshipping", curso: "Curso", info_produto: "Info Produto", servico: "Serviço" };
 
   return (
     <div>
@@ -345,12 +359,20 @@ const Checkouts = () => {
         title="Checkouts"
         subtitle="Gerencie seus fluxos de conversão e otimize suas vendas em tempo real."
         actions={
-          <button
-            onClick={() => setWizardOpen(true)}
-            className="gradient-primary flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold text-primary-foreground transition-all hover:opacity-90"
-          >
-            <Plus className="h-4 w-4" /> Novo Checkout
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setWizardOpen(true)}
+              className="flex items-center gap-2 rounded-lg border border-border bg-secondary px-4 py-2.5 text-sm font-semibold text-foreground transition-all hover:bg-secondary/80"
+            >
+              <Package className="h-4 w-4" /> Novo Checkout COD
+            </button>
+            <button
+              onClick={() => { setEditingGeneralCheckout(null); setGeneralWizardOpen(true); }}
+              className="gradient-primary flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold text-primary-foreground transition-all hover:opacity-90"
+            >
+              <Zap className="h-4 w-4" /> Novo Checkout Geral
+            </button>
+          </div>
         }
       />
 
@@ -358,84 +380,122 @@ const Checkouts = () => {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-8">
         <StatCard label="Total Checkouts" value={checkouts.length} icon={<ShoppingCart className="h-6 w-6 text-primary" />} iconBg="bg-primary/10" />
         <StatCard label="Ativos" value={activeCount} icon={<CheckCircle className="h-6 w-6 text-success" />} iconBg="bg-success/10" />
-        <StatCard label="Inativos" value={inactiveCount} icon={<PauseCircle className="h-6 w-6 text-warning" />} iconBg="bg-warning/10" />
-        <StatCard label="Produtos" value={productCount} icon={<Package className="h-6 w-6 text-primary" />} iconBg="bg-primary/10" />
+        <StatCard label="COD" value={codCount} icon={<Package className="h-6 w-6 text-warning" />} iconBg="bg-warning/10" />
+        <StatCard label="Geral" value={generalCount} icon={<Zap className="h-6 w-6 text-primary" />} iconBg="bg-primary/10" />
       </div>
 
-      {/* List */}
-      <div className="ninja-card">
-        <div className="mb-6 flex items-center justify-between">
-          <h2 className="text-lg font-bold text-foreground">Meus Checkouts</h2>
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <input
-              type="text"
-              placeholder="Buscar por nome..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="h-9 rounded-lg border border-border bg-input pl-9 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
-            />
-          </div>
-        </div>
+      {/* Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="checkouts">Meus Checkouts</TabsTrigger>
+          <TabsTrigger value="bumps">Order Bumps & Upsells</TabsTrigger>
+        </TabsList>
 
-        {isLoading ? (
-          <div className="space-y-4">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="h-20 animate-pulse rounded-lg bg-muted" />
-            ))}
-          </div>
-        ) : filtered.length === 0 ? (
-          <EmptyState
-            icon={<Plus className="h-12 w-12" />}
-            title="Criar Primeiro Checkout"
-            description="Crie seu primeiro checkout para começar a vender."
-            className="border border-dashed border-border shadow-none"
-            action={<button onClick={() => setWizardOpen(true)} className="gradient-primary rounded-lg px-5 py-2.5 text-sm font-semibold text-primary-foreground">+ Criar Checkout</button>}
-          />
-        ) : (
-          <div className="space-y-3">
-            {filtered.map((c) => {
-              const offer = offers.find((o) => o.id === c.offer_id);
-              const product = offer ? products.find((p) => p.id === offer.product_id) : null;
-              return (
-                <div key={c.id} className="flex items-center justify-between rounded-lg border border-border bg-secondary/50 p-4 transition-colors hover:bg-secondary">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-3 mb-1">
-                      <span className="font-semibold text-foreground truncate">{c.name}</span>
-                      <Badge variant={c.is_active ? "default" : "secondary"} className={c.is_active ? "bg-success/20 text-success border-success/30" : "bg-muted text-muted-foreground"}>
-                        {c.is_active ? "Ativo" : "Inativo"}
-                      </Badge>
-                      <Badge variant="outline" className="text-xs">{typeLabel[c.type || "hybrid"] || c.type}</Badge>
-                    </div>
-                    <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                      {product && <span>Produto: {product.name}</span>}
-                      <span>{orderCounts[c.id] || 0} pedidos</span>
-                      {c.slug && <span className="flex items-center gap-1"><ExternalLink className="h-3 w-3" />/c/{c.slug}</span>}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1.5 ml-4">
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" onClick={() => openEdit(c)}><Pencil className="h-4 w-4" /></Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" onClick={() => copyUrl(c.slug)}><Copy className="h-4 w-4" /></Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" onClick={() => toggleMutation.mutate({ id: c.id, is_active: !c.is_active })}>
-                      {c.is_active ? <ToggleRight className="h-4 w-4 text-success" /> : <ToggleLeft className="h-4 w-4" />}
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => { if (confirm("Excluir este checkout?")) deleteMutation.mutate(c.id); }}><Trash2 className="h-4 w-4" /></Button>
-                  </div>
+        <TabsContent value="checkouts">
+          {/* List */}
+          <div className="ninja-card">
+            <div className="mb-6 flex items-center justify-between gap-3 flex-wrap">
+              <div className="flex items-center gap-2">
+                <h2 className="text-lg font-bold text-foreground">Meus Checkouts</h2>
+                <div className="flex items-center gap-1 ml-2">
+                  {(["all", "cod", "general"] as const).map((cat) => (
+                    <button
+                      key={cat}
+                      onClick={() => setFilterCategory(cat)}
+                      className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${
+                        filterCategory === cat ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground hover:bg-muted/80"
+                      }`}
+                    >
+                      {cat === "all" ? "Todos" : cat === "cod" ? "COD" : "Geral"}
+                    </button>
+                  ))}
                 </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
+              </div>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  type="text" placeholder="Buscar por nome..." value={search} onChange={(e) => setSearch(e.target.value)}
+                  className="h-9 rounded-lg border border-border bg-input pl-9 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
+                />
+              </div>
+            </div>
 
-      {/* Wizard Modal */}
+            {isLoading ? (
+              <div className="space-y-4">{[1, 2, 3].map((i) => <div key={i} className="h-20 animate-pulse rounded-lg bg-muted" />)}</div>
+            ) : filtered.length === 0 ? (
+              <EmptyState
+                icon={<Plus className="h-12 w-12" />}
+                title="Criar Primeiro Checkout"
+                description="Crie seu primeiro checkout para começar a vender."
+                className="border border-dashed border-border shadow-none"
+                action={
+                  <div className="flex gap-2">
+                    <button onClick={() => setWizardOpen(true)} className="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-foreground">COD</button>
+                    <button onClick={() => setGeneralWizardOpen(true)} className="gradient-primary rounded-lg px-5 py-2.5 text-sm font-semibold text-primary-foreground">+ Checkout Geral</button>
+                  </div>
+                }
+              />
+            ) : (
+              <div className="space-y-3">
+                {filtered.map((c) => {
+                  const offer = offers.find((o) => o.id === c.offer_id);
+                  const product = offer ? products.find((p) => p.id === offer.product_id) : null;
+                  const isCod = ((c as any).checkout_category || "cod") === "cod";
+                  return (
+                    <div key={c.id} className="flex items-center justify-between rounded-lg border border-border bg-secondary/50 p-4 transition-colors hover:bg-secondary">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1 flex-wrap">
+                          <span className="font-semibold text-foreground truncate">{c.name}</span>
+                          <Badge variant={c.is_active ? "default" : "secondary"} className={c.is_active ? "bg-success/20 text-success border-success/30" : "bg-muted text-muted-foreground"}>
+                            {c.is_active ? "Ativo" : "Inativo"}
+                          </Badge>
+                          <Badge variant="outline" className={`text-xs ${isCod ? "border-warning/30 text-warning" : "border-primary/30 text-primary"}`}>
+                            {isCod ? "COD" : "Geral"}
+                          </Badge>
+                          {!isCod && (c as any).product_type && (
+                            <Badge variant="outline" className="text-xs border-muted-foreground/20">
+                              {productTypeLabel[(c as any).product_type] || (c as any).product_type}
+                            </Badge>
+                          )}
+                          {isCod && <Badge variant="outline" className="text-xs">{typeLabel[c.type || "hybrid"] || c.type}</Badge>}
+                        </div>
+                        <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                          {product && <span>Produto: {product.name}</span>}
+                          <span>{orderCounts[c.id] || 0} pedidos</span>
+                          {c.slug && <span className="flex items-center gap-1"><ExternalLink className="h-3 w-3" />/c/{c.slug}</span>}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1.5 ml-4">
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" onClick={() => openEdit(c)}><Pencil className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" onClick={() => copyUrl(c.slug)}><Copy className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" onClick={() => toggleMutation.mutate({ id: c.id, is_active: !c.is_active })}>
+                          {c.is_active ? <ToggleRight className="h-4 w-4 text-success" /> : <ToggleLeft className="h-4 w-4" />}
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => { if (confirm("Excluir este checkout?")) deleteMutation.mutate(c.id); }}><Trash2 className="h-4 w-4" /></Button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="bumps">
+          <OrderBumpsTab />
+        </TabsContent>
+      </Tabs>
+
+      {/* COD Wizard Modal (existing) */}
       <Dialog open={wizardOpen} onOpenChange={(o) => { if (!o) closeWizard(); }}>
         <DialogContent className="sm:max-w-[560px] bg-card border-border max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-foreground">{editingCheckout ? "Editar Checkout" : "Novo Checkout"}</DialogTitle>
+            <DialogTitle className="text-foreground flex items-center gap-2">
+              <span className="text-[10px] bg-warning/15 text-warning px-2 py-0.5 rounded-full font-bold">COD</span>
+              {editingCheckout ? "Editar Checkout COD" : "Novo Checkout COD"}
+            </DialogTitle>
           </DialogHeader>
 
-          {/* Step indicators */}
           <div className="flex items-center gap-2 mb-6">
             {[1, 2, 3, 4].map((s) => (
               <button key={s} onClick={() => setWizardStep(s)} className={`flex-1 h-1.5 rounded-full transition-colors ${wizardStep >= s ? "bg-primary" : "bg-muted"}`} />
@@ -459,17 +519,10 @@ const Checkouts = () => {
                       try {
                         const { data, error } = await supabase.functions.invoke("logzz-list-products");
                         if (error) throw error;
-                        if (data?.offers?.length > 0) {
-                          setLogzzOffers(data.offers);
-                          toast.success(`${data.offers.length} ofertas encontradas na Logzz!`);
-                        } else {
-                          toast.info(data?.message || "Nenhuma oferta encontrada. Verifique o token da Logzz.");
-                        }
-                      } catch {
-                        toast.error("Erro ao buscar ofertas da Logzz");
-                      } finally {
-                        setSyncingLogzz(false);
-                      }
+                        if (data?.offers?.length > 0) { setLogzzOffers(data.offers); toast.success(`${data.offers.length} ofertas encontradas na Logzz!`); }
+                        else { toast.info(data?.message || "Nenhuma oferta encontrada."); }
+                      } catch { toast.error("Erro ao buscar ofertas da Logzz"); }
+                      finally { setSyncingLogzz(false); }
                     }}
                     disabled={syncingLogzz}
                     className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 disabled:opacity-50"
@@ -484,8 +537,7 @@ const Checkouts = () => {
                       <Button variant="outline" role="combobox" aria-expanded={logzzPopoverOpen} className="w-full justify-between bg-input border-border text-left font-normal h-10">
                         {selectedLogzzOffer
                           ? <span className="truncate">{selectedLogzzOffer.product_name} — {selectedLogzzOffer.offer_name} (R$ {selectedLogzzOffer.price.toFixed(2)})</span>
-                          : <span className="text-muted-foreground">Buscar oferta da Logzz...</span>
-                        }
+                          : <span className="text-muted-foreground">Buscar oferta da Logzz...</span>}
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                       </Button>
                     </PopoverTrigger>
@@ -499,98 +551,52 @@ const Checkouts = () => {
                               <CommandItem
                                 key={o.offer_hash || i}
                                 value={`${o.product_name} ${o.offer_name} ${o.offer_hash} ${o.price} ${o.role}`}
-                              onSelect={async () => {
-                                  setSelectedLogzzOffer(o);
-                                  setLogzzPopoverOpen(false);
-
-                                  // Auto-fill checkout name + slug
-                                  const slug = `${o.product_name}-${o.offer_hash || ""}`.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "").replace(/-+/g, "-").replace(/^-|-$/g, "").slice(0, 60);
+                                onSelect={async () => {
+                                  setSelectedLogzzOffer(o); setLogzzPopoverOpen(false);
                                   setFormName(o.offer_name || o.product_name);
-
-                                  // Upsert product in DB
                                   try {
-                                    const { data: existingProd } = await supabase
-                                      .from("products")
-                                      .select("id")
-                                      .eq("user_id", user!.id)
-                                      .eq("hash", o.product_hash)
-                                      .maybeSingle();
-
+                                    const { data: existingProd } = await supabase.from("products").select("id").eq("user_id", user!.id).eq("hash", o.product_hash).maybeSingle();
                                     let productId = existingProd?.id;
                                     if (!productId) {
                                       const { data: newProd } = await supabase.from("products").insert({
-                                        user_id: user!.id,
-                                        name: o.product_name,
-                                        hash: o.product_hash,
-                                        description: o.product_description,
-                                        main_image_url: o.product_image_url,
-                                        weight: o.product_weight,
-                                        width: o.product_width,
-                                        height: o.product_height,
-                                        length: o.product_length,
-                                        warranty_days: o.product_warranty_days,
-                                        categories: o.product_categories,
+                                        user_id: user!.id, name: o.product_name, hash: o.product_hash, description: o.product_description,
+                                        main_image_url: o.product_image_url, weight: o.product_weight, width: o.product_width,
+                                        height: o.product_height, length: o.product_length, warranty_days: o.product_warranty_days, categories: o.product_categories,
                                       }).select("id").single();
                                       productId = newProd?.id;
                                     } else {
                                       await supabase.from("products").update({
-                                        name: o.product_name,
-                                        description: o.product_description,
-                                        main_image_url: o.product_image_url,
-                                        weight: o.product_weight,
-                                        width: o.product_width,
-                                        height: o.product_height,
-                                        length: o.product_length,
-                                        warranty_days: o.product_warranty_days,
-                                        categories: o.product_categories,
+                                        name: o.product_name, description: o.product_description, main_image_url: o.product_image_url,
+                                        weight: o.product_weight, width: o.product_width, height: o.product_height,
+                                        length: o.product_length, warranty_days: o.product_warranty_days, categories: o.product_categories,
                                       }).eq("id", productId);
                                     }
-
                                     if (productId) {
-                                      // Upsert offer
-                                      const { data: existingOffer } = await supabase
-                                        .from("offers")
-                                        .select("id")
-                                        .eq("user_id", user!.id)
-                                        .eq("hash", o.offer_hash)
-                                        .maybeSingle();
-
+                                      const { data: existingOffer } = await supabase.from("offers").select("id").eq("user_id", user!.id).eq("hash", o.offer_hash).maybeSingle();
                                       let offerId = existingOffer?.id;
                                       if (!offerId) {
                                         const { data: newOffer } = await supabase.from("offers").insert({
-                                          user_id: user!.id,
-                                          product_id: productId,
-                                          name: o.offer_name,
-                                          hash: o.offer_hash,
-                                          price: o.price,
-                                          original_price: o.original_price || o.price,
-                                          scheduling_checkout_url: o.scheduling_checkout_url,
-                                          expedition_checkout_url: o.expedition_checkout_url,
+                                          user_id: user!.id, product_id: productId, name: o.offer_name, hash: o.offer_hash,
+                                          price: o.price, original_price: o.original_price || o.price,
+                                          scheduling_checkout_url: o.scheduling_checkout_url, expedition_checkout_url: o.expedition_checkout_url,
                                           affiliate_code: o.affiliate_code || null,
                                         }).select("id").single();
                                         offerId = newOffer?.id;
                                       } else {
                                         await supabase.from("offers").update({
-                                          name: o.offer_name,
-                                          price: o.price,
-                                          original_price: o.original_price || o.price,
-                                          scheduling_checkout_url: o.scheduling_checkout_url,
-                                          expedition_checkout_url: o.expedition_checkout_url,
+                                          name: o.offer_name, price: o.price, original_price: o.original_price || o.price,
+                                          scheduling_checkout_url: o.scheduling_checkout_url, expedition_checkout_url: o.expedition_checkout_url,
                                           affiliate_code: o.affiliate_code || null,
                                         }).eq("id", offerId);
                                       }
-
                                       if (offerId) {
                                         setFormOfferId(offerId);
                                         queryClient.invalidateQueries({ queryKey: ["offers"] });
                                         queryClient.invalidateQueries({ queryKey: ["products"] });
                                       }
                                     }
-                                    toast.success(`Oferta "${o.offer_name}" importada com todos os dados!`);
-                                  } catch (err: any) {
-                                    if (import.meta.env.DEV) console.error("[Logzz Import]", err);
-                                    toast.error("Erro ao salvar produto/oferta no banco");
-                                  }
+                                    toast.success(`Oferta "${o.offer_name}" importada!`);
+                                  } catch { toast.error("Erro ao salvar produto/oferta"); }
                                 }}
                               >
                                 <Check className={`mr-2 h-4 w-4 ${selectedLogzzOffer?.offer_hash === o.offer_hash ? "opacity-100" : "opacity-0"}`} />
@@ -612,26 +618,20 @@ const Checkouts = () => {
                     </PopoverContent>
                   </Popover>
                 ) : (
-                  <p className="text-xs text-muted-foreground">Clique em ↻ para buscar ofertas da Logzz (produtor, afiliado, coprodutor).</p>
+                  <p className="text-xs text-muted-foreground">Clique em ↻ para buscar ofertas da Logzz.</p>
                 )}
                 {selectedLogzzOffer && (() => {
-                  // Fallback: extract affiliate code from URL if not in response
                   const affCode = selectedLogzzOffer.affiliate_code
                     || (selectedLogzzOffer.role === "affiliate" && selectedLogzzOffer.scheduling_checkout_url
-                      ? selectedLogzzOffer.scheduling_checkout_url.match(/\/pay\/([^/]+)\/[^/]+/)?.[1] ?? null
-                      : null);
+                      ? selectedLogzzOffer.scheduling_checkout_url.match(/\/pay\/([^/]+)\/[^/]+/)?.[1] ?? null : null);
                   return (
-                  <div className="flex flex-wrap items-center gap-2 mt-1.5 text-[11px] text-muted-foreground font-mono">
-                    <span className="inline-flex items-center gap-1 bg-muted/50 rounded px-1.5 py-0.5">
-                      Hash: <span className="text-foreground/80 font-semibold">{selectedLogzzOffer.offer_hash || "—"}</span>
-                    </span>
-                    <span className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 ${affCode ? "bg-success/10 text-success" : "bg-muted/50"}`}>
-                      ID Afiliado: <span className="font-semibold">{affCode || "N/A (produtor)"}</span>
-                    </span>
-                    <span className={`inline-flex items-center rounded px-1.5 py-0.5 font-semibold uppercase ${selectedLogzzOffer.role === "affiliate" ? "bg-success/10 text-success" : selectedLogzzOffer.role === "coproducer" ? "bg-primary/10 text-primary" : "bg-warning/10 text-warning"}`}>
-                      {selectedLogzzOffer.role === "affiliate" ? "afiliado" : selectedLogzzOffer.role === "coproducer" ? "coprodutor" : "produtor"}
-                    </span>
-                  </div>
+                    <div className="flex flex-wrap items-center gap-2 mt-1.5 text-[11px] text-muted-foreground font-mono">
+                      <span className="inline-flex items-center gap-1 bg-muted/50 rounded px-1.5 py-0.5">Hash: <span className="text-foreground/80 font-semibold">{selectedLogzzOffer.offer_hash || "—"}</span></span>
+                      <span className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 ${affCode ? "bg-success/10 text-success" : "bg-muted/50"}`}>ID Afiliado: <span className="font-semibold">{affCode || "N/A"}</span></span>
+                      <span className={`inline-flex items-center rounded px-1.5 py-0.5 font-semibold uppercase ${selectedLogzzOffer.role === "affiliate" ? "bg-success/10 text-success" : selectedLogzzOffer.role === "coproducer" ? "bg-primary/10 text-primary" : "bg-warning/10 text-warning"}`}>
+                        {selectedLogzzOffer.role === "affiliate" ? "afiliado" : selectedLogzzOffer.role === "coproducer" ? "coprodutor" : "produtor"}
+                      </span>
+                    </div>
                   );
                 })()}
               </div>
@@ -639,7 +639,7 @@ const Checkouts = () => {
                 <Label>Nome do Checkout</Label>
                 <Input value={formName} onChange={(e) => setFormName(e.target.value)} placeholder="Ex: Checkout Principal" className="bg-input border-border" />
               </div>
-              {/* Hyppe Offer Sync */}
+              {/* Hyppe */}
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <div className="flex items-center gap-2">
@@ -651,17 +651,11 @@ const Checkouts = () => {
                       setSyncingHyppe(true);
                       try {
                         const { data, error } = await supabase.functions.invoke("hyppe-list-products");
-                        console.log("[Hyppe Sync] Response:", { data, error });
                         if (error) throw error;
-                        if (data?.error) {
-                          toast.error(data.error);
-                        } else if (data?.offers?.length > 0) {
-                          setHyppeOffers(data.offers);
-                          toast.success(`${data.offers.length} ofertas encontradas na Hyppe!`);
-                        } else {
-                          toast.info("Nenhuma oferta encontrada na Hyppe. Verifique se há produtos cadastrados.");
-                        }
-                      } catch { toast.error("Erro ao buscar ofertas da Hyppe"); }
+                        if (data?.error) { toast.error(data.error); }
+                        else if (data?.offers?.length > 0) { setHyppeOffers(data.offers); toast.success(`${data.offers.length} ofertas Hyppe!`); }
+                        else { toast.info("Nenhuma oferta Hyppe."); }
+                      } catch { toast.error("Erro Hyppe"); }
                       finally { setSyncingHyppe(false); }
                     }}
                     disabled={syncingHyppe}
@@ -689,8 +683,7 @@ const Checkouts = () => {
                           <CommandGroup>
                             {hyppeOffers.map((o, i) => (
                               <CommandItem key={o.hyppe_offer_id || i} value={`${o.product_name} ${o.offer_name} ${o.price}`} onSelect={() => {
-                                setFormHyppeOfferData(o);
-                                setHyppePopoverOpen(false);
+                                setFormHyppeOfferData(o); setHyppePopoverOpen(false);
                                 if (!formName) setFormName(o.offer_name || o.product_name);
                                 toast.success(`Oferta Hyppe "${o.offer_name}" selecionada!`);
                               }}>
@@ -707,7 +700,7 @@ const Checkouts = () => {
                     </PopoverContent>
                   </Popover>
                 ) : (
-                  <p className="text-xs text-muted-foreground">Clique em ↻ para buscar ofertas da Hyppe (COD + Antecipado).</p>
+                  <p className="text-xs text-muted-foreground">Clique em ↻ para buscar ofertas da Hyppe.</p>
                 )}
                 {formHyppeOfferData && (
                   <div className="mt-2 flex items-center gap-2">
@@ -728,15 +721,14 @@ const Checkouts = () => {
                   </SelectContent>
                 </Select>
               </div>
-              {/* Provider Priority */}
               {(formOfferId || formHyppeOfferData) && (
                 <div>
                   <Label>Prioridade de verificação de CEP</Label>
-                  <p className="text-xs text-muted-foreground mb-1.5">Qual provedor logístico será consultado primeiro ao verificar o CEP do cliente</p>
+                  <p className="text-xs text-muted-foreground mb-1.5">Qual provedor logístico será consultado primeiro</p>
                   <Select value={formProviderPriority} onValueChange={setFormProviderPriority}>
                     <SelectTrigger className="bg-input border-border"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="logzz_first">🟢 Logzz primeiro (padrão)</SelectItem>
+                      <SelectItem value="logzz_first">🟢 Logzz primeiro</SelectItem>
                       <SelectItem value="hyppe_first">🟠 Hyppe primeiro</SelectItem>
                     </SelectContent>
                   </Select>
@@ -748,36 +740,24 @@ const Checkouts = () => {
           {wizardStep === 2 && (
             <div className="space-y-4">
               <div className="flex items-center justify-between p-3 rounded-xl bg-secondary/50 border border-border">
-                <div><Label>Order Bump</Label><p className="text-xs text-muted-foreground">Oferecer produto adicional no checkout</p></div>
+                <div><Label>Order Bump</Label><p className="text-xs text-muted-foreground">Oferecer produto adicional</p></div>
                 <Switch checked={formOrderBump} onCheckedChange={setFormOrderBump} />
               </div>
-
               {formOrderBump && (
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <Label className="text-sm">Produtos para Order Bump</Label>
                     <button
                       onClick={async () => {
-                        if (logzzOffers.length > 0) {
-                          setBumpLogzzPopoverOpen(true);
-                          return;
-                        }
+                        if (logzzOffers.length > 0) { setBumpLogzzPopoverOpen(true); return; }
                         setSyncingLogzz(true);
                         try {
                           const { data, error } = await supabase.functions.invoke("logzz-list-products");
                           if (error) throw error;
-                          if (data?.offers?.length > 0) {
-                            setLogzzOffers(data.offers);
-                            setBumpLogzzPopoverOpen(true);
-                            toast.success(`${data.offers.length} ofertas encontradas!`);
-                          } else {
-                            toast.info(data?.message || "Nenhuma oferta encontrada.");
-                          }
-                        } catch {
-                          toast.error("Erro ao buscar ofertas da Logzz");
-                        } finally {
-                          setSyncingLogzz(false);
-                        }
+                          if (data?.offers?.length > 0) { setLogzzOffers(data.offers); setBumpLogzzPopoverOpen(true); toast.success(`${data.offers.length} ofertas!`); }
+                          else { toast.info("Nenhuma oferta."); }
+                        } catch { toast.error("Erro Logzz"); }
+                        finally { setSyncingLogzz(false); }
                       }}
                       disabled={syncingLogzz}
                       className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 disabled:opacity-50"
@@ -786,66 +766,51 @@ const Checkouts = () => {
                       {syncingLogzz ? "Buscando..." : "↻ Importar Logzz"}
                     </button>
                   </div>
-
-                  {/* Logzz Combobox for bump */}
                   {logzzOffers.length > 0 && (
                     <Popover open={bumpLogzzPopoverOpen} onOpenChange={setBumpLogzzPopoverOpen}>
                       <PopoverTrigger asChild>
-                        <Button variant="outline" role="combobox" aria-expanded={bumpLogzzPopoverOpen} className="w-full justify-between bg-input border-border text-left font-normal h-10">
-                          <span className="text-muted-foreground">Buscar oferta da Logzz para bump...</span>
+                        <Button variant="outline" role="combobox" className="w-full justify-between bg-input border-border text-left font-normal h-10">
+                          <span className="text-muted-foreground">Buscar oferta para bump...</span>
                           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
                         <Command>
-                          <CommandInput placeholder="Buscar por nome, preço, hash..." />
+                          <CommandInput placeholder="Buscar..." />
                           <CommandList>
                             <CommandEmpty>Nenhuma oferta encontrada.</CommandEmpty>
                             <CommandGroup>
-                              {logzzOffers
-                                .filter((o) => !formBumps.some((b) => b.hash === o.offer_hash))
-                                .map((o, i) => (
+                              {logzzOffers.filter((o) => !formBumps.some((b) => b.hash === o.offer_hash)).map((o, i) => (
                                 <CommandItem
                                   key={`bump-${o.offer_hash || i}`}
                                   value={`${o.product_name} ${o.offer_name} ${o.offer_hash} ${o.price} ${o.role}`}
                                   onSelect={async () => {
                                     setBumpLogzzPopoverOpen(false);
                                     try {
-                                      const { data: existingProd } = await supabase
-                                        .from("products").select("id")
-                                        .eq("user_id", user!.id).eq("hash", o.product_hash).maybeSingle();
+                                      const { data: existingProd } = await supabase.from("products").select("id").eq("user_id", user!.id).eq("hash", o.product_hash).maybeSingle();
                                       let productId = existingProd?.id;
                                       if (!productId) {
                                         const { data: newProd } = await supabase.from("products").insert({
-                                          user_id: user!.id, name: o.product_name, hash: o.product_hash,
-                                          description: o.product_description, main_image_url: o.product_image_url,
-                                          weight: o.product_weight, width: o.product_width, height: o.product_height,
-                                          length: o.product_length, warranty_days: o.product_warranty_days,
-                                          categories: o.product_categories,
+                                          user_id: user!.id, name: o.product_name, hash: o.product_hash, description: o.product_description,
+                                          main_image_url: o.product_image_url, weight: o.product_weight, width: o.product_width,
+                                          height: o.product_height, length: o.product_length, warranty_days: o.product_warranty_days, categories: o.product_categories,
                                         }).select("id").single();
                                         productId = newProd?.id;
                                       }
                                       if (productId) {
-                                        const { data: existingOffer } = await supabase
-                                          .from("offers").select("id")
-                                          .eq("user_id", user!.id).eq("hash", o.offer_hash).maybeSingle();
+                                        const { data: existingOffer } = await supabase.from("offers").select("id").eq("user_id", user!.id).eq("hash", o.offer_hash).maybeSingle();
                                         let offerId = existingOffer?.id;
                                         if (!offerId) {
                                           const { data: newOffer } = await supabase.from("offers").insert({
-                                            user_id: user!.id, product_id: productId, name: o.offer_name,
-                                            hash: o.offer_hash, price: o.price,
-                                            original_price: o.original_price || o.price,
-                                            scheduling_checkout_url: o.scheduling_checkout_url,
-                                            expedition_checkout_url: o.expedition_checkout_url,
+                                            user_id: user!.id, product_id: productId, name: o.offer_name, hash: o.offer_hash, price: o.price,
+                                            original_price: o.original_price || o.price, scheduling_checkout_url: o.scheduling_checkout_url, expedition_checkout_url: o.expedition_checkout_url,
                                           }).select("id").single();
                                           offerId = newOffer?.id;
                                         }
                                         if (offerId) {
                                           setFormBumps((prev) => [...prev, {
-                                            offer_id: offerId!,
-                                            name: `${o.product_name} — ${o.offer_name}`,
-                                            price: o.price, label_bump: "OFERTA ESPECIAL",
-                                            description: "", hash: o.offer_hash,
+                                            offer_id: offerId!, name: `${o.product_name} — ${o.offer_name}`,
+                                            price: o.price, label_bump: "OFERTA ESPECIAL", description: "", hash: o.offer_hash,
                                             image_url: o.product_image_url, role: o.role,
                                           }]);
                                           queryClient.invalidateQueries({ queryKey: ["offers"] });
@@ -853,9 +818,7 @@ const Checkouts = () => {
                                           toast.success(`"${o.offer_name}" adicionado como bump!`);
                                         }
                                       }
-                                    } catch {
-                                      toast.error("Erro ao importar oferta para bump");
-                                    }
+                                    } catch { toast.error("Erro ao importar bump"); }
                                   }}
                                 >
                                   <div className="flex flex-col min-w-0">
@@ -864,8 +827,7 @@ const Checkouts = () => {
                                       R$ {o.price.toFixed(2)} ·
                                       <span className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-bold uppercase ${o.role === "affiliate" ? "bg-success/15 text-success" : o.role === "coproducer" ? "bg-primary/15 text-primary" : "bg-warning/15 text-warning"}`}>
                                         {o.role === "affiliate" ? "afiliado" : o.role === "coproducer" ? "coprodutor" : "produtor"}
-                                      </span>
-                                      · {o.offer_hash}
+                                      </span> · {o.offer_hash}
                                     </span>
                                   </div>
                                 </CommandItem>
@@ -876,62 +838,43 @@ const Checkouts = () => {
                       </PopoverContent>
                     </Popover>
                   )}
-
-                  {/* Fallback: local search when no Logzz data */}
                   {logzzOffers.length === 0 && (
                     <>
                       <div className="relative">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                        <Input
-                          value={bumpSearchQuery}
-                          onChange={(e) => setBumpSearchQuery(e.target.value)}
-                          placeholder="Buscar oferta local por nome..."
-                          className="pl-9 bg-input border-border text-sm"
-                        />
+                        <Input value={bumpSearchQuery} onChange={(e) => setBumpSearchQuery(e.target.value)} placeholder="Buscar oferta local..." className="pl-9 bg-input border-border text-sm" />
                       </div>
                       {bumpSearchQuery && (
                         <div className="bg-secondary border border-border rounded-xl max-h-48 overflow-y-auto">
-                          {offers
-                            .filter((o) => {
-                              const q = bumpSearchQuery.toLowerCase();
-                              const prod = products.find((p) => p.id === o.product_id);
-                              return (o.name.toLowerCase().includes(q) || prod?.name.toLowerCase().includes(q)) && !formBumps.some((b) => b.offer_id === o.id);
-                            })
-                            .map((o) => {
-                              const prod = products.find((p) => p.id === o.product_id);
-                              return (
-                                <button
-                                  key={o.id}
-                                  onClick={() => {
-                                    setFormBumps((prev) => [...prev, { offer_id: o.id, name: o.name, price: Number(o.price), label_bump: "OFERTA ESPECIAL", description: "", hash: null, image_url: null }]);
-                                    setBumpSearchQuery("");
-                                    toast.success(`"${o.name}" adicionado como order bump`);
-                                  }}
-                                  className="w-full flex items-center gap-3 p-3 hover:bg-muted text-left border-b border-border/50 last:border-0"
-                                >
-                                  <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
-                                    <ShoppingBag className="h-4 w-4 text-muted-foreground" />
-                                  </div>
-                                  <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-medium text-foreground truncate">{prod?.name} — {o.name}</p>
-                                    <p className="text-xs text-primary">R$ {Number(o.price).toFixed(2)}</p>
-                                  </div>
-                                  <Plus className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                                </button>
-                              );
-                            })}
                           {offers.filter((o) => {
                             const q = bumpSearchQuery.toLowerCase();
                             const prod = products.find((p) => p.id === o.product_id);
                             return (o.name.toLowerCase().includes(q) || prod?.name.toLowerCase().includes(q)) && !formBumps.some((b) => b.offer_id === o.id);
-                          }).length === 0 && (
-                            <p className="p-3 text-sm text-muted-foreground text-center">Nenhuma oferta encontrada</p>
-                          )}
+                          }).map((o) => {
+                            const prod = products.find((p) => p.id === o.product_id);
+                            return (
+                              <button key={o.id} onClick={() => {
+                                setFormBumps((prev) => [...prev, { offer_id: o.id, name: o.name, price: Number(o.price), label_bump: "OFERTA ESPECIAL", description: "", hash: null, image_url: null }]);
+                                setBumpSearchQuery(""); toast.success(`"${o.name}" adicionado`);
+                              }} className="w-full flex items-center gap-3 p-3 hover:bg-muted text-left border-b border-border/50 last:border-0">
+                                <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center flex-shrink-0"><ShoppingBag className="h-4 w-4 text-muted-foreground" /></div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-medium text-foreground truncate">{prod?.name} — {o.name}</p>
+                                  <p className="text-xs text-primary">R$ {Number(o.price).toFixed(2)}</p>
+                                </div>
+                                <Plus className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                              </button>
+                            );
+                          })}
+                          {offers.filter((o) => {
+                            const q = bumpSearchQuery.toLowerCase();
+                            const prod = products.find((p) => p.id === o.product_id);
+                            return (o.name.toLowerCase().includes(q) || prod?.name.toLowerCase().includes(q)) && !formBumps.some((b) => b.offer_id === o.id);
+                          }).length === 0 && <p className="p-3 text-sm text-muted-foreground text-center">Nenhuma oferta encontrada</p>}
                         </div>
                       )}
                     </>
                   )}
-
                   {formBumps.length > 0 && (
                     <div className="space-y-2">
                       <p className="text-xs text-muted-foreground">Bumps adicionados ({formBumps.length})</p>
@@ -942,92 +885,45 @@ const Checkouts = () => {
                             <p className="text-sm text-foreground truncate">{bump.name}</p>
                             <p className="text-xs text-muted-foreground flex items-center gap-1.5">
                               <span className="text-primary">R$ {bump.price.toFixed(2)}</span>
-                              {bump.role && (
-                                <span className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-bold uppercase ${bump.role === "affiliate" ? "bg-success/15 text-success" : bump.role === "coproducer" ? "bg-primary/15 text-primary" : "bg-warning/15 text-warning"}`}>
-                                  {bump.role === "affiliate" ? "afiliado" : bump.role === "coproducer" ? "coprodutor" : "produtor"}
-                                </span>
-                              )}
+                              {bump.role && <span className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-bold uppercase ${bump.role === "affiliate" ? "bg-success/15 text-success" : bump.role === "coproducer" ? "bg-primary/15 text-primary" : "bg-warning/15 text-warning"}`}>
+                                {bump.role === "affiliate" ? "afiliado" : bump.role === "coproducer" ? "coprodutor" : "produtor"}
+                              </span>}
                               {bump.hash && <span>· {bump.hash}</span>}
                             </p>
                           </div>
-                          <Input
-                            value={bump.label_bump}
-                            onChange={(e) => {
-                              setFormBumps((prev) => prev.map((b, j) => j === i ? { ...b, label_bump: e.target.value } : b));
-                            }}
-                            className="w-28 text-xs h-7 bg-input border-border"
-                            placeholder="Label"
-                          />
-                          <button
-                            onClick={() => setFormBumps((prev) => prev.filter((_, j) => j !== i))}
-                            className="p-1 text-destructive hover:text-destructive/80"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
+                          <Input value={bump.label_bump} onChange={(e) => setFormBumps((prev) => prev.map((b, j) => j === i ? { ...b, label_bump: e.target.value } : b))} className="w-28 text-xs h-7 bg-input border-border" placeholder="Label" />
+                          <button onClick={() => setFormBumps((prev) => prev.filter((_, j) => j !== i))} className="p-1 text-destructive hover:text-destructive/80"><Trash2 className="h-3.5 w-3.5" /></button>
                         </div>
                       ))}
                     </div>
                   )}
                 </div>
               )}
-
               <div className="flex items-center justify-between p-3 rounded-xl bg-secondary/50 border border-border">
                 <div><Label>Upsell</Label><p className="text-xs text-muted-foreground">Oferta pós-compra</p></div>
                 <Switch checked={formUpsell} onCheckedChange={setFormUpsell} />
               </div>
-
             </div>
           )}
 
           {wizardStep === 3 && (
             <div className="space-y-4">
               <div className="rounded-lg border border-primary/10 bg-primary/5 p-3 mb-2">
-                <p className="text-xs text-muted-foreground"><strong className="text-foreground">📊 Tracking & Pixels</strong> — Configure os pixels de rastreamento para medir conversões do checkout.</p>
+                <p className="text-xs text-muted-foreground"><strong className="text-foreground">📊 Tracking & Pixels</strong> — Configure os pixels de rastreamento.</p>
               </div>
-              <div>
-                <Label>Facebook Pixel ID</Label>
-                <Input value={formPixelFacebook} onChange={(e) => setFormPixelFacebook(e.target.value)} placeholder="Ex: 1234567890" className="bg-input border-border" />
-                <p className="text-xs text-muted-foreground mt-1">Encontre em: Meta Business → Gerenciador de Eventos → Pixel</p>
-              </div>
-              <div>
-                <Label>Meta CAPI Token (Conversions API)</Label>
-                <Input value={formMetaCapiToken} onChange={(e) => setFormMetaCapiToken(e.target.value)} placeholder="EAAXXXXX..." type="password" className="bg-input border-border" />
-                <p className="text-xs text-muted-foreground mt-1">Gere em: Gerenciador de Eventos → Configurações → Token de acesso</p>
-              </div>
-              <div>
-                <Label>Google Ads ID</Label>
-                <Input value={formGoogleAdsId} onChange={(e) => setFormGoogleAdsId(e.target.value)} placeholder="AW-XXXXXXXXXX" className="bg-input border-border" />
-              </div>
-              <div>
-                <Label>Google Conversion ID</Label>
-                <Input value={formGoogleConversionId} onChange={(e) => setFormGoogleConversionId(e.target.value)} placeholder="XXXXXXXX" className="bg-input border-border" />
-              </div>
-              <div>
-                <Label>Google Analytics ID</Label>
-                <Input value={formGoogleAnalyticsId} onChange={(e) => setFormGoogleAnalyticsId(e.target.value)} placeholder="G-XXXXXXXXXX" className="bg-input border-border" />
-              </div>
-              <div>
-                <Label>URL pós-compra (Thank You Page)</Label>
-                <Input value={formThankYouUrl} onChange={(e) => setFormThankYouUrl(e.target.value)} placeholder="https://seusite.com/obrigado" className="bg-input border-border" />
-              </div>
-              <div>
-                <Label>WhatsApp Suporte</Label>
-                <Input value={formWhatsappSupport} onChange={(e) => setFormWhatsappSupport(e.target.value)} placeholder="5511999999999" className="bg-input border-border" />
-              </div>
+              <div><Label>Facebook Pixel ID</Label><Input value={formPixelFacebook} onChange={(e) => setFormPixelFacebook(e.target.value)} placeholder="Ex: 1234567890" className="bg-input border-border" /><p className="text-xs text-muted-foreground mt-1">Meta Business → Gerenciador de Eventos → Pixel</p></div>
+              <div><Label>Meta CAPI Token</Label><Input value={formMetaCapiToken} onChange={(e) => setFormMetaCapiToken(e.target.value)} placeholder="EAAXXXXX..." type="password" className="bg-input border-border" /></div>
+              <div><Label>Google Ads ID</Label><Input value={formGoogleAdsId} onChange={(e) => setFormGoogleAdsId(e.target.value)} placeholder="AW-XXXXXXXXXX" className="bg-input border-border" /></div>
+              <div><Label>Google Conversion ID</Label><Input value={formGoogleConversionId} onChange={(e) => setFormGoogleConversionId(e.target.value)} placeholder="XXXXXXXX" className="bg-input border-border" /></div>
+              <div><Label>Google Analytics ID</Label><Input value={formGoogleAnalyticsId} onChange={(e) => setFormGoogleAnalyticsId(e.target.value)} placeholder="G-XXXXXXXXXX" className="bg-input border-border" /></div>
+              <div><Label>URL pós-compra</Label><Input value={formThankYouUrl} onChange={(e) => setFormThankYouUrl(e.target.value)} placeholder="https://seusite.com/obrigado" className="bg-input border-border" /></div>
+              <div><Label>WhatsApp Suporte</Label><Input value={formWhatsappSupport} onChange={(e) => setFormWhatsappSupport(e.target.value)} placeholder="5511999999999" className="bg-input border-border" /></div>
             </div>
           )}
 
           {wizardStep === 4 && (
             <div className="space-y-4">
-              <div>
-                <Label>CSS Customizado</Label>
-                <Textarea
-                  value={formCustomCss}
-                  onChange={(e) => setFormCustomCss(e.target.value)}
-                  placeholder=".checkout-container { ... }"
-                  className="bg-input border-border font-mono text-xs min-h-[160px]"
-                />
-              </div>
+              <div><Label>CSS Customizado</Label><Textarea value={formCustomCss} onChange={(e) => setFormCustomCss(e.target.value)} placeholder=".checkout-container { ... }" className="bg-input border-border font-mono text-xs min-h-[160px]" /></div>
               {formName && (
                 <div className="rounded-lg border border-border bg-secondary/50 p-4">
                   <p className="text-xs text-muted-foreground mb-1">Preview da URL</p>
@@ -1051,8 +947,94 @@ const Checkouts = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* General Wizard */}
+      <CheckoutWizardGeneral
+        open={generalWizardOpen}
+        onClose={() => { setGeneralWizardOpen(false); setEditingGeneralCheckout(null); }}
+        onSave={handleGeneralSave}
+        saving={generalCreateMutation.isPending || generalUpdateMutation.isPending}
+        editData={editingGeneralCheckout}
+      />
     </div>
   );
 };
+
+// Order Bumps & Upsells Tab
+function OrderBumpsTab() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  const { data: bumps = [], isLoading } = useQuery({
+    queryKey: ["all-order-bumps"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("order_bumps").select("*, offers(name, hash, price)").order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user,
+  });
+
+  const deleteBumpMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("order_bumps").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["all-order-bumps"] });
+      toast.success("Order bump removido!");
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  return (
+    <div className="ninja-card">
+      <div className="mb-6">
+        <h2 className="text-lg font-bold text-foreground mb-1">Order Bumps & Upsells</h2>
+        <p className="text-sm text-muted-foreground">Gerencie todos os order bumps e upsells cadastrados nos seus checkouts.</p>
+      </div>
+
+      {isLoading ? (
+        <div className="space-y-3">{[1, 2, 3].map((i) => <div key={i} className="h-16 animate-pulse rounded-lg bg-muted" />)}</div>
+      ) : bumps.length === 0 ? (
+        <EmptyState
+          icon={<ShoppingBag className="h-12 w-12" />}
+          title="Nenhum Order Bump"
+          description="Adicione order bumps ao criar ou editar um checkout."
+          className="border border-dashed border-border shadow-none"
+        />
+      ) : (
+        <div className="space-y-3">
+          {bumps.map((bump: any) => (
+            <div key={bump.id} className="flex items-center justify-between p-4 rounded-xl border border-border bg-secondary/50">
+              <div className="flex items-center gap-3 flex-1 min-w-0">
+                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                  <ShoppingBag className="h-5 w-5 text-primary" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-foreground truncate">{bump.name}</p>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <span className="text-primary font-semibold">R$ {(bump.current_price || bump.price || 0).toFixed(2)}</span>
+                    {bump.label_bump && <Badge variant="outline" className="text-[10px]">{bump.label_bump}</Badge>}
+                    {bump.offers?.name && <span>· Oferta: {bump.offers.name}</span>}
+                    {bump.hash && <span className="font-mono">· {bump.hash}</span>}
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-1.5 ml-4">
+                <Badge variant={bump.is_active ? "default" : "secondary"} className={bump.is_active ? "bg-success/20 text-success border-success/30 text-xs" : "text-xs"}>
+                  {bump.is_active ? "Ativo" : "Inativo"}
+                </Badge>
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => { if (confirm("Remover este order bump?")) deleteBumpMutation.mutate(bump.id); }}>
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default Checkouts;
