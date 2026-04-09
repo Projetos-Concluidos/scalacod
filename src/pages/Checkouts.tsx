@@ -992,6 +992,16 @@ const Checkouts = () => {
         saving={generalCreateMutation.isPending || generalUpdateMutation.isPending}
         editData={editingGeneralCheckout}
       />
+
+      {/* Delete Checkout Modal */}
+      <DeleteCheckoutModal
+        open={deleteModalOpen}
+        onClose={() => { setDeleteModalOpen(false); setDeletingCheckout(null); }}
+        onConfirm={() => { if (deletingCheckout) deleteMutation.mutate(deletingCheckout.id); }}
+        checkoutName={deletingCheckout?.name || ""}
+        orderCount={deletingCheckout ? (orderCounts[deletingCheckout.id] || 0) : 0}
+        deleting={deleteMutation.isPending}
+      />
     </div>
   );
 };
