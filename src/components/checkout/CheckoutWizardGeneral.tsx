@@ -29,7 +29,7 @@ export default function CheckoutWizardGeneral({ open, onClose, onSave, saving, e
   const [step, setStep] = useState(1);
 
   // Step 1
-  const [productType, setProductType] = useState(editData?.product_type || "pedidos_manuais");
+  const [productType, setProductType] = useState(editData?.product_type || "dropshipping");
   const [formName, setFormName] = useState(editData?.name || "");
   const [productCoverUrl, setProductCoverUrl] = useState(editData?.product_cover_url || "");
   const [productPrice, setProductPrice] = useState<number>(editData?.product_price || 0);
