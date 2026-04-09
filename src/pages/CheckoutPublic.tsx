@@ -276,6 +276,7 @@ const CheckoutPublic = () => {
   const updateField = (field: string, value: string) => setForm((prev) => ({ ...prev, [field]: value }));
 
   // PM delivery config from checkout settings
+  const isCheckoutGeneral = (checkout as any)?.checkout_category === "general";
   const pmDeliveryConfig = isCheckoutGeneral ? (checkout as any)?.config?.delivery : null;
   const pmShippingValue = pmDeliveryConfig?.shipping_enabled ? (pmDeliveryConfig.shipping_value || 0) : 0;
   const pmSchedulingEnabled = pmDeliveryConfig?.scheduling_enabled || false;
