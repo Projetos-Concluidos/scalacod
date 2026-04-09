@@ -1108,14 +1108,29 @@ const CheckoutPublic = () => {
         {/* Social proof + trust badges */}
         <div className="mb-4 space-y-3">
           {/* Scarcity timer or social proof */}
-          {(checkout as any).scarcity_timer_config?.enabled ? (
-            <ScarcityTimer config={(checkout as any).scarcity_timer_config} />
-          ) : (
-            <div className="flex items-center gap-2 bg-orange-50 border border-orange-100 rounded-xl px-3 py-2">
-              <span className="text-base">🔥</span>
-              <p className="text-xs text-orange-800"><strong>{Math.floor(Math.random() * 30 + 25)} pessoas</strong> estão vendo este produto agora</p>
-            </div>
-          )}
+          {(() => {
+            const scarcity = (checkout as any).scarcity_timer_config;
+            if (scarcity?.enabled) {
+              const [timeLeft, setTimeLeft] = useState(() => (scarcity.duration_minutes || 15) * 60);
+              useEffect(() => {
+                const interval = setInterval(() => setTimeLeft((t: number) => Math.max(0, t - 1)), 1000);
+                return () => clearInterval(interval);
+              }, []);
+              const mins = Math.floor(timeLeft / 60);
+              const secs = timeLeft % 60;
+              return (
+                <div className="rounded-xl px-4 py-2.5 text-center font-bold text-sm" style={{ backgroundColor: scarcity.bg_color || "#ef4444", color: scarcity.text_color || "#fff" }}>
+                  {scarcity.text || "🔥 OFERTA EXPIRA EM:"} {String(mins).padStart(2, "0")}:{String(secs).padStart(2, "0")}
+                </div>
+              );
+            }
+            return (
+              <div className="flex items-center gap-2 bg-orange-50 border border-orange-100 rounded-xl px-3 py-2">
+                <span className="text-base">🔥</span>
+                <p className="text-xs text-orange-800"><strong>{Math.floor(Math.random() * 30 + 25)} pessoas</strong> estão vendo este produto agora</p>
+              </div>
+            );
+          })()}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             {[
               { icon: "🔒", title: "Site Seguro", sub: "SSL 256-bit" },
