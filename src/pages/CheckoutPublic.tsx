@@ -1405,6 +1405,7 @@ const CheckoutPublic = () => {
               </motion.div>
             ) : null}
             </AnimatePresence>
+            )}
 
             {/* ── STEP 3: Date (Logzz) or Payment (Coinzz) ── */}
             <AnimatePresence mode="wait">
