@@ -173,6 +173,9 @@ export type Database = {
           pixel_id: string | null
           primary_color: string | null
           product_cover_url: string | null
+          product_description: string | null
+          product_offer_price: number | null
+          product_price: number | null
           product_type: string | null
           provider_priority: string | null
           scarcity_timer_config: Json | null
@@ -208,6 +211,9 @@ export type Database = {
           pixel_id?: string | null
           primary_color?: string | null
           product_cover_url?: string | null
+          product_description?: string | null
+          product_offer_price?: number | null
+          product_price?: number | null
           product_type?: string | null
           provider_priority?: string | null
           scarcity_timer_config?: Json | null
@@ -243,6 +249,9 @@ export type Database = {
           pixel_id?: string | null
           primary_color?: string | null
           product_cover_url?: string | null
+          product_description?: string | null
+          product_offer_price?: number | null
+          product_price?: number | null
           product_type?: string | null
           provider_priority?: string | null
           scarcity_timer_config?: Json | null
@@ -953,6 +962,7 @@ export type Database = {
           description: string | null
           hash: string | null
           id: string
+          image_url: string | null
           is_active: boolean | null
           label_bump: string | null
           name: string
@@ -966,6 +976,7 @@ export type Database = {
           description?: string | null
           hash?: string | null
           id?: string
+          image_url?: string | null
           is_active?: boolean | null
           label_bump?: string | null
           name: string
@@ -979,6 +990,7 @@ export type Database = {
           description?: string | null
           hash?: string | null
           id?: string
+          image_url?: string | null
           is_active?: boolean | null
           label_bump?: string | null
           name?: string
