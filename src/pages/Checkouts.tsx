@@ -409,25 +409,19 @@ const Checkouts = () => {
 
             {isLoading ? (
               <div className="space-y-4">{[1, 2, 3].map((i) => <div key={i} className="h-20 animate-pulse rounded-lg bg-muted" />)}</div>
-            ) : filtered.length === 0 ? (
+            ) : filteredCod.length === 0 ? (
               <EmptyState
                 icon={<Plus className="h-12 w-12" />}
-                title="Criar Primeiro Checkout"
-                description="Crie seu primeiro checkout para começar a vender."
+                title="Nenhum Checkout COD"
+                description="Crie seu primeiro checkout COD para começar a vender."
                 className="border border-dashed border-border shadow-none"
-                action={
-                  <div className="flex gap-2">
-                    <button onClick={() => setWizardOpen(true)} className="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-foreground">COD</button>
-                    <button onClick={() => setGeneralWizardOpen(true)} className="gradient-primary rounded-lg px-5 py-2.5 text-sm font-semibold text-primary-foreground">+ Checkout Geral</button>
-                  </div>
-                }
+                action={<button onClick={() => setWizardOpen(true)} className="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-foreground">+ Novo COD</button>}
               />
             ) : (
               <div className="space-y-3">
-                {filtered.map((c) => {
+                {filteredCod.map((c) => {
                   const offer = offers.find((o) => o.id === c.offer_id);
                   const product = offer ? products.find((p) => p.id === offer.product_id) : null;
-                  const isCod = ((c as any).checkout_category || "cod") === "cod";
                   return (
                     <div key={c.id} className="flex items-center justify-between rounded-lg border border-border bg-secondary/50 p-4 transition-colors hover:bg-secondary">
                       <div className="flex-1 min-w-0">
@@ -436,15 +430,8 @@ const Checkouts = () => {
                           <Badge variant={c.is_active ? "default" : "secondary"} className={c.is_active ? "bg-success/20 text-success border-success/30" : "bg-muted text-muted-foreground"}>
                             {c.is_active ? "Ativo" : "Inativo"}
                           </Badge>
-                          <Badge variant="outline" className={`text-xs ${isCod ? "border-warning/30 text-warning" : "border-primary/30 text-primary"}`}>
-                            {isCod ? "COD" : "Geral"}
-                          </Badge>
-                          {!isCod && (c as any).product_type && (
-                            <Badge variant="outline" className="text-xs border-muted-foreground/20">
-                              {productTypeLabel[(c as any).product_type] || (c as any).product_type}
-                            </Badge>
-                          )}
-                          {isCod && <Badge variant="outline" className="text-xs">{typeLabel[c.type || "hybrid"] || c.type}</Badge>}
+                          <Badge variant="outline" className="text-xs border-warning/30 text-warning">COD</Badge>
+                          <Badge variant="outline" className="text-xs">{typeLabel[c.type || "hybrid"] || c.type}</Badge>
                         </div>
                         <div className="flex items-center gap-4 text-xs text-muted-foreground">
                           {product && <span>Produto: {product.name}</span>}
@@ -463,6 +450,63 @@ const Checkouts = () => {
                     </div>
                   );
                 })}
+              </div>
+            )}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="pm">
+          <div className="ninja-card">
+            <div className="mb-6 flex items-center justify-between gap-3 flex-wrap">
+              <h2 className="text-lg font-bold text-foreground">Checkouts Pedidos Manuais</h2>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <input type="text" placeholder="Buscar..." value={search} onChange={(e) => setSearch(e.target.value)}
+                  className="h-9 rounded-lg border border-border bg-input pl-9 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30" />
+              </div>
+            </div>
+            {isLoading ? (
+              <div className="space-y-4">{[1, 2, 3].map((i) => <div key={i} className="h-20 animate-pulse rounded-lg bg-muted" />)}</div>
+            ) : filteredPm.length === 0 ? (
+              <EmptyState
+                icon={<Zap className="h-12 w-12" />}
+                title="Nenhum Checkout PM"
+                description="Crie seu primeiro checkout de Pedidos Manuais."
+                className="border border-dashed border-border shadow-none"
+                action={<button onClick={() => { setEditingGeneralCheckout(null); setGeneralWizardOpen(true); }} className="gradient-primary rounded-lg px-5 py-2.5 text-sm font-semibold text-primary-foreground">+ Novo Checkout PM</button>}
+              />
+            ) : (
+              <div className="space-y-3">
+                {filteredPm.map((c) => (
+                  <div key={c.id} className="flex items-center justify-between rounded-lg border border-border bg-secondary/50 p-4 transition-colors hover:bg-secondary">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
+                        <span className="font-semibold text-foreground truncate">{c.name}</span>
+                        <Badge variant={c.is_active ? "default" : "secondary"} className={c.is_active ? "bg-success/20 text-success border-success/30" : "bg-muted text-muted-foreground"}>
+                          {c.is_active ? "Ativo" : "Inativo"}
+                        </Badge>
+                        <Badge variant="outline" className="text-xs border-primary/30 text-primary">PM</Badge>
+                        {(c as any).product_type && (
+                          <Badge variant="outline" className="text-xs border-muted-foreground/20">
+                            {productTypeLabel[(c as any).product_type] || (c as any).product_type}
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                        <span>{orderCounts[c.id] || 0} pedidos</span>
+                        {c.slug && <span className="flex items-center gap-1"><ExternalLink className="h-3 w-3" />/c/{c.slug}</span>}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1.5 ml-4">
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" onClick={() => openEdit(c)}><Pencil className="h-4 w-4" /></Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" onClick={() => copyUrl(c.slug)}><Copy className="h-4 w-4" /></Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" onClick={() => toggleMutation.mutate({ id: c.id, is_active: !c.is_active })}>
+                        {c.is_active ? <ToggleRight className="h-4 w-4 text-success" /> : <ToggleLeft className="h-4 w-4" />}
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => { if (confirm("Excluir este checkout?")) deleteMutation.mutate(c.id); }}><Trash2 className="h-4 w-4" /></Button>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </div>
