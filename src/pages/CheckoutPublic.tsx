@@ -275,12 +275,90 @@ const CheckoutPublic = () => {
 
   const updateField = (field: string, value: string) => setForm((prev) => ({ ...prev, [field]: value }));
 
+  // Scarcity timer state
+  const scarcityConfig = (checkout as any)?.scarcity_timer_config;
+  const scarcityEnabled = scarcityConfig?.enabled === true;
+  const [scarcityTimeLeft, setScarcityTimeLeft] = useState(() => (scarcityConfig?.duration_minutes || 15) * 60);
+  useEffect(() => {
+    if (!scarcityEnabled) return;
+    setScarcityTimeLeft((scarcityConfig?.duration_minutes || 15) * 60);
+    const interval = setInterval(() => setScarcityTimeLeft((t: number) => Math.max(0, t - 1)), 1000);
+    return () => clearInterval(interval);
+  }, [scarcityEnabled, scarcityConfig?.duration_minutes]);
+
+  // PM delivery config from checkout settings
+  const isCheckoutGeneral = (checkout as any)?.checkout_category === "general";
+  const pmDeliveryConfig = isCheckoutGeneral ? (checkout as any)?.config?.delivery : null;
+  const pmShippingValue = pmDeliveryConfig?.shipping_enabled ? (pmDeliveryConfig.shipping_value || 0) : 0;
+  const pmSchedulingEnabled = pmDeliveryConfig?.scheduling_enabled || false;
+
+  // Generate PM delivery dates based on scheduling config
+  const generatePMDeliveryDates = (): DeliveryDate[] => {
+    if (!pmDeliveryConfig?.scheduling_enabled) return [];
+    const config = pmDeliveryConfig.scheduling_config || {};
+    const excludedWeekdays: number[] = config.excluded_weekdays || [0];
+    const skipHolidays = config.skip_holidays !== false;
+    const minDays = config.min_days_ahead || 1;
+    const maxDays = config.max_days_ahead || 14;
+
+    // Brazilian holidays (month-day format for current year)
+    const getHolidays = (year: number): Set<string> => {
+      const fixed = [`${year}-01-01`, `${year}-04-21`, `${year}-05-01`, `${year}-09-07`, `${year}-10-12`, `${year}-11-02`, `${year}-11-15`, `${year}-12-25`];
+      return new Set(fixed);
+    };
+
+    const dates: DeliveryDate[] = [];
+    const now = new Date();
+    const holidays = getHolidays(now.getFullYear());
+    let daysChecked = 0;
+    let offset = minDays;
+
+    while (dates.length < 6 && daysChecked < maxDays + 30) {
+      const d = new Date(now);
+      d.setDate(d.getDate() + offset);
+      offset++;
+      daysChecked++;
+
+      if (offset - minDays > maxDays) break;
+      if (excludedWeekdays.includes(d.getDay())) continue;
+      const dateStr = d.toISOString().split("T")[0];
+      if (skipHolidays && holidays.has(dateStr)) continue;
+
+      const method = pmDeliveryConfig.delivery_method === "motoboy" ? "Motoboy" : "Correios";
+      dates.push({ date: dateStr, type: method, price: pmShippingValue });
+    }
+    return dates;
+  };
+
+  const [pmDeliveryDates, setPmDeliveryDates] = useState<DeliveryDate[]>([]);
+  const [selectedPmDate, setSelectedPmDate] = useState<DeliveryDate | null>(null);
+
+  useEffect(() => {
+    if (pmSchedulingEnabled && isCheckoutGeneral) {
+      const dates = generatePMDeliveryDates();
+      setPmDeliveryDates(dates);
+    }
+  }, [checkout]);
+
   const lookupCep = async () => {
     const cep = form.cep.replace(/\D/g, "");
     if (cep.length !== 8) return;
     setCepLoading(true);
     track("cep_check", { cep });
-    await checkDeliveryProvider(cep);
+
+    // For PM checkouts, just use ViaCEP directly (no Logzz/Hyppe provider check)
+    if (isCheckoutGeneral) {
+      try {
+        const viaCepRes = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+        const viaCepData = await viaCepRes.json();
+        if (!viaCepData.erro) {
+          setForm((prev) => ({ ...prev, street: viaCepData.logradouro || "", district: viaCepData.bairro || "", city: viaCepData.localidade || "", state: viaCepData.uf || "" }));
+        }
+      } catch { /* ignore */ }
+      setDeliveryChecked(true);
+    } else {
+      await checkDeliveryProvider(cep);
+    }
     setCepLoading(false);
   };
 
@@ -299,7 +377,6 @@ const CheckoutPublic = () => {
       });
       const data = await res.json();
       if (import.meta.env.DEV) console.log("[Checkout] Response da edge function checkout-api:", JSON.stringify(data));
-      if (import.meta.env.DEV) console.log("[Checkout] Provider:", data?.provider);
 
       // Auto-fill address from edge function response (ViaCEP enrichment)
       if (data.street || data.neighborhood || data.city || data.state) {
@@ -323,7 +400,7 @@ const CheckoutPublic = () => {
       } else if (data.provider === "hyppe_antecipado" && data.shipping_options?.length > 0) {
         setProvider("hyppe_antecipado"); setDeliveryDates([]);
         setShippingOptions(data.shipping_options);
-        setSelectedShipping(data.shipping_options[0]); // auto-select cheapest
+        setSelectedShipping(data.shipping_options[0]);
       } else {
         setProvider("coinzz"); setDeliveryDates([]);
         setShippingOptions([]); setSelectedShipping(null);
@@ -367,9 +444,8 @@ const CheckoutPublic = () => {
     fetchFees();
   }, [checkout]);
 
-  const isCheckoutGeneral = (checkout as any)?.checkout_category === "general";
   const bumpsTotal = orderBumps.filter((b) => selectedBumps.has(b.id)).reduce((sum, b) => sum + (b.current_price || b.price || 0), 0);
-  const shippingPrice = provider === "hyppe_antecipado" && selectedShipping ? selectedShipping.price : 0;
+  const shippingPrice = isCheckoutGeneral ? pmShippingValue : (provider === "hyppe_antecipado" && selectedShipping ? selectedShipping.price : 0);
   const basePrice = (offer?.price || 0) + bumpsTotal + shippingPrice;
   const needsOnlinePayment = isCheckoutGeneral || provider === "coinzz" || provider === "hyppe_antecipado";
   const mpFeeAmount = needsOnlinePayment && mpFeePercent > 0 ? Math.round(basePrice * mpFeePercent) / 100 : 0;
@@ -467,8 +543,9 @@ const CheckoutPublic = () => {
     };
   }, [step, provider, paymentMethod, mpPublicKey, totalPrice]);
 
-  const isGeneralCheckout = (checkout as any)?.checkout_category === "general";
+  const isGeneralCheckout = isCheckoutGeneral;
   const isDigitalPM = isGeneralCheckout && ((checkout as any)?.product_type === "curso" || (checkout as any)?.product_type === "info_produto" || (checkout as any)?.product_type === "servico");
+  const isPhysicalPM = isGeneralCheckout && (checkout as any)?.product_type === "dropshipping";
   const isCODProvider = !isGeneralCheckout && (provider === "logzz" || provider === "hyppe_cod");
   const needsAddress = !isDigitalPM; // dropshipping PM still needs address
   const totalSteps = isDigitalPM ? 3 : isCODProvider ? 3 : 4;
@@ -481,7 +558,8 @@ const CheckoutPublic = () => {
   const cpfValid = validateCpf(form.cpf);
   const cpfApproved = isGeneralCheckout ? cpfValid : (cpfValid && cpfResult?.valid === true && cpfResult?.status !== "blocked");
   const step1Valid = form.name.length >= 2 && form.phone.replace(/\D/g, "").length >= 10 && cpfApproved && !cpfValidating;
-  const step2Valid = !needsAddress || (form.cep.replace(/\D/g, "").length === 8 && form.street && form.number && form.district && form.city && form.state && deliveryChecked);
+  // PM physical: just needs CEP + address fields (no provider check needed)
+  const step2Valid = !needsAddress || (form.cep.replace(/\D/g, "").length === 8 && form.street && form.number && form.district && form.city && form.state && (isPhysicalPM || deliveryChecked));
 
   const goToStep = (s: number) => {
     if (s === 2 && !step1Valid) { toast.error("Preencha todos os campos obrigatórios"); return; }
@@ -941,9 +1019,13 @@ const CheckoutPublic = () => {
           )}
           <div className="flex justify-between">
             <span className="text-gray-500">Frete</span>
-            <span className="inline-flex items-center gap-1 text-emerald-600 font-medium">
-              <Truck className="h-3 w-3" /> Grátis
-            </span>
+            {shippingPrice > 0 ? (
+              <span className="text-gray-900 font-medium">R$ {shippingPrice.toFixed(2)}</span>
+            ) : (
+              <span className="inline-flex items-center gap-1 text-emerald-600 font-medium">
+                <Truck className="h-3 w-3" /> Grátis
+              </span>
+            )}
           </div>
           {mpFeeAmount > 0 && (
             <div className="flex justify-between"><span className="text-gray-500">Taxa de processamento</span><span className="text-gray-900">R$ {mpFeeAmount.toFixed(2)}</span></div>
@@ -966,7 +1048,7 @@ const CheckoutPublic = () => {
         <div className="checkout-trust-badges mt-4 space-y-2 pt-3 border-t border-gray-100">
           <div className="flex items-center gap-2 text-xs text-gray-500"><Lock className="h-3.5 w-3.5 text-emerald-400" /> Proteção SSL 256-bit</div>
           <div className="flex items-center gap-2 text-xs text-gray-500"><Truck className="h-3.5 w-3.5 text-emerald-400" /> Entrega Garantida</div>
-          <div className="flex items-center gap-2 text-xs text-gray-500"><CreditCard className="h-3.5 w-3.5 text-emerald-400" /> Pague na Entrega</div>
+          <div className="flex items-center gap-2 text-xs text-gray-500"><CreditCard className="h-3.5 w-3.5 text-emerald-400" /> {isCheckoutGeneral ? "Pagamento Seguro" : "Pague na Entrega"}</div>
           <div className="flex items-center gap-2 text-xs text-gray-500"><ShieldCheck className="h-3.5 w-3.5 text-emerald-400" /> 7 dias de garantia</div>
         </div>
       </div>
@@ -1036,10 +1118,17 @@ const CheckoutPublic = () => {
 
         {/* Social proof + trust badges */}
         <div className="mb-4 space-y-3">
-          <div className="flex items-center gap-2 bg-orange-50 border border-orange-100 rounded-xl px-3 py-2">
-            <span className="text-base">🔥</span>
-            <p className="text-xs text-orange-800"><strong>{Math.floor(Math.random() * 30 + 25)} pessoas</strong> estão vendo este produto agora</p>
-          </div>
+          {/* Scarcity timer or social proof */}
+          {scarcityEnabled ? (
+            <div className="rounded-xl px-4 py-2.5 text-center font-bold text-sm" style={{ backgroundColor: scarcityConfig?.bg_color || "#ef4444", color: scarcityConfig?.text_color || "#fff" }}>
+              {scarcityConfig?.text || "🔥 OFERTA EXPIRA EM:"} {String(Math.floor(scarcityTimeLeft / 60)).padStart(2, "0")}:{String(scarcityTimeLeft % 60).padStart(2, "0")}
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 bg-orange-50 border border-orange-100 rounded-xl px-3 py-2">
+              <span className="text-base">🔥</span>
+              <p className="text-xs text-orange-800"><strong>{Math.floor(Math.random() * 30 + 25)} pessoas</strong> estão vendo este produto agora</p>
+            </div>
+          )}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             {[
               { icon: "🔒", title: "Site Seguro", sub: "SSL 256-bit" },
