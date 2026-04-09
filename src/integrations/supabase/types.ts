@@ -2421,6 +2421,10 @@ export type Database = {
         Args: { p_amount: number; p_user_id: string }
         Returns: boolean
       }
+      delete_checkout_cascade: {
+        Args: { p_checkout_id: string }
+        Returns: undefined
+      }
       get_effective_user_id: { Args: never; Returns: string }
       get_user_plan_limit: { Args: { feature: string }; Returns: number }
       has_active_subscription: { Args: never; Returns: boolean }
