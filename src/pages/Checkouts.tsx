@@ -324,10 +324,15 @@ const Checkouts = () => {
   }
 
   function handleGeneralSave(data: any) {
+    const normalizedData = {
+      ...data,
+      product_type: data.product_type === "pedidos_manuais" ? "dropshipping" : data.product_type,
+    };
+
     if (editingGeneralCheckout) {
-      generalUpdateMutation.mutate({ id: editingGeneralCheckout.id, ...data });
+      generalUpdateMutation.mutate({ id: editingGeneralCheckout.id, ...normalizedData });
     } else {
-      generalCreateMutation.mutate(data);
+      generalCreateMutation.mutate(normalizedData);
     }
   }
 
