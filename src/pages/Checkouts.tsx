@@ -232,10 +232,7 @@ const Checkouts = () => {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      // Cascade: delete related orders and leads first
-      await supabase.from("orders").delete().eq("checkout_id", id);
-      await supabase.from("pixel_events").delete().eq("checkout_id", id);
-      const { error } = await supabase.from("checkouts").delete().eq("id", id);
+      const { error } = await supabase.rpc("delete_checkout_cascade", { p_checkout_id: id });
       if (error) throw error;
     },
     onSuccess: () => {
