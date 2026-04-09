@@ -1492,11 +1492,69 @@ const CheckoutPublic = () => {
                       className="mt-1 w-full p-2.5 border border-gray-200 rounded-xl text-sm resize-none bg-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none"
                       rows={2}
                     />
-                    <p className="text-[10px] text-gray-400 mt-0.5">Ajude o entregador a encontrar seu endereço</p>
+                   <p className="text-[10px] text-gray-400 mt-0.5">Ajude o entregador a encontrar seu endereço</p>
                   </div>
+
+                  {/* PM Delivery Method & Scheduling */}
+                  {isPhysicalPM && pmDeliveryConfig && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-3">
+                      {/* Delivery method badge */}
+                      <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3">
+                        <div className="flex items-center gap-2">
+                          <Truck className="h-4 w-4 text-emerald-600" />
+                          <div>
+                            <p className="text-sm font-semibold text-emerald-800">
+                              Entrega via {pmDeliveryConfig.delivery_method === "motoboy" ? "Motoboy" : "Correios"}
+                            </p>
+                            <p className="text-xs text-emerald-600">
+                              {pmShippingValue > 0 ? `Frete: R$ ${pmShippingValue.toFixed(2)}` : "Frete Grátis 🎉"}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Scheduling dates */}
+                      {pmSchedulingEnabled && pmDeliveryDates.length > 0 && (
+                        <div>
+                          <p className="text-xs font-semibold text-gray-700 mb-2 flex items-center gap-1.5">
+                            <Calendar className="h-3.5 w-3.5 text-emerald-500" /> Escolha a data de entrega
+                          </p>
+                          <div className="grid grid-cols-3 gap-2">
+                            {pmDeliveryDates.map((dd, i) => {
+                              const fmt = formatDeliveryDate(dd.date);
+                              const isSelected = selectedPmDate?.date === dd.date;
+                              return (
+                                <motion.button
+                                  key={i}
+                                  onClick={() => setSelectedPmDate(dd)}
+                                  whileTap={{ scale: 0.95 }}
+                                  initial={{ opacity: 0, y: 10 }}
+                                  animate={{ opacity: 1, y: 0, transition: { delay: i * 0.06 } }}
+                                  className={`relative rounded-xl border-2 p-2.5 text-center transition-colors ${
+                                    isSelected ? "border-emerald-500 bg-emerald-50 shadow-md shadow-emerald-500/10" : "border-gray-200 bg-white hover:border-gray-300"
+                                  }`}
+                                >
+                                  {i === 0 && (
+                                    <span className="absolute -top-2 left-1/2 -translate-x-1/2 rounded-full bg-emerald-500 px-1.5 py-0.5 text-[8px] font-bold text-white uppercase">Melhor</span>
+                                  )}
+                                  <p className="text-[10px] font-semibold text-gray-900 capitalize mt-0.5">{fmt.weekday}</p>
+                                  <p className="text-xl font-bold text-gray-900">{fmt.day}</p>
+                                  <p className="text-[9px] font-bold text-gray-500 uppercase">{fmt.month}</p>
+                                </motion.button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </motion.div>
+                  )}
+
                   <button
                     onClick={() => {
                       if (!step2Valid) { toast.error("Preencha o endereço completo e aguarde a verificação do CEP"); return; }
+                      if (isPhysicalPM && pmSchedulingEnabled && pmDeliveryDates.length > 0 && !selectedPmDate) {
+                        toast.error("Selecione uma data de entrega"); return;
+                      }
                       goToStep(3);
                     }}
                     disabled={!step2Valid}
