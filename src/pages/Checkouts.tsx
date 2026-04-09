@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { ShoppingCart, CheckCircle, PauseCircle, Package, Plus, Search, Copy, Pencil, Trash2, ToggleLeft, ToggleRight, ExternalLink, RefreshCw, Loader2, ShoppingBag, Zap } from "lucide-react";
+import { ShoppingCart, CheckCircle, PauseCircle, Package, Plus, Search, Copy, Pencil, Trash2, ToggleLeft, ToggleRight, ExternalLink, RefreshCw, Loader2, ShoppingBag, Zap, X, Image as ImageIcon } from "lucide-react";
 import PageHeader from "@/components/PageHeader";
 import StatCard from "@/components/StatCard";
 import EmptyState from "@/components/EmptyState";
@@ -338,11 +338,13 @@ const Checkouts = () => {
     toast.success("URL copiada!");
   }
 
-  const filtered = checkouts.filter((c) => {
-    const matchSearch = c.name.toLowerCase().includes(search.toLowerCase());
+  const filteredCod = checkouts.filter((c) => {
     const cat = (c as any).checkout_category || "cod";
-    const matchCategory = filterCategory === "all" || cat === filterCategory;
-    return matchSearch && matchCategory;
+    return cat === "cod" && c.name.toLowerCase().includes(search.toLowerCase());
+  });
+  const filteredPm = checkouts.filter((c) => {
+    const cat = (c as any).checkout_category || "cod";
+    return cat === "general" && c.name.toLowerCase().includes(search.toLowerCase());
   });
 
   const activeCount = checkouts.filter((c) => c.is_active).length;
@@ -351,7 +353,7 @@ const Checkouts = () => {
   const generalCount = checkouts.filter((c) => (c as any).checkout_category === "general").length;
 
   const typeLabel: Record<string, string> = { standard: "Padrão", express: "Express", hybrid: "Híbrido" };
-  const productTypeLabel: Record<string, string> = { dropshipping: "Dropshipping", curso: "Curso", info_produto: "Info Produto", servico: "Serviço" };
+  const productTypeLabel: Record<string, string> = { pedidos_manuais: "Pedidos Manuais", dropshipping: "Dropshipping", curso: "Curso", info_produto: "Info Produto", servico: "Serviço" };
 
   return (
     <div>
@@ -370,7 +372,7 @@ const Checkouts = () => {
               onClick={() => { setEditingGeneralCheckout(null); setGeneralWizardOpen(true); }}
               className="gradient-primary flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold text-primary-foreground transition-all hover:opacity-90"
             >
-              <Zap className="h-4 w-4" /> Novo Checkout Geral
+              <Zap className="h-4 w-4" /> Novo Checkout PM
             </button>
           </div>
         }
@@ -381,36 +383,21 @@ const Checkouts = () => {
         <StatCard label="Total Checkouts" value={checkouts.length} icon={<ShoppingCart className="h-6 w-6 text-primary" />} iconBg="bg-primary/10" />
         <StatCard label="Ativos" value={activeCount} icon={<CheckCircle className="h-6 w-6 text-success" />} iconBg="bg-success/10" />
         <StatCard label="COD" value={codCount} icon={<Package className="h-6 w-6 text-warning" />} iconBg="bg-warning/10" />
-        <StatCard label="Geral" value={generalCount} icon={<Zap className="h-6 w-6 text-primary" />} iconBg="bg-primary/10" />
+        <StatCard label="Pedidos Manuais" value={generalCount} icon={<Zap className="h-6 w-6 text-primary" />} iconBg="bg-primary/10" />
       </div>
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList>
-          <TabsTrigger value="checkouts">Meus Checkouts</TabsTrigger>
+          <TabsTrigger value="checkouts">Checkouts COD</TabsTrigger>
+          <TabsTrigger value="pm">Checkouts Pedidos Manuais</TabsTrigger>
           <TabsTrigger value="bumps">Order Bumps & Upsells</TabsTrigger>
         </TabsList>
 
         <TabsContent value="checkouts">
-          {/* List */}
           <div className="ninja-card">
             <div className="mb-6 flex items-center justify-between gap-3 flex-wrap">
-              <div className="flex items-center gap-2">
-                <h2 className="text-lg font-bold text-foreground">Meus Checkouts</h2>
-                <div className="flex items-center gap-1 ml-2">
-                  {(["all", "cod", "general"] as const).map((cat) => (
-                    <button
-                      key={cat}
-                      onClick={() => setFilterCategory(cat)}
-                      className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${
-                        filterCategory === cat ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground hover:bg-muted/80"
-                      }`}
-                    >
-                      {cat === "all" ? "Todos" : cat === "cod" ? "COD" : "Geral"}
-                    </button>
-                  ))}
-                </div>
-              </div>
+              <h2 className="text-lg font-bold text-foreground">Checkouts COD</h2>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <input
@@ -422,25 +409,19 @@ const Checkouts = () => {
 
             {isLoading ? (
               <div className="space-y-4">{[1, 2, 3].map((i) => <div key={i} className="h-20 animate-pulse rounded-lg bg-muted" />)}</div>
-            ) : filtered.length === 0 ? (
+            ) : filteredCod.length === 0 ? (
               <EmptyState
                 icon={<Plus className="h-12 w-12" />}
-                title="Criar Primeiro Checkout"
-                description="Crie seu primeiro checkout para começar a vender."
+                title="Nenhum Checkout COD"
+                description="Crie seu primeiro checkout COD para começar a vender."
                 className="border border-dashed border-border shadow-none"
-                action={
-                  <div className="flex gap-2">
-                    <button onClick={() => setWizardOpen(true)} className="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-foreground">COD</button>
-                    <button onClick={() => setGeneralWizardOpen(true)} className="gradient-primary rounded-lg px-5 py-2.5 text-sm font-semibold text-primary-foreground">+ Checkout Geral</button>
-                  </div>
-                }
+                action={<button onClick={() => setWizardOpen(true)} className="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-foreground">+ Novo COD</button>}
               />
             ) : (
               <div className="space-y-3">
-                {filtered.map((c) => {
+                {filteredCod.map((c) => {
                   const offer = offers.find((o) => o.id === c.offer_id);
                   const product = offer ? products.find((p) => p.id === offer.product_id) : null;
-                  const isCod = ((c as any).checkout_category || "cod") === "cod";
                   return (
                     <div key={c.id} className="flex items-center justify-between rounded-lg border border-border bg-secondary/50 p-4 transition-colors hover:bg-secondary">
                       <div className="flex-1 min-w-0">
@@ -449,15 +430,8 @@ const Checkouts = () => {
                           <Badge variant={c.is_active ? "default" : "secondary"} className={c.is_active ? "bg-success/20 text-success border-success/30" : "bg-muted text-muted-foreground"}>
                             {c.is_active ? "Ativo" : "Inativo"}
                           </Badge>
-                          <Badge variant="outline" className={`text-xs ${isCod ? "border-warning/30 text-warning" : "border-primary/30 text-primary"}`}>
-                            {isCod ? "COD" : "Geral"}
-                          </Badge>
-                          {!isCod && (c as any).product_type && (
-                            <Badge variant="outline" className="text-xs border-muted-foreground/20">
-                              {productTypeLabel[(c as any).product_type] || (c as any).product_type}
-                            </Badge>
-                          )}
-                          {isCod && <Badge variant="outline" className="text-xs">{typeLabel[c.type || "hybrid"] || c.type}</Badge>}
+                          <Badge variant="outline" className="text-xs border-warning/30 text-warning">COD</Badge>
+                          <Badge variant="outline" className="text-xs">{typeLabel[c.type || "hybrid"] || c.type}</Badge>
                         </div>
                         <div className="flex items-center gap-4 text-xs text-muted-foreground">
                           {product && <span>Produto: {product.name}</span>}
@@ -476,6 +450,63 @@ const Checkouts = () => {
                     </div>
                   );
                 })}
+              </div>
+            )}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="pm">
+          <div className="ninja-card">
+            <div className="mb-6 flex items-center justify-between gap-3 flex-wrap">
+              <h2 className="text-lg font-bold text-foreground">Checkouts Pedidos Manuais</h2>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <input type="text" placeholder="Buscar..." value={search} onChange={(e) => setSearch(e.target.value)}
+                  className="h-9 rounded-lg border border-border bg-input pl-9 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30" />
+              </div>
+            </div>
+            {isLoading ? (
+              <div className="space-y-4">{[1, 2, 3].map((i) => <div key={i} className="h-20 animate-pulse rounded-lg bg-muted" />)}</div>
+            ) : filteredPm.length === 0 ? (
+              <EmptyState
+                icon={<Zap className="h-12 w-12" />}
+                title="Nenhum Checkout PM"
+                description="Crie seu primeiro checkout de Pedidos Manuais."
+                className="border border-dashed border-border shadow-none"
+                action={<button onClick={() => { setEditingGeneralCheckout(null); setGeneralWizardOpen(true); }} className="gradient-primary rounded-lg px-5 py-2.5 text-sm font-semibold text-primary-foreground">+ Novo Checkout PM</button>}
+              />
+            ) : (
+              <div className="space-y-3">
+                {filteredPm.map((c) => (
+                  <div key={c.id} className="flex items-center justify-between rounded-lg border border-border bg-secondary/50 p-4 transition-colors hover:bg-secondary">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
+                        <span className="font-semibold text-foreground truncate">{c.name}</span>
+                        <Badge variant={c.is_active ? "default" : "secondary"} className={c.is_active ? "bg-success/20 text-success border-success/30" : "bg-muted text-muted-foreground"}>
+                          {c.is_active ? "Ativo" : "Inativo"}
+                        </Badge>
+                        <Badge variant="outline" className="text-xs border-primary/30 text-primary">PM</Badge>
+                        {(c as any).product_type && (
+                          <Badge variant="outline" className="text-xs border-muted-foreground/20">
+                            {productTypeLabel[(c as any).product_type] || (c as any).product_type}
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                        <span>{orderCounts[c.id] || 0} pedidos</span>
+                        {c.slug && <span className="flex items-center gap-1"><ExternalLink className="h-3 w-3" />/c/{c.slug}</span>}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1.5 ml-4">
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" onClick={() => openEdit(c)}><Pencil className="h-4 w-4" /></Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" onClick={() => copyUrl(c.slug)}><Copy className="h-4 w-4" /></Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" onClick={() => toggleMutation.mutate({ id: c.id, is_active: !c.is_active })}>
+                        {c.is_active ? <ToggleRight className="h-4 w-4 text-success" /> : <ToggleLeft className="h-4 w-4" />}
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => { if (confirm("Excluir este checkout?")) deleteMutation.mutate(c.id); }}><Trash2 className="h-4 w-4" /></Button>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </div>
@@ -964,6 +995,13 @@ const Checkouts = () => {
 function OrderBumpsTab() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const [createOpen, setCreateOpen] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newPrice, setNewPrice] = useState("");
+  const [newDesc, setNewDesc] = useState("");
+  const [newImageUrl, setNewImageUrl] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const { data: bumps = [], isLoading } = useQuery({
     queryKey: ["all-order-bumps"],
@@ -973,6 +1011,20 @@ function OrderBumpsTab() {
       return data;
     },
     enabled: !!user,
+  });
+
+  const createBumpMutation = useMutation({
+    mutationFn: async (payload: any) => {
+      const { error } = await supabase.from("order_bumps").insert(payload);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["all-order-bumps"] });
+      toast.success("Order bump criado!");
+      setCreateOpen(false);
+      setNewName(""); setNewPrice(""); setNewDesc(""); setNewImageUrl("");
+    },
+    onError: (e: any) => toast.error(e.message),
   });
 
   const deleteBumpMutation = useMutation({
@@ -987,11 +1039,50 @@ function OrderBumpsTab() {
     onError: (e: any) => toast.error(e.message),
   });
 
+  async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) { toast.error("Máx 5MB"); return; }
+    setUploading(true);
+    try {
+      const ext = file.name.split(".").pop();
+      const path = `bumps/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      const { error } = await supabase.storage.from("checkout-assets").upload(path, file);
+      if (error) throw error;
+      const { data: urlData } = supabase.storage.from("checkout-assets").getPublicUrl(path);
+      setNewImageUrl(urlData.publicUrl);
+      toast.success("Imagem enviada!");
+    } catch (err: any) { toast.error(err.message); }
+    setUploading(false);
+    if (fileRef.current) fileRef.current.value = "";
+  }
+
+  function handleCreate() {
+    if (!newName.trim() || !newPrice) return toast.error("Nome e preço são obrigatórios");
+    // We need an offer_id — for general bumps we'll create a placeholder
+    // For now, we require at least one offer to exist
+    createBumpMutation.mutate({
+      name: newName.trim(),
+      price: Number(newPrice),
+      current_price: Number(newPrice),
+      description: newDesc || null,
+      image_url: newImageUrl || null,
+      label_bump: "OFERTA ESPECIAL",
+      is_active: true,
+      offer_id: bumps[0]?.offer_id || null, // will be linked when attached to checkout
+    });
+  }
+
   return (
     <div className="ninja-card">
-      <div className="mb-6">
-        <h2 className="text-lg font-bold text-foreground mb-1">Order Bumps & Upsells</h2>
-        <p className="text-sm text-muted-foreground">Gerencie todos os order bumps e upsells cadastrados nos seus checkouts.</p>
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-bold text-foreground mb-1">Order Bumps Cadastrados</h2>
+          <p className="text-sm text-muted-foreground">Gerencie order bumps para vincular aos seus checkouts.</p>
+        </div>
+        <Button onClick={() => setCreateOpen(true)} className="gradient-primary text-primary-foreground">
+          <Plus className="h-4 w-4 mr-1" /> Novo Order Bump
+        </Button>
       </div>
 
       {isLoading ? (
@@ -1000,24 +1091,28 @@ function OrderBumpsTab() {
         <EmptyState
           icon={<ShoppingBag className="h-12 w-12" />}
           title="Nenhum Order Bump"
-          description="Adicione order bumps ao criar ou editar um checkout."
+          description="Crie order bumps para oferecer produtos complementares nos seus checkouts."
           className="border border-dashed border-border shadow-none"
+          action={<Button onClick={() => setCreateOpen(true)} className="gradient-primary text-primary-foreground"><Plus className="h-4 w-4 mr-1" /> Criar Order Bump</Button>}
         />
       ) : (
         <div className="space-y-3">
           {bumps.map((bump: any) => (
             <div key={bump.id} className="flex items-center justify-between p-4 rounded-xl border border-border bg-secondary/50">
               <div className="flex items-center gap-3 flex-1 min-w-0">
-                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                  <ShoppingBag className="h-5 w-5 text-primary" />
-                </div>
+                {bump.image_url ? (
+                  <img src={bump.image_url} alt={bump.name} className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
+                ) : (
+                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                    <ShoppingBag className="h-5 w-5 text-primary" />
+                  </div>
+                )}
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-foreground truncate">{bump.name}</p>
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     <span className="text-primary font-semibold">R$ {(bump.current_price || bump.price || 0).toFixed(2)}</span>
                     {bump.label_bump && <Badge variant="outline" className="text-[10px]">{bump.label_bump}</Badge>}
                     {bump.offers?.name && <span>· Oferta: {bump.offers.name}</span>}
-                    {bump.hash && <span className="font-mono">· {bump.hash}</span>}
                   </div>
                 </div>
               </div>
@@ -1033,6 +1128,62 @@ function OrderBumpsTab() {
           ))}
         </div>
       )}
+
+      {/* Create Bump Dialog */}
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent className="sm:max-w-[500px] bg-card border-border">
+          <DialogHeader>
+            <DialogTitle className="text-foreground">Novo Order Bump</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Nome *</Label>
+                <Input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Ex: Acesso VIP" className="bg-input border-border mt-1" />
+              </div>
+              <div>
+                <Label>Preço (R$) *</Label>
+                <Input type="number" step="0.01" value={newPrice} onChange={(e) => setNewPrice(e.target.value)} placeholder="19.90" className="bg-input border-border mt-1" />
+              </div>
+            </div>
+            <div>
+              <Label>Descrição</Label>
+              <Textarea value={newDesc} onChange={(e) => setNewDesc(e.target.value)} placeholder="Descrição que aparecerá no checkout" className="bg-input border-border mt-1" />
+            </div>
+            <div>
+              <Label>Imagem</Label>
+              <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={handleImageUpload} className="hidden" />
+              {newImageUrl ? (
+                <div className="mt-2 relative">
+                  <img src={newImageUrl} alt="Preview" className="w-full h-32 object-cover rounded-xl border border-border" />
+                  <button onClick={() => setNewImageUrl("")} className="absolute top-2 right-2 p-1 bg-destructive/90 text-destructive-foreground rounded-full"><X className="h-3.5 w-3.5" /></button>
+                </div>
+              ) : (
+                <button onClick={() => fileRef.current?.click()} disabled={uploading}
+                  className="mt-2 w-full flex flex-col items-center justify-center gap-2 p-6 rounded-xl border-2 border-dashed border-border bg-secondary/30 hover:border-primary/30 transition-all">
+                  {uploading ? <span className="text-sm text-muted-foreground animate-pulse">Enviando...</span> : (
+                    <>
+                      <ImageIcon className="h-8 w-8 text-muted-foreground/50" />
+                      <span className="text-sm text-primary font-medium">Clique ou arraste uma imagem</span>
+                      <span className="text-[11px] text-muted-foreground">JPG, PNG, WebP ou GIF (máx. 5MB)</span>
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <span>Status:</span>
+              <Badge className="bg-success/20 text-success border-success/30">✓ Ativo</Badge>
+            </div>
+            <div className="flex gap-3 pt-2">
+              <Button variant="outline" onClick={() => setCreateOpen(false)} className="flex-1">Cancelar</Button>
+              <Button onClick={handleCreate} disabled={createBumpMutation.isPending} className="flex-1 gradient-primary text-primary-foreground">
+                {createBumpMutation.isPending ? "Criando..." : "Criar Order Bump"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

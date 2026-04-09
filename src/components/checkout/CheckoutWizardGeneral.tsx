@@ -1,7 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import StepProductType from "./StepProductType";
 import StepVisualCustomization from "./StepVisualCustomization";
 import StepOrderBumpGeneral from "./StepOrderBumpGeneral";
@@ -22,12 +25,17 @@ const defaultScarcity = { enabled: false, duration_minutes: 15, bg_color: "#ef44
 const defaultPayment = { pix_enabled: true, credit_card_enabled: true, boleto_enabled: false, mp_balance_enabled: false };
 
 export default function CheckoutWizardGeneral({ open, onClose, onSave, saving, editData }: Props) {
+  const { user } = useAuth();
   const [step, setStep] = useState(1);
 
   // Step 1
-  const [productType, setProductType] = useState(editData?.product_type || "dropshipping");
+  const [productType, setProductType] = useState(editData?.product_type || "pedidos_manuais");
   const [formName, setFormName] = useState(editData?.name || "");
   const [productCoverUrl, setProductCoverUrl] = useState(editData?.product_cover_url || "");
+  const [productPrice, setProductPrice] = useState<number>(editData?.product_price || 0);
+  const [productOfferPrice, setProductOfferPrice] = useState<number>(editData?.product_offer_price || 0);
+  const [productDescription, setProductDescription] = useState(editData?.product_description || "");
+  const [selectedBumpIds, setSelectedBumpIds] = useState<string[]>([]);
 
   // Step 2
   const [primaryColor, setPrimaryColor] = useState(editData?.primary_color || "#6366f1");
@@ -39,7 +47,7 @@ export default function CheckoutWizardGeneral({ open, onClose, onSave, saving, e
   // Step 3
   const [orderBumpEnabled, setOrderBumpEnabled] = useState(editData?.order_bump_enabled || false);
   const [upsellEnabled, setUpsellEnabled] = useState(editData?.upsell_enabled || false);
-  const [bumps, setBumps] = useState<any[]>([]);
+  const [bumps, setBumps] = useState<any[]>(editData?.config?.bumps || []);
 
   // Step 4
   const [paymentConfig, setPaymentConfig] = useState(editData?.config?.payment || { ...defaultPayment });
@@ -57,11 +65,30 @@ export default function CheckoutWizardGeneral({ open, onClose, onSave, saving, e
   const [whatsappSupport, setWhatsappSupport] = useState(editData?.whatsapp_support || "");
   const [customCss, setCustomCss] = useState(editData?.custom_css || "");
 
-  const stepLabels = ["Produto & Tipo", "Visual", "Order Bump", "Pagamento", "Tracking", "Links & Extras"];
+  // Fetch available bumps for selection in step 1
+  const { data: availableBumps = [] } = useQuery({
+    queryKey: ["available-bumps-for-general"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("order_bumps").select("id, name, price, current_price, label_bump, description, image_url").eq("is_active", true);
+      if (error) throw error;
+      return (data || []).map((b: any) => ({
+        id: b.id,
+        name: b.name,
+        price: b.current_price || b.price || 0,
+        label_bump: b.label_bump || "OFERTA ESPECIAL",
+        description: b.description || "",
+        image_url: b.image_url || "",
+      }));
+    },
+    enabled: open && !!user,
+  });
+
+  const stepLabels = ["Produto", "Visual", "Order Bump", "Pagamento", "Tracking", "Links & Extras"];
 
   function handleSave() {
     if (!formName.trim()) return toast.error("Nome é obrigatório");
     if (!productType) return toast.error("Selecione um tipo de produto");
+    if (!productPrice || productPrice <= 0) return toast.error("Preço é obrigatório");
 
     const slug = `${formName.trim()}-${Math.random().toString(36).slice(2, 9)}`
       .toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "").replace(/-+/g, "-").slice(0, 80);
@@ -72,6 +99,9 @@ export default function CheckoutWizardGeneral({ open, onClose, onSave, saving, e
       checkout_category: "general",
       product_type: productType,
       product_cover_url: productCoverUrl || null,
+      product_price: productPrice || null,
+      product_offer_price: productOfferPrice || null,
+      product_description: productDescription || null,
       primary_color: primaryColor || null,
       font_family: fontFamily || null,
       cta_config: ctaConfig,
@@ -79,7 +109,7 @@ export default function CheckoutWizardGeneral({ open, onClose, onSave, saving, e
       banner_images: bannerImages,
       order_bump_enabled: orderBumpEnabled,
       upsell_enabled: upsellEnabled,
-      config: { payment: paymentConfig, bumps },
+      config: { payment: paymentConfig, bumps, selectedBumpIds },
       pixel_facebook: pixelFacebook || null,
       pixel_id: pixelFacebook || null,
       meta_capi_token: metaCapiToken || null,
@@ -99,8 +129,8 @@ export default function CheckoutWizardGeneral({ open, onClose, onSave, saving, e
       <DialogContent className="sm:max-w-[600px] bg-card border-border max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-foreground flex items-center gap-2">
-            <span className="text-[10px] bg-primary/15 text-primary px-2 py-0.5 rounded-full font-bold">GERAL</span>
-            {editData ? "Editar Checkout Geral" : "Novo Checkout Geral"}
+            <span className="text-[10px] bg-primary/15 text-primary px-2 py-0.5 rounded-full font-bold">PM</span>
+            {editData ? "Editar Checkout PM" : "Novo Checkout PM"}
           </DialogTitle>
         </DialogHeader>
 
@@ -123,6 +153,11 @@ export default function CheckoutWizardGeneral({ open, onClose, onSave, saving, e
             productType={productType} setProductType={setProductType}
             formName={formName} setFormName={setFormName}
             productCoverUrl={productCoverUrl} setProductCoverUrl={setProductCoverUrl}
+            productPrice={productPrice} setProductPrice={setProductPrice}
+            productOfferPrice={productOfferPrice} setProductOfferPrice={setProductOfferPrice}
+            productDescription={productDescription} setProductDescription={setProductDescription}
+            selectedBumpIds={selectedBumpIds} setSelectedBumpIds={setSelectedBumpIds}
+            availableBumps={availableBumps}
           />
         )}
         {step === 2 && (
