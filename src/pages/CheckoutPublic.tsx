@@ -185,7 +185,35 @@ const CheckoutPublic = () => {
         gAdsRef.current = gads;
       }
 
-      if (c.offer_id) {
+      // PM (general) checkouts: product data lives directly on the checkout row
+      if ((c as any).checkout_category === "general") {
+        const syntheticOffer: OfferData = {
+          id: c.id,
+          name: c.name,
+          price: (c as any).product_offer_price || (c as any).product_price || 0,
+          original_price: (c as any).product_offer_price ? (c as any).product_price : null,
+          product_id: c.id,
+          hash: null,
+        };
+        setOffer(syntheticOffer);
+        setOriginalOffer(syntheticOffer);
+        setProduct({
+          id: c.id,
+          name: c.name,
+          main_image_url: (c as any).product_cover_url || null,
+        });
+
+        // Load selected bumps from config
+        const selectedBumpIds: string[] = (c as any).config?.selectedBumpIds || [];
+        if (selectedBumpIds.length > 0) {
+          const { data: bumps } = await supabase
+            .from("order_bumps")
+            .select("*")
+            .in("id", selectedBumpIds)
+            .eq("is_active", true);
+          if (bumps) setOrderBumps(bumps as any);
+        }
+      } else if (c.offer_id) {
         const { data: o } = await supabase.from("offers").select("*").eq("id", c.offer_id).single();
         if (o) {
           setOffer(o as any);
