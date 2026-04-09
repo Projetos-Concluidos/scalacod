@@ -185,7 +185,35 @@ const CheckoutPublic = () => {
         gAdsRef.current = gads;
       }
 
-      if (c.offer_id) {
+      // PM (general) checkouts: product data lives directly on the checkout row
+      if ((c as any).checkout_category === "general") {
+        const syntheticOffer: OfferData = {
+          id: c.id,
+          name: c.name,
+          price: (c as any).product_offer_price || (c as any).product_price || 0,
+          original_price: (c as any).product_offer_price ? (c as any).product_price : null,
+          product_id: c.id,
+          hash: null,
+        };
+        setOffer(syntheticOffer);
+        setOriginalOffer(syntheticOffer);
+        setProduct({
+          id: c.id,
+          name: c.name,
+          main_image_url: (c as any).product_cover_url || null,
+        });
+
+        // Load selected bumps from config
+        const selectedBumpIds: string[] = (c as any).config?.selectedBumpIds || [];
+        if (selectedBumpIds.length > 0) {
+          const { data: bumps } = await supabase
+            .from("order_bumps")
+            .select("*")
+            .in("id", selectedBumpIds)
+            .eq("is_active", true);
+          if (bumps) setOrderBumps(bumps as any);
+        }
+      } else if (c.offer_id) {
         const { data: o } = await supabase.from("offers").select("*").eq("id", c.offer_id).single();
         if (o) {
           setOffer(o as any);
@@ -339,10 +367,11 @@ const CheckoutPublic = () => {
     fetchFees();
   }, [checkout]);
 
+  const isCheckoutGeneral = (checkout as any)?.checkout_category === "general";
   const bumpsTotal = orderBumps.filter((b) => selectedBumps.has(b.id)).reduce((sum, b) => sum + (b.current_price || b.price || 0), 0);
   const shippingPrice = provider === "hyppe_antecipado" && selectedShipping ? selectedShipping.price : 0;
   const basePrice = (offer?.price || 0) + bumpsTotal + shippingPrice;
-  const needsOnlinePayment = provider === "coinzz" || provider === "hyppe_antecipado";
+  const needsOnlinePayment = isCheckoutGeneral || provider === "coinzz" || provider === "hyppe_antecipado";
   const mpFeeAmount = needsOnlinePayment && mpFeePercent > 0 ? Math.round(basePrice * mpFeePercent) / 100 : 0;
   const totalPrice = basePrice + mpFeeAmount;
 
@@ -438,20 +467,27 @@ const CheckoutPublic = () => {
     };
   }, [step, provider, paymentMethod, mpPublicKey, totalPrice]);
 
-  const isCODProvider = provider === "logzz" || provider === "hyppe_cod";
-  const totalSteps = isCODProvider ? 3 : 4;
-  const progressPercent = isCODProvider
-    ? step >= 4 ? 100 : step === 3 ? 75 : step === 2 ? 50 : 25
-    : (step / totalSteps) * 100;
+  const isGeneralCheckout = (checkout as any)?.checkout_category === "general";
+  const isDigitalPM = isGeneralCheckout && ((checkout as any)?.product_type === "curso" || (checkout as any)?.product_type === "info_produto" || (checkout as any)?.product_type === "servico");
+  const isCODProvider = !isGeneralCheckout && (provider === "logzz" || provider === "hyppe_cod");
+  const needsAddress = !isDigitalPM; // dropshipping PM still needs address
+  const totalSteps = isDigitalPM ? 3 : isCODProvider ? 3 : 4;
+  const progressPercent = isDigitalPM
+    ? step >= 4 ? 100 : step === 3 ? 66 : step === 2 ? 33 : 15
+    : isCODProvider
+      ? step >= 4 ? 100 : step === 3 ? 75 : step === 2 ? 50 : 25
+      : (step / totalSteps) * 100;
 
   const cpfValid = validateCpf(form.cpf);
-  const cpfApproved = cpfValid && cpfResult?.valid === true && cpfResult?.status !== "blocked";
+  const cpfApproved = isGeneralCheckout ? cpfValid : (cpfValid && cpfResult?.valid === true && cpfResult?.status !== "blocked");
   const step1Valid = form.name.length >= 2 && form.phone.replace(/\D/g, "").length >= 10 && cpfApproved && !cpfValidating;
-  const step2Valid = form.cep.replace(/\D/g, "").length === 8 && form.street && form.number && form.district && form.city && form.state && deliveryChecked;
+  const step2Valid = !needsAddress || (form.cep.replace(/\D/g, "").length === 8 && form.street && form.number && form.district && form.city && form.state && deliveryChecked);
 
   const goToStep = (s: number) => {
     if (s === 2 && !step1Valid) { toast.error("Preencha todos os campos obrigatórios"); return; }
-    if (s === 3 && !step2Valid) { toast.error("Preencha o endereço completo"); return; }
+    // For digital PM, skip step 2 (address) — go directly to payment
+    if (isDigitalPM && s === 2) { s = 3; }
+    if (s === 3 && needsAddress && !step2Valid) { toast.error("Preencha o endereço completo"); return; }
     track("step_" + s);
 
     // FB Pixel step events
@@ -478,27 +514,28 @@ const CheckoutPublic = () => {
           order_data: {
             order_number: num,
             checkout_id: checkout.id,
-            offer_id: offer.id,
+            offer_id: isGeneralCheckout ? null : offer.id,
             client_name: form.name,
             client_email: null,
             client_document: form.cpf.replace(/\D/g, "") || null,
             client_phone: form.phone.replace(/\D/g, ""),
-            client_zip_code: form.cep.replace(/\D/g, ""),
-            client_address: form.street,
-            client_address_number: form.number,
-            client_address_comp: form.complement || null,
-            client_address_district: form.district,
-            client_address_city: form.city,
-            client_address_state: form.state,
+            client_zip_code: isDigitalPM ? "00000000" : form.cep.replace(/\D/g, ""),
+            client_address: isDigitalPM ? "Digital" : form.street,
+            client_address_number: isDigitalPM ? "0" : form.number,
+            client_address_comp: isDigitalPM ? null : (form.complement || null),
+            client_address_district: isDigitalPM ? "Digital" : form.district,
+            client_address_city: isDigitalPM ? "Digital" : form.city,
+            client_address_state: isDigitalPM ? "XX" : form.state,
             order_final_price: totalPrice,
             shipping_value: shippingPrice,
             status: "Aguardando",
-            logistics_type: provider || "logzz",
+            logistics_type: isGeneralCheckout ? "mercadopago" : (provider || "logzz"),
             delivery_date: isCODProvider && selectedDate ? selectedDate.date : null,
             delivery_type_code: isCODProvider && selectedDate ? selectedDate.type_code || null : null,
             delivery_type_name: isCODProvider && selectedDate ? selectedDate.type || null : null,
             local_operation_code: isCODProvider && selectedDate ? selectedDate.local_operation_code || null : null,
-            payment_method: isCODProvider ? "afterpay" : paymentMethod,
+            payment_method: isGeneralCheckout ? paymentMethod : (isCODProvider ? "afterpay" : paymentMethod),
+            products: isGeneralCheckout ? JSON.stringify([{ name: checkout.name, price: offer.price, qty: 1 }]) : null,
             utm_source: utm.utm_source || null,
             utm_medium: utm.utm_medium || null,
             utm_campaign: utm.utm_campaign || null,
@@ -553,7 +590,10 @@ const CheckoutPublic = () => {
     if (!checkout || !offer) return;
     setSubmitting(true);
     track("order_submitted");
-    if (isCODProvider) {
+    if (isGeneralCheckout) {
+      // PM checkouts always use online payment (MercadoPago)
+      setStep(3);
+    } else if (isCODProvider) {
       // COD providers (logzz, hyppe_cod) — create order directly
       const oid = await createOrder();
       if (oid) setStep(4);
@@ -679,6 +719,9 @@ const CheckoutPublic = () => {
   }
 
   const quantity = extractQty(checkout.name);
+  const isGeneral = (checkout as any).checkout_category === "general";
+  const productTypePM = (checkout as any).product_type;
+  const isDigitalProduct = productTypePM === "curso" || productTypePM === "info_produto" || productTypePM === "servico";
 
   // ── STEP 4: CONFIRMATION PAGE ──
   if (step === 4) {
@@ -972,9 +1015,23 @@ const CheckoutPublic = () => {
       </header>
 
       <div className="mx-auto max-w-5xl px-4 py-6">
-        {/* Header with product name */}
+        {/* Header with product name + image for PM */}
         <div className="mb-4 text-center">
+          {isGeneralCheckout && product?.main_image_url && (
+            <img src={product.main_image_url} alt={checkout.name} className="mx-auto mb-4 max-h-48 rounded-2xl object-cover shadow-sm" />
+          )}
           <h1 className="text-lg font-bold text-gray-900">{checkout.name}</h1>
+          {isGeneralCheckout && (checkout as any).product_description && (
+            <p className="text-sm text-gray-500 mt-1">{(checkout as any).product_description}</p>
+          )}
+          {isGeneralCheckout && offer && (
+            <div className="flex items-center justify-center gap-3 mt-2">
+              {offer.original_price && offer.original_price > offer.price && (
+                <span className="text-sm text-gray-400 line-through">R$ {Number(offer.original_price).toFixed(2)}</span>
+              )}
+              <span className="text-xl font-black text-emerald-600">R$ {Number(offer.price).toFixed(2)}</span>
+            </div>
+          )}
         </div>
 
         {/* Social proof + trust badges */}
@@ -987,7 +1044,7 @@ const CheckoutPublic = () => {
             {[
               { icon: "🔒", title: "Site Seguro", sub: "SSL 256-bit" },
               { icon: "🚚", title: "Entrega Garantida", sub: "Rastreio em tempo real" },
-              { icon: "💰", title: "Pague na Entrega", sub: "Sem risco" },
+              { icon: "💰", title: isGeneralCheckout ? "Pagamento Seguro" : "Pague na Entrega", sub: isGeneralCheckout ? "MercadoPago" : "Sem risco" },
               { icon: "↩️", title: "7 dias de garantia", sub: "Devolução garantida" },
             ].map((badge) => (
               <div key={badge.title} className="flex flex-col items-center text-center p-2.5 bg-white rounded-xl border border-gray-100 shadow-sm">
@@ -1222,7 +1279,8 @@ const CheckoutPublic = () => {
             )}
             </AnimatePresence>
 
-            {/* ── STEP 2: Endereço e Entrega ── */}
+            {/* ── STEP 2: Endereço e Entrega (hidden for digital PM products) ── */}
+            {!isDigitalPM && (
             <AnimatePresence mode="wait">
             {step > 2 ? (
               <motion.div key="step2-collapsed" variants={collapseVariants} initial="initial" animate="animate" exit="exit">
@@ -1361,6 +1419,7 @@ const CheckoutPublic = () => {
               </motion.div>
             ) : null}
             </AnimatePresence>
+            )}
 
             {/* ── STEP 3: Date (Logzz) or Payment (Coinzz) ── */}
             <AnimatePresence mode="wait">
