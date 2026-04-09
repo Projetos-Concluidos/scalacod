@@ -951,7 +951,7 @@ const CheckoutPublic = () => {
                     <table><tr><td>${product?.name} (1x)</td><td style="text-align:right">R$ ${Number(offer?.price || 0).toFixed(2)}</td></tr>
                     ${bumpsHtml}
                     ${bumpsTotal > 0 ? `<tr><td style="padding:6px 0;color:#666">Subtotal itens adicionais</td><td style="padding:6px 0;text-align:right;color:#666">R$ ${bumpsTotal.toFixed(2)}</td></tr>` : ""}
-                    <tr><td style="padding:6px 0">Frete</td><td style="padding:6px 0;text-align:right;color:#10B981">Grátis</td></tr>
+                    <tr><td style="padding:6px 0">Frete</td><td style="padding:6px 0;text-align:right;${shippingPrice > 0 ? '' : 'color:#10B981'}">${shippingPrice > 0 ? 'R$ ' + shippingPrice.toFixed(2) : 'Grátis'}</td></tr>
                     <tr class="total-row"><td>Total</td><td style="text-align:right;color:#10B981">R$ ${totalPrice.toFixed(2)}</td></tr>
                     </table></div>
                     <div class="section"><p class="section-title">Cliente</p>
