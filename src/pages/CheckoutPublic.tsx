@@ -275,12 +275,78 @@ const CheckoutPublic = () => {
 
   const updateField = (field: string, value: string) => setForm((prev) => ({ ...prev, [field]: value }));
 
+  // PM delivery config from checkout settings
+  const pmDeliveryConfig = isCheckoutGeneral ? (checkout as any)?.config?.delivery : null;
+  const pmShippingValue = pmDeliveryConfig?.shipping_enabled ? (pmDeliveryConfig.shipping_value || 0) : 0;
+  const pmSchedulingEnabled = pmDeliveryConfig?.scheduling_enabled || false;
+
+  // Generate PM delivery dates based on scheduling config
+  const generatePMDeliveryDates = (): DeliveryDate[] => {
+    if (!pmDeliveryConfig?.scheduling_enabled) return [];
+    const config = pmDeliveryConfig.scheduling_config || {};
+    const excludedWeekdays: number[] = config.excluded_weekdays || [0];
+    const skipHolidays = config.skip_holidays !== false;
+    const minDays = config.min_days_ahead || 1;
+    const maxDays = config.max_days_ahead || 14;
+
+    // Brazilian holidays (month-day format for current year)
+    const getHolidays = (year: number): Set<string> => {
+      const fixed = [`${year}-01-01`, `${year}-04-21`, `${year}-05-01`, `${year}-09-07`, `${year}-10-12`, `${year}-11-02`, `${year}-11-15`, `${year}-12-25`];
+      return new Set(fixed);
+    };
+
+    const dates: DeliveryDate[] = [];
+    const now = new Date();
+    const holidays = getHolidays(now.getFullYear());
+    let daysChecked = 0;
+    let offset = minDays;
+
+    while (dates.length < 6 && daysChecked < maxDays + 30) {
+      const d = new Date(now);
+      d.setDate(d.getDate() + offset);
+      offset++;
+      daysChecked++;
+
+      if (offset - minDays > maxDays) break;
+      if (excludedWeekdays.includes(d.getDay())) continue;
+      const dateStr = d.toISOString().split("T")[0];
+      if (skipHolidays && holidays.has(dateStr)) continue;
+
+      const method = pmDeliveryConfig.delivery_method === "motoboy" ? "Motoboy" : "Correios";
+      dates.push({ date: dateStr, type: method, price: pmShippingValue });
+    }
+    return dates;
+  };
+
+  const [pmDeliveryDates, setPmDeliveryDates] = useState<DeliveryDate[]>([]);
+  const [selectedPmDate, setSelectedPmDate] = useState<DeliveryDate | null>(null);
+
+  useEffect(() => {
+    if (pmSchedulingEnabled && isCheckoutGeneral) {
+      const dates = generatePMDeliveryDates();
+      setPmDeliveryDates(dates);
+    }
+  }, [checkout]);
+
   const lookupCep = async () => {
     const cep = form.cep.replace(/\D/g, "");
     if (cep.length !== 8) return;
     setCepLoading(true);
     track("cep_check", { cep });
-    await checkDeliveryProvider(cep);
+
+    // For PM checkouts, just use ViaCEP directly (no Logzz/Hyppe provider check)
+    if (isCheckoutGeneral) {
+      try {
+        const viaCepRes = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+        const viaCepData = await viaCepRes.json();
+        if (!viaCepData.erro) {
+          setForm((prev) => ({ ...prev, street: viaCepData.logradouro || "", district: viaCepData.bairro || "", city: viaCepData.localidade || "", state: viaCepData.uf || "" }));
+        }
+      } catch { /* ignore */ }
+      setDeliveryChecked(true);
+    } else {
+      await checkDeliveryProvider(cep);
+    }
     setCepLoading(false);
   };
 
@@ -299,7 +365,6 @@ const CheckoutPublic = () => {
       });
       const data = await res.json();
       if (import.meta.env.DEV) console.log("[Checkout] Response da edge function checkout-api:", JSON.stringify(data));
-      if (import.meta.env.DEV) console.log("[Checkout] Provider:", data?.provider);
 
       // Auto-fill address from edge function response (ViaCEP enrichment)
       if (data.street || data.neighborhood || data.city || data.state) {
@@ -323,7 +388,7 @@ const CheckoutPublic = () => {
       } else if (data.provider === "hyppe_antecipado" && data.shipping_options?.length > 0) {
         setProvider("hyppe_antecipado"); setDeliveryDates([]);
         setShippingOptions(data.shipping_options);
-        setSelectedShipping(data.shipping_options[0]); // auto-select cheapest
+        setSelectedShipping(data.shipping_options[0]);
       } else {
         setProvider("coinzz"); setDeliveryDates([]);
         setShippingOptions([]); setSelectedShipping(null);
