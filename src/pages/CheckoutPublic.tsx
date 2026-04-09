@@ -959,6 +959,7 @@ const CheckoutPublic = () => {
                     <div class="section"><p class="section-title">Endereço</p>
                     <p>📍 ${form.street}, ${form.number}</p><p>🏘️ ${form.district} - ${form.city}/${form.state}</p><p>📮 CEP: ${form.cep}</p></div>
                     ${provider === "logzz" && selectedDate ? `<div class="section"><p class="section-title">Entrega</p><p>🚚 Entrega via Logzz · Pagamento na entrega</p><p>📅 ${selectedDate.date}</p></div>` : ""}
+                    ${isPhysicalPM && pmDeliveryConfig ? `<div class="section"><p class="section-title">Entrega</p><p>🚚 Via ${pmDeliveryConfig.delivery_method === "motoboy" ? "Motoboy" : "Correios"}</p>${selectedPmDate ? `<p>📅 ${selectedPmDate.date}</p>` : ""}<p>${pmShippingValue > 0 ? "Frete: R$ " + pmShippingValue.toFixed(2) : "Frete Grátis"}</p></div>` : ""}
                     <p class="footer">Compra 100% segura • ScalaCOD</p>
                     </body></html>`;
                   const printWindow = window.open("", "_blank");
