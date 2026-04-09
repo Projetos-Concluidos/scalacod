@@ -588,7 +588,10 @@ const CheckoutPublic = () => {
     if (!checkout || !offer) return;
     setSubmitting(true);
     track("order_submitted");
-    if (isCODProvider) {
+    if (isGeneralCheckout) {
+      // PM checkouts always use online payment (MercadoPago)
+      setStep(3);
+    } else if (isCODProvider) {
       // COD providers (logzz, hyppe_cod) — create order directly
       const oid = await createOrder();
       if (oid) setStep(4);
