@@ -358,7 +358,7 @@ const Checkouts = () => {
   const generalCount = checkouts.filter((c) => (c as any).checkout_category === "general").length;
 
   const typeLabel: Record<string, string> = { standard: "Padrão", express: "Express", hybrid: "Híbrido" };
-  const productTypeLabel: Record<string, string> = { pedidos_manuais: "Pedidos Manuais", dropshipping: "Dropshipping", curso: "Curso", info_produto: "Info Produto", servico: "Serviço" };
+  const productTypeLabel: Record<string, string> = { pedidos_manuais: "Pedidos Manuais", dropshipping: "Pedidos Manuais", curso: "Curso", info_produto: "Info Produto", servico: "Serviço" };
 
   return (
     <div>
