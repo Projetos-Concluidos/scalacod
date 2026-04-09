@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import DeleteCheckoutModal from "@/components/checkout/DeleteCheckoutModal";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
