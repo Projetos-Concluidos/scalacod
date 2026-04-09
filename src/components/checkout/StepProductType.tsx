@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 const productTypes = [
-  { value: "pedidos_manuais", label: "Pedidos Manuais", icon: ShoppingCart, desc: "Produto físico com envio e frete", color: "text-primary" },
+  { value: "dropshipping", label: "Pedidos Manuais", icon: ShoppingCart, desc: "Produto físico com envio e frete", color: "text-primary" },
   { value: "curso", label: "Curso", icon: BookOpen, desc: "Curso online com link de acesso", color: "text-emerald-500" },
   { value: "info_produto", label: "Info Produto", icon: FileText, desc: "E-book, template, planilha", color: "text-orange-500" },
   { value: "servico", label: "Serviço", icon: Wrench, desc: "Consultoria, mentoria, freelance", color: "text-violet-500" },
