@@ -1015,9 +1015,23 @@ const CheckoutPublic = () => {
       </header>
 
       <div className="mx-auto max-w-5xl px-4 py-6">
-        {/* Header with product name */}
+        {/* Header with product name + image for PM */}
         <div className="mb-4 text-center">
+          {isGeneralCheckout && product?.main_image_url && (
+            <img src={product.main_image_url} alt={checkout.name} className="mx-auto mb-4 max-h-48 rounded-2xl object-cover shadow-sm" />
+          )}
           <h1 className="text-lg font-bold text-gray-900">{checkout.name}</h1>
+          {isGeneralCheckout && (checkout as any).product_description && (
+            <p className="text-sm text-gray-500 mt-1">{(checkout as any).product_description}</p>
+          )}
+          {isGeneralCheckout && offer && (
+            <div className="flex items-center justify-center gap-3 mt-2">
+              {offer.original_price && offer.original_price > offer.price && (
+                <span className="text-sm text-gray-400 line-through">R$ {Number(offer.original_price).toFixed(2)}</span>
+              )}
+              <span className="text-xl font-black text-emerald-600">R$ {Number(offer.price).toFixed(2)}</span>
+            </div>
+          )}
         </div>
 
         {/* Social proof + trust badges */}
@@ -1030,7 +1044,7 @@ const CheckoutPublic = () => {
             {[
               { icon: "🔒", title: "Site Seguro", sub: "SSL 256-bit" },
               { icon: "🚚", title: "Entrega Garantida", sub: "Rastreio em tempo real" },
-              { icon: "💰", title: "Pague na Entrega", sub: "Sem risco" },
+              { icon: "💰", title: isGeneralCheckout ? "Pagamento Seguro" : "Pague na Entrega", sub: isGeneralCheckout ? "MercadoPago" : "Sem risco" },
               { icon: "↩️", title: "7 dias de garantia", sub: "Devolução garantida" },
             ].map((badge) => (
               <div key={badge.title} className="flex flex-col items-center text-center p-2.5 bg-white rounded-xl border border-gray-100 shadow-sm">
