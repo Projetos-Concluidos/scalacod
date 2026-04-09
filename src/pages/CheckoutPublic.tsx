@@ -857,7 +857,7 @@ const CheckoutPublic = () => {
                 {bumpsTotal > 0 && (
                   <div className="flex justify-between"><span className="text-gray-500">Itens adicionais</span><span className="text-gray-800">R$ {bumpsTotal.toFixed(2)}</span></div>
                 )}
-                <div className="flex justify-between"><span className="text-gray-500">Frete</span><span className="text-emerald-600 font-medium">Grátis</span></div>
+                <div className="flex justify-between"><span className="text-gray-500">Frete</span>{shippingPrice > 0 ? <span className="text-gray-800">R$ {shippingPrice.toFixed(2)}</span> : <span className="text-emerald-600 font-medium">Grátis</span>}</div>
                 {mpFeeAmount > 0 && (
                   <div className="flex justify-between"><span className="text-gray-500">Taxa de processamento</span><span className="text-gray-800">R$ {mpFeeAmount.toFixed(2)}</span></div>
                 )}
