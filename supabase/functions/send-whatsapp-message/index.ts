@@ -276,7 +276,9 @@ Deno.serve(async (req) => {
 
       try {
         const baseUrl = serverUrl.replace(/\/$/, "");
-        const number = `${cleanPhone}@s.whatsapp.net`;
+        // Send raw number without @s.whatsapp.net suffix — Evolution API
+        // normalizes it internally and avoids false "exists: false" errors
+        const number = cleanPhone;
         let endpoint = "sendText";
         let bodyPayload: any = { number, text: content, delay: 1200 };
 
