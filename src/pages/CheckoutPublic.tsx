@@ -275,6 +275,17 @@ const CheckoutPublic = () => {
 
   const updateField = (field: string, value: string) => setForm((prev) => ({ ...prev, [field]: value }));
 
+  // Scarcity timer state
+  const scarcityConfig = (checkout as any)?.scarcity_timer_config;
+  const scarcityEnabled = scarcityConfig?.enabled === true;
+  const [scarcityTimeLeft, setScarcityTimeLeft] = useState(() => (scarcityConfig?.duration_minutes || 15) * 60);
+  useEffect(() => {
+    if (!scarcityEnabled) return;
+    setScarcityTimeLeft((scarcityConfig?.duration_minutes || 15) * 60);
+    const interval = setInterval(() => setScarcityTimeLeft((t: number) => Math.max(0, t - 1)), 1000);
+    return () => clearInterval(interval);
+  }, [scarcityEnabled, scarcityConfig?.duration_minutes]);
+
   // PM delivery config from checkout settings
   const isCheckoutGeneral = (checkout as any)?.checkout_category === "general";
   const pmDeliveryConfig = isCheckoutGeneral ? (checkout as any)?.config?.delivery : null;
