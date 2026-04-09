@@ -1,73 +1,96 @@
 
 
-## Relatorio: Por que o pedido nao foi atribuido ao afiliado na Logzz
+## Plano: Checkout Geral com Personalização Premium
 
-### Diagnostico
+### Resumo
 
-Analisei o pedido #Q03XR8SB (ID: `046a0eca-121c-4f99-b235-d51db83fd44d`) e o payload enviado:
+Criar um novo tipo de checkout **"Geral"** focado em vender qualquer produto (cursos, info produtos, serviços, dropshipping) com pagamento exclusivamente via MercadoPago. O editor terá personalização completa do visual, CTA, timer de escassez, tarjas, e campos condicionais por tipo de produto.
 
-```text
-Payload enviado para Logzz:
-- offer: "sal6oxlk"           ← hash da oferta (correto)
-- affiliate_code: "memdn8lr0" ← campo CUSTOMIZADO que adicionamos
-- affiliate_email: null        ← campo vazio
-- Resposta: 200 "Webhook processado com sucesso!"
-```
+### O que muda
 
-### Causa raiz identificada
+Hoje existe apenas um wizard de 4 passos para criar checkouts COD/Híbrido. Vamos adicionar:
 
-O campo `affiliate_code` que estamos enviando **nao e um campo reconhecido pela API de importacao de pedidos da Logzz**. A Logzz aceita e ignora campos desconhecidos — por isso retorna sucesso (200), mas nao atribui ao afiliado.
+1. **Dois botões na página Checkouts**: "Novo Checkout COD" (atual) e "Novo Checkout Geral" (novo)
+2. **Wizard expandido do Checkout Geral** com 6 passos:
+   - Passo 1: Produto & Tipo (Dropshipping, Curso, Info Produto, Serviço)
+   - Passo 2: Personalização Visual (cores, fontes, CTA, timer escassez, tarjas)
+   - Passo 3: Order Bump & Upsell
+   - Passo 4: Pagamento (MercadoPago: PIX, Cartão, Boleto)
+   - Passo 5: Tracking & Pixels (UTM, Facebook, Google)
+   - Passo 6: Links & Extras (download, thank you page, CSS)
 
-Analisando a documentacao da API de produtos que voce compartilhou, a estrutura e:
+3. **Campos condicionais por tipo**:
+   - **Curso/Info Produto**: link de acesso/download, sem campo de endereço no checkout público
+   - **Serviço**: sem endereço, campo de observações
+   - **Dropshipping**: endereço obrigatório, frete
 
-```text
-data.producer[]   → produtos do produtor (com offers[].hash)
-data.affiliate[]  → produtos do afiliado (com offers[].hash)
-data.coproducer[] → produtos do coprodutor (com offers[].hash)
-```
+### Detalhes Técnicos
 
-A questao critica: **a Logzz pode retornar hashes de oferta DIFERENTES** para cada papel. O hash `sal6oxlk` pode ser o hash do produtor, nao o hash do afiliado. Quando o pedido chega com o hash do produtor, a Logzz atribui ao produtor.
+#### 1. Migração de Banco de Dados
+Adicionar colunas na tabela `checkouts`:
+- `checkout_category` (text): `'cod'` | `'general'` -- diferencia COD vs Geral
+- `product_type` (text): `'dropshipping'` | `'curso'` | `'info_produto'` | `'servico'`
+- `cta_config` (jsonb): título, ícone, cores, fontes, tamanho do botão CTA
+- `scarcity_timer_config` (jsonb): ativo, duração em minutos, cor de fundo, texto
+- `banner_images` (jsonb): array de URLs de tarjas/banners abaixo do CTA
+- `download_url` (text): link de download pós-compra
+- `primary_color` (text), `font_family` (text)
+- `product_cover_url` (text): imagem de capa estilo hero
 
-Alem disso, o campo que a Logzz reconhece para atribuicao de afiliado no webhook de importacao e provavelmente `affiliate_email` (email da conta do afiliado na Logzz), que esta sendo enviado como `null`.
+#### 2. Refatoração da Página Checkouts (src/pages/Checkouts.tsx)
+- Separar em componentes menores dentro de `src/components/checkout/`:
+  - `CheckoutList.tsx` - listagem com filtro COD/Geral
+  - `CheckoutWizardCOD.tsx` - wizard atual (extraído)
+  - `CheckoutWizardGeneral.tsx` - novo wizard de 6 passos
+  - `StepProductType.tsx` - seleção de tipo com cards visuais
+  - `StepVisualCustomization.tsx` - cores, fontes, CTA, timer, tarjas
+  - `StepOrderBumpUpsell.tsx` - reutiliza lógica atual + melhorias
+  - `StepPaymentConfig.tsx` - configuração MercadoPago
+  - `StepTracking.tsx` - pixels e UTM
+  - `StepExtras.tsx` - download link, thank you, CSS, preview
 
-### Dados confirmados no banco
+#### 3. Checkout Público (src/pages/CheckoutPublic.tsx)
+- Detectar `checkout_category === 'general'` e renderizar layout premium:
+  - Imagem de capa hero responsiva
+  - Título do produto em caixa alta
+  - Timer de escassez vermelho no topo (configurável)
+  - Tarjas/banners abaixo do CTA
+  - CTA customizado (cor, texto, ícone, fonte)
+  - Campos condicionais: sem endereço para curso/serviço
+  - Pagamento MercadoPago integrado (já existe a lógica, reutilizar)
 
-| Campo | Valor |
+#### 4. Aba Order Bump & Upsell
+- Dentro do menu Checkouts, adicionar tabs: **Meus Checkouts** | **Order Bumps & Upsells**
+- Tela de gerenciamento independente para cadastrar produtos de bump/upsell
+- Vincular bumps a checkouts específicos
+
+#### 5. Detalhes do Pedido
+- No modal de detalhes, exibir dados de order bumps e upsells comprados
+- Mostrar valor individual de cada bump no demonstrativo financeiro
+
+#### 6. Disparo de Mensagens (já funciona)
+- Confirmar que mudanças manuais no Kanban já disparam `trigger-flow` -- já implementado
+- Garantir que pedidos do checkout geral também passem pelo mesmo fluxo
+
+### Arquivos Modificados
+| Arquivo | Ação |
 |---|---|
-| offer hash | sal6oxlk |
-| affiliate_code | memdn8lr0 (salvo, mas ignorado pela Logzz) |
-| scheduling_checkout_url | `https://entrega.logzz.com.br/pay/1-uni-organic-lizz-107` (URL de PRODUTOR, sem ID afiliado) |
-| URL esperada afiliado | `https://entrega.logzz.com.br/pay/memdn8lr0/1-uni-organic-lizz-107` |
+| `src/pages/Checkouts.tsx` | Refatorar: extrair componentes, adicionar tabs e botões |
+| `src/components/checkout/*.tsx` | Criar ~8 novos componentes |
+| `src/pages/CheckoutPublic.tsx` | Adicionar renderização condicional para checkout geral |
+| Migração SQL | Adicionar colunas na tabela `checkouts` |
 
-A URL armazenada e do produtor (sem segmento de afiliado), o que confirma que a API da Logzz retorna URLs de produtor mesmo para o array `affiliate`.
+### Fases de Entrega (esta primeira fase)
+1. Migração DB + novos campos
+2. Refatorar Checkouts.tsx em componentes
+3. Wizard do Checkout Geral (6 passos com personalização completa)
+4. Aba Order Bumps & Upsells
+5. Checkout público com visual premium para tipo Geral
 
-### Solucao proposta (3 acoes)
-
-**1. Adicionar campo "Email do Afiliado" nas configuracoes Logzz**
-- Novo campo no `LogzzTab.tsx` para o usuario informar o email da conta Logzz do afiliado
-- Salvar como `affiliate_email` no config da integracao
-
-**2. Enviar `affiliate_email` preenchido no payload**
-- Em `logzz-create-order`, buscar o `affiliate_email` da integracao e enviar no payload
-- Campo `affiliate_email` ja existe no payload, so esta `null`
-
-**3. Investigar hashes de oferta por papel**
-- Em `logzz-list-products`, logar os hashes separados por role (producer vs affiliate)
-- Se a Logzz retornar hashes diferentes para afiliados, armazenar essa distincao
-- Usar o hash correto do afiliado ao enviar o pedido
-
-### Arquivos impactados
-
-| Arquivo | Mudanca |
-|---|---|
-| `src/components/settings/LogzzTab.tsx` | Adicionar campo "Email do Afiliado Logzz" |
-| `supabase/functions/logzz-create-order/index.ts` | Preencher `affiliate_email` do config |
-| `supabase/functions/logzz-list-products/index.ts` | Logar hashes por role para diagnostico |
-
-### Recomendacao imediata
-
-Para confirmar qual campo a Logzz reconhece, sugiro:
-1. Implementar o envio do `affiliate_email` (email da sua conta Logzz de afiliado)
-2. Fazer um pedido teste
-3. Se ainda nao atribuir, o proximo passo seria testar com um hash de oferta diferente (se existir um hash especifico do afiliado)
+### O que fica para fase 2 (futuro)
+- Preview em tempo real do checkout dentro do editor
+- Templates prontos de checkout
+- A/B testing entre checkouts
+- Upsell pós-compra (página intermediária após pagamento)
+- Galeria de imagens do produto (múltiplas fotos)
 
