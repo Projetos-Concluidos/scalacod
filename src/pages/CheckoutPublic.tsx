@@ -1107,10 +1107,15 @@ const CheckoutPublic = () => {
 
         {/* Social proof + trust badges */}
         <div className="mb-4 space-y-3">
-          <div className="flex items-center gap-2 bg-orange-50 border border-orange-100 rounded-xl px-3 py-2">
-            <span className="text-base">🔥</span>
-            <p className="text-xs text-orange-800"><strong>{Math.floor(Math.random() * 30 + 25)} pessoas</strong> estão vendo este produto agora</p>
-          </div>
+          {/* Scarcity timer or social proof */}
+          {(checkout as any).scarcity_timer_config?.enabled ? (
+            <ScarcityTimer config={(checkout as any).scarcity_timer_config} />
+          ) : (
+            <div className="flex items-center gap-2 bg-orange-50 border border-orange-100 rounded-xl px-3 py-2">
+              <span className="text-base">🔥</span>
+              <p className="text-xs text-orange-800"><strong>{Math.floor(Math.random() * 30 + 25)} pessoas</strong> estão vendo este produto agora</p>
+            </div>
+          )}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             {[
               { icon: "🔒", title: "Site Seguro", sub: "SSL 256-bit" },
