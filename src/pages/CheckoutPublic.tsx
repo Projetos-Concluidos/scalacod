@@ -896,6 +896,18 @@ const CheckoutPublic = () => {
                 )}
               </>
             )}
+            {/* PM delivery info */}
+            {isPhysicalPM && pmDeliveryConfig && (
+              <div className="rounded-xl bg-emerald-50 border border-emerald-100 p-3 text-sm mb-3">
+                <p className="text-emerald-700 font-medium">🚚 Entrega via {pmDeliveryConfig.delivery_method === "motoboy" ? "Motoboy" : "Correios"}</p>
+                <p className="text-emerald-600 text-xs">
+                  {pmShippingValue > 0 ? `Frete: R$ ${pmShippingValue.toFixed(2)}` : "Frete Grátis"}
+                </p>
+                {selectedPmDate && (
+                  <p className="text-emerald-600 text-xs mt-1">📅 Entrega: {formatDeliveryDate(selectedPmDate.date).day}/{formatDeliveryDate(selectedPmDate.date).month}</p>
+                )}
+              </div>
+            )}
             {provider === "hyppe_antecipado" && selectedShipping && (
               <div className="rounded-xl bg-violet-50 border border-violet-100 p-3 text-sm mb-3">
                 <p className="text-violet-700 font-medium">📦 Entrega via Hyppe ({selectedShipping.name})</p>
