@@ -383,7 +383,7 @@ const Checkouts = () => {
         <StatCard label="Total Checkouts" value={checkouts.length} icon={<ShoppingCart className="h-6 w-6 text-primary" />} iconBg="bg-primary/10" />
         <StatCard label="Ativos" value={activeCount} icon={<CheckCircle className="h-6 w-6 text-success" />} iconBg="bg-success/10" />
         <StatCard label="COD" value={codCount} icon={<Package className="h-6 w-6 text-warning" />} iconBg="bg-warning/10" />
-        <StatCard label="Geral" value={generalCount} icon={<Zap className="h-6 w-6 text-primary" />} iconBg="bg-primary/10" />
+        <StatCard label="Pedidos Manuais" value={generalCount} icon={<Zap className="h-6 w-6 text-primary" />} iconBg="bg-primary/10" />
       </div>
 
       {/* Tabs */}
