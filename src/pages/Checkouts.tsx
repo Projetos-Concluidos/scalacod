@@ -393,25 +393,9 @@ const Checkouts = () => {
         </TabsList>
 
         <TabsContent value="checkouts">
-          {/* List */}
           <div className="ninja-card">
             <div className="mb-6 flex items-center justify-between gap-3 flex-wrap">
-              <div className="flex items-center gap-2">
-                <h2 className="text-lg font-bold text-foreground">Meus Checkouts</h2>
-                <div className="flex items-center gap-1 ml-2">
-                  {(["all", "cod", "general"] as const).map((cat) => (
-                    <button
-                      key={cat}
-                      onClick={() => setFilterCategory(cat)}
-                      className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${
-                        filterCategory === cat ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground hover:bg-muted/80"
-                      }`}
-                    >
-                      {cat === "all" ? "Todos" : cat === "cod" ? "COD" : "Geral"}
-                    </button>
-                  ))}
-                </div>
-              </div>
+              <h2 className="text-lg font-bold text-foreground">Checkouts COD</h2>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <input
