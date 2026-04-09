@@ -608,7 +608,7 @@ const CheckoutPublic = () => {
             shipping_value: shippingPrice,
             status: "Aguardando",
             logistics_type: isGeneralCheckout ? "mercadopago" : (provider || "logzz"),
-            delivery_date: isCODProvider && selectedDate ? selectedDate.date : null,
+            delivery_date: isCODProvider && selectedDate ? selectedDate.date : (isPhysicalPM && selectedPmDate ? selectedPmDate.date : null),
             delivery_type_code: isCODProvider && selectedDate ? selectedDate.type_code || null : null,
             delivery_type_name: isCODProvider && selectedDate ? selectedDate.type || null : null,
             local_operation_code: isCODProvider && selectedDate ? selectedDate.local_operation_code || null : null,
