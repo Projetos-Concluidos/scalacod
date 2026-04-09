@@ -1265,7 +1265,8 @@ const CheckoutPublic = () => {
             )}
             </AnimatePresence>
 
-            {/* ── STEP 2: Endereço e Entrega ── */}
+            {/* ── STEP 2: Endereço e Entrega (hidden for digital PM products) ── */}
+            {!isDigitalPM && (
             <AnimatePresence mode="wait">
             {step > 2 ? (
               <motion.div key="step2-collapsed" variants={collapseVariants} initial="initial" animate="animate" exit="exit">
