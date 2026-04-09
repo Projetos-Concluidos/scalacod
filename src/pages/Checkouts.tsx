@@ -71,6 +71,8 @@ const Checkouts = () => {
   const [editingGeneralCheckout, setEditingGeneralCheckout] = useState<any>(null);
   const [activeTab, setActiveTab] = useState("checkouts");
   const [filterCategory, setFilterCategory] = useState<"all" | "cod" | "general">("all");
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deletingCheckout, setDeletingCheckout] = useState<CheckoutWithOffer | null>(null);
 
   // Form state (COD wizard)
   const [formName, setFormName] = useState("");
