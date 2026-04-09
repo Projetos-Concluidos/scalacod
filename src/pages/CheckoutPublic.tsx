@@ -433,9 +433,8 @@ const CheckoutPublic = () => {
     fetchFees();
   }, [checkout]);
 
-  const isCheckoutGeneral = (checkout as any)?.checkout_category === "general";
   const bumpsTotal = orderBumps.filter((b) => selectedBumps.has(b.id)).reduce((sum, b) => sum + (b.current_price || b.price || 0), 0);
-  const shippingPrice = provider === "hyppe_antecipado" && selectedShipping ? selectedShipping.price : 0;
+  const shippingPrice = isCheckoutGeneral ? pmShippingValue : (provider === "hyppe_antecipado" && selectedShipping ? selectedShipping.price : 0);
   const basePrice = (offer?.price || 0) + bumpsTotal + shippingPrice;
   const needsOnlinePayment = isCheckoutGeneral || provider === "coinzz" || provider === "hyppe_antecipado";
   const mpFeeAmount = needsOnlinePayment && mpFeePercent > 0 ? Math.round(basePrice * mpFeePercent) / 100 : 0;
