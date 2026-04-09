@@ -338,11 +338,13 @@ const Checkouts = () => {
     toast.success("URL copiada!");
   }
 
-  const filtered = checkouts.filter((c) => {
-    const matchSearch = c.name.toLowerCase().includes(search.toLowerCase());
+  const filteredCod = checkouts.filter((c) => {
     const cat = (c as any).checkout_category || "cod";
-    const matchCategory = filterCategory === "all" || cat === filterCategory;
-    return matchSearch && matchCategory;
+    return cat === "cod" && c.name.toLowerCase().includes(search.toLowerCase());
+  });
+  const filteredPm = checkouts.filter((c) => {
+    const cat = (c as any).checkout_category || "cod";
+    return cat === "general" && c.name.toLowerCase().includes(search.toLowerCase());
   });
 
   const activeCount = checkouts.filter((c) => c.is_active).length;
