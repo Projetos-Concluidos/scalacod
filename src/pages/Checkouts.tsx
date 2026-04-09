@@ -387,7 +387,8 @@ const Checkouts = () => {
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList>
-          <TabsTrigger value="checkouts">Meus Checkouts</TabsTrigger>
+          <TabsTrigger value="checkouts">Checkouts COD</TabsTrigger>
+          <TabsTrigger value="pm">Checkouts Pedidos Manuais</TabsTrigger>
           <TabsTrigger value="bumps">Order Bumps & Upsells</TabsTrigger>
         </TabsList>
 
