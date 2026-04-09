@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import DeleteCheckoutModal from "@/components/checkout/DeleteCheckoutModal";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -70,6 +71,8 @@ const Checkouts = () => {
   const [editingGeneralCheckout, setEditingGeneralCheckout] = useState<any>(null);
   const [activeTab, setActiveTab] = useState("checkouts");
   const [filterCategory, setFilterCategory] = useState<"all" | "cod" | "general">("all");
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deletingCheckout, setDeletingCheckout] = useState<CheckoutWithOffer | null>(null);
 
   // Form state (COD wizard)
   const [formName, setFormName] = useState("");
@@ -229,24 +232,21 @@ const Checkouts = () => {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { count } = await supabase.from("orders").select("id", { count: "exact", head: true }).eq("checkout_id", id);
-      if (count && count > 0) throw new Error(`LINKED_ORDERS:${count}`);
+      // Cascade: delete related orders and leads first
+      await supabase.from("orders").delete().eq("checkout_id", id);
+      await supabase.from("pixel_events").delete().eq("checkout_id", id);
       const { error } = await supabase.from("checkouts").delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["checkouts"] });
+      queryClient.invalidateQueries({ queryKey: ["checkout-order-counts"] });
       toast.success("Checkout excluído com sucesso!");
+      setDeleteModalOpen(false);
+      setDeletingCheckout(null);
     },
     onError: (e: any) => {
-      if (e.message?.startsWith("LINKED_ORDERS:")) {
-        const count = e.message.split(":")[1];
-        toast.warning(`Este checkout possui ${count} pedido(s) vinculado(s) e não pode ser excluído. Desative-o em vez disso.`, { duration: 7000 });
-      } else if (e.message?.includes("foreign key")) {
-        toast.warning("Não é possível excluir: existem pedidos vinculados. Desative-o em vez disso.", { duration: 7000 });
-      } else {
-        toast.error(`Erro ao excluir: ${e.message}`);
-      }
+      toast.error(`Erro ao excluir: ${e.message}`);
     },
   });
 
@@ -450,7 +450,7 @@ const Checkouts = () => {
                         <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" onClick={() => toggleMutation.mutate({ id: c.id, is_active: !c.is_active })}>
                           {c.is_active ? <ToggleRight className="h-4 w-4 text-success" /> : <ToggleLeft className="h-4 w-4" />}
                         </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => { if (confirm("Excluir este checkout?")) deleteMutation.mutate(c.id); }}><Trash2 className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => { setDeletingCheckout(c); setDeleteModalOpen(true); }}><Trash2 className="h-4 w-4" /></Button>
                       </div>
                     </div>
                   );
@@ -508,7 +508,7 @@ const Checkouts = () => {
                       <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" onClick={() => toggleMutation.mutate({ id: c.id, is_active: !c.is_active })}>
                         {c.is_active ? <ToggleRight className="h-4 w-4 text-success" /> : <ToggleLeft className="h-4 w-4" />}
                       </Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => { if (confirm("Excluir este checkout?")) deleteMutation.mutate(c.id); }}><Trash2 className="h-4 w-4" /></Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => { setDeletingCheckout(c); setDeleteModalOpen(true); }}><Trash2 className="h-4 w-4" /></Button>
                     </div>
                   </div>
                 ))}
@@ -991,6 +991,16 @@ const Checkouts = () => {
         onSave={handleGeneralSave}
         saving={generalCreateMutation.isPending || generalUpdateMutation.isPending}
         editData={editingGeneralCheckout}
+      />
+
+      {/* Delete Checkout Modal */}
+      <DeleteCheckoutModal
+        open={deleteModalOpen}
+        onClose={() => { setDeleteModalOpen(false); setDeletingCheckout(null); }}
+        onConfirm={() => { if (deletingCheckout) deleteMutation.mutate(deletingCheckout.id); }}
+        checkoutName={deletingCheckout?.name || ""}
+        orderCount={deletingCheckout ? (orderCounts[deletingCheckout.id] || 0) : 0}
+        deleting={deleteMutation.isPending}
       />
     </div>
   );

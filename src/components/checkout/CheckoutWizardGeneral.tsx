@@ -11,6 +11,7 @@ import StepOrderBumpGeneral from "./StepOrderBumpGeneral";
 import StepPaymentConfig from "./StepPaymentConfig";
 import StepTracking from "./StepTracking";
 import StepExtras from "./StepExtras";
+import StepDeliveryConfig from "./StepDeliveryConfig";
 
 interface Props {
   open: boolean;
@@ -23,47 +24,66 @@ interface Props {
 const defaultCta = { title: "COMPRAR AGORA", icon: "🛒", bg_color: "#22c55e", text_color: "#ffffff", font_size: "lg", border_radius: "lg" };
 const defaultScarcity = { enabled: false, duration_minutes: 15, bg_color: "#ef4444", text_color: "#ffffff", text: "🔥 OFERTA EXPIRA EM:" };
 const defaultPayment = { pix_enabled: true, credit_card_enabled: true, boleto_enabled: false, mp_balance_enabled: false };
+const defaultDelivery = {
+  delivery_method: "correios" as string,
+  shipping_enabled: false,
+  shipping_value: 0,
+  scheduling_enabled: false,
+  scheduling_config: {
+    excluded_weekdays: [0] as number[], // Sunday
+    skip_holidays: true,
+    max_days_ahead: 14,
+    min_days_ahead: 1,
+  },
+};
+
+function initState(editData: any) {
+  return {
+    productType: editData?.product_type === "pedidos_manuais" ? "dropshipping" : (editData?.product_type || "dropshipping"),
+    formName: editData?.name || "",
+    productCoverUrl: editData?.product_cover_url || "",
+    productPrice: editData?.product_price || 0,
+    productOfferPrice: editData?.product_offer_price || 0,
+    productDescription: editData?.product_description || "",
+    selectedBumpIds: editData?.config?.selectedBumpIds || [],
+    primaryColor: editData?.primary_color || "#6366f1",
+    fontFamily: editData?.font_family || "Inter",
+    ctaConfig: editData?.cta_config || { ...defaultCta },
+    scarcityConfig: editData?.scarcity_timer_config || { ...defaultScarcity },
+    bannerImages: editData?.banner_images || [],
+    orderBumpEnabled: editData?.order_bump_enabled || false,
+    upsellEnabled: editData?.upsell_enabled || false,
+    bumps: editData?.config?.bumps || [],
+    paymentConfig: editData?.config?.payment || { ...defaultPayment },
+    pixelFacebook: editData?.pixel_facebook || "",
+    metaCapiToken: editData?.meta_capi_token || "",
+    googleAdsId: editData?.google_ads_id || "",
+    googleConversionId: editData?.google_conversion_id || "",
+    googleAnalyticsId: editData?.google_analytics_id || "",
+    thankYouUrl: editData?.thank_you_page_url || "",
+    downloadUrl: editData?.download_url || "",
+    whatsappSupport: editData?.whatsapp_support || "",
+    customCss: editData?.custom_css || "",
+    deliveryConfig: editData?.config?.delivery || { ...defaultDelivery },
+  };
+}
 
 export default function CheckoutWizardGeneral({ open, onClose, onSave, saving, editData }: Props) {
   const { user } = useAuth();
   const [step, setStep] = useState(1);
+  const [state, setState] = useState(() => initState(editData));
 
-  // Step 1
-  const [productType, setProductType] = useState(editData?.product_type === "pedidos_manuais" ? "dropshipping" : (editData?.product_type || "dropshipping"));
-  const [formName, setFormName] = useState(editData?.name || "");
-  const [productCoverUrl, setProductCoverUrl] = useState(editData?.product_cover_url || "");
-  const [productPrice, setProductPrice] = useState<number>(editData?.product_price || 0);
-  const [productOfferPrice, setProductOfferPrice] = useState<number>(editData?.product_offer_price || 0);
-  const [productDescription, setProductDescription] = useState(editData?.product_description || "");
-  const [selectedBumpIds, setSelectedBumpIds] = useState<string[]>([]);
+  // Reset all state when open changes or editData changes
+  useEffect(() => {
+    if (open) {
+      setStep(1);
+      setState(initState(editData));
+    }
+  }, [open, editData]);
 
-  // Step 2
-  const [primaryColor, setPrimaryColor] = useState(editData?.primary_color || "#6366f1");
-  const [fontFamily, setFontFamily] = useState(editData?.font_family || "Inter");
-  const [ctaConfig, setCtaConfig] = useState(editData?.cta_config || { ...defaultCta });
-  const [scarcityConfig, setScarcityConfig] = useState(editData?.scarcity_timer_config || { ...defaultScarcity });
-  const [bannerImages, setBannerImages] = useState<string[]>(editData?.banner_images || []);
-
-  // Step 3
-  const [orderBumpEnabled, setOrderBumpEnabled] = useState(editData?.order_bump_enabled || false);
-  const [upsellEnabled, setUpsellEnabled] = useState(editData?.upsell_enabled || false);
-  const [bumps, setBumps] = useState<any[]>(editData?.config?.bumps || []);
-
-  // Step 4
-  const [paymentConfig, setPaymentConfig] = useState(editData?.config?.payment || { ...defaultPayment });
-
-  // Step 5
-  const [pixelFacebook, setPixelFacebook] = useState(editData?.pixel_facebook || "");
-  const [metaCapiToken, setMetaCapiToken] = useState(editData?.meta_capi_token || "");
-  const [googleAdsId, setGoogleAdsId] = useState(editData?.google_ads_id || "");
-  const [googleConversionId, setGoogleConversionId] = useState(editData?.google_conversion_id || "");
-  const [googleAnalyticsId, setGoogleAnalyticsId] = useState(editData?.google_analytics_id || "");
-
-  // Step 6
-  const [thankYouUrl, setThankYouUrl] = useState(editData?.thank_you_page_url || "");
-  const [downloadUrl, setDownloadUrl] = useState(editData?.download_url || "");
-  const [whatsappSupport, setWhatsappSupport] = useState(editData?.whatsapp_support || "");
-  const [customCss, setCustomCss] = useState(editData?.custom_css || "");
+  const set = <K extends keyof ReturnType<typeof initState>>(key: K, value: ReturnType<typeof initState>[K]) => {
+    setState(prev => ({ ...prev, [key]: value }));
+  };
 
   // Fetch available bumps for selection in step 1
   const { data: availableBumps = [] } = useQuery({
@@ -83,45 +103,138 @@ export default function CheckoutWizardGeneral({ open, onClose, onSave, saving, e
     enabled: open && !!user,
   });
 
-  const stepLabels = ["Produto", "Visual", "Order Bump", "Pagamento", "Tracking", "Links & Extras"];
+  const stepLabels = ["Produto", "Entrega", "Visual", "Order Bump", "Pagamento", "Tracking", "Links & Extras"];
+  const totalSteps = stepLabels.length;
+
+  const isPhysical = state.productType === "dropshipping";
 
   function handleSave() {
-    if (!formName.trim()) return toast.error("Nome é obrigatório");
-    if (!productType) return toast.error("Selecione um tipo de produto");
-    if (!productPrice || productPrice <= 0) return toast.error("Preço é obrigatório");
+    if (!state.formName.trim()) return toast.error("Nome é obrigatório");
+    if (!state.productType) return toast.error("Selecione um tipo de produto");
+    if (!state.productPrice || state.productPrice <= 0) return toast.error("Preço é obrigatório");
 
-    const slug = `${formName.trim()}-${Math.random().toString(36).slice(2, 9)}`
+    const slug = `${state.formName.trim()}-${Math.random().toString(36).slice(2, 9)}`
       .toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "").replace(/-+/g, "-").slice(0, 80);
 
     onSave({
-      name: formName.trim(),
+      name: state.formName.trim(),
       slug,
       checkout_category: "general",
-      product_type: productType,
-      product_cover_url: productCoverUrl || null,
-      product_price: productPrice || null,
-      product_offer_price: productOfferPrice || null,
-      product_description: productDescription || null,
-      primary_color: primaryColor || null,
-      font_family: fontFamily || null,
-      cta_config: ctaConfig,
-      scarcity_timer_config: scarcityConfig,
-      banner_images: bannerImages,
-      order_bump_enabled: orderBumpEnabled,
-      upsell_enabled: upsellEnabled,
-      config: { payment: paymentConfig, bumps, selectedBumpIds },
-      pixel_facebook: pixelFacebook || null,
-      pixel_id: pixelFacebook || null,
-      meta_capi_token: metaCapiToken || null,
-      google_ads_id: googleAdsId || null,
-      google_conversion_id: googleConversionId || null,
-      google_analytics_id: googleAnalyticsId || null,
-      thank_you_page_url: thankYouUrl || null,
-      download_url: downloadUrl || null,
-      whatsapp_support: whatsappSupport || null,
-      custom_css: customCss || null,
+      product_type: state.productType,
+      product_cover_url: state.productCoverUrl || null,
+      product_price: state.productPrice || null,
+      product_offer_price: state.productOfferPrice || null,
+      product_description: state.productDescription || null,
+      primary_color: state.primaryColor || null,
+      font_family: state.fontFamily || null,
+      cta_config: state.ctaConfig,
+      scarcity_timer_config: state.scarcityConfig,
+      banner_images: state.bannerImages,
+      order_bump_enabled: state.orderBumpEnabled,
+      upsell_enabled: state.upsellEnabled,
+      config: {
+        payment: state.paymentConfig,
+        bumps: state.bumps,
+        selectedBumpIds: state.selectedBumpIds,
+        delivery: isPhysical ? state.deliveryConfig : null,
+      },
+      pixel_facebook: state.pixelFacebook || null,
+      pixel_id: state.pixelFacebook || null,
+      meta_capi_token: state.metaCapiToken || null,
+      google_ads_id: state.googleAdsId || null,
+      google_conversion_id: state.googleConversionId || null,
+      google_analytics_id: state.googleAnalyticsId || null,
+      thank_you_page_url: state.thankYouUrl || null,
+      download_url: state.downloadUrl || null,
+      whatsapp_support: state.whatsappSupport || null,
+      custom_css: state.customCss || null,
       type: "standard",
     });
+  }
+
+  // For digital products, skip the delivery step
+  function getActualStep(displayStep: number): number {
+    if (!isPhysical && displayStep >= 2) return displayStep + 1;
+    return displayStep;
+  }
+
+  function getDisplaySteps() {
+    if (!isPhysical) {
+      return stepLabels.filter((_, i) => i !== 1); // Remove "Entrega"
+    }
+    return stepLabels;
+  }
+
+  const displaySteps = getDisplaySteps();
+  const displayTotalSteps = displaySteps.length;
+
+  function renderStep() {
+    const actualStep = isPhysical ? step : (step >= 2 ? step + 1 : step);
+
+    switch (actualStep) {
+      case 1:
+        return (
+          <StepProductType
+            productType={state.productType} setProductType={(v) => set("productType", v)}
+            formName={state.formName} setFormName={(v) => set("formName", v)}
+            productCoverUrl={state.productCoverUrl} setProductCoverUrl={(v) => set("productCoverUrl", v)}
+            productPrice={state.productPrice} setProductPrice={(v) => set("productPrice", v)}
+            productOfferPrice={state.productOfferPrice} setProductOfferPrice={(v) => set("productOfferPrice", v)}
+            productDescription={state.productDescription} setProductDescription={(v) => set("productDescription", v)}
+            selectedBumpIds={state.selectedBumpIds} setSelectedBumpIds={(v) => set("selectedBumpIds", v)}
+            availableBumps={availableBumps}
+          />
+        );
+      case 2:
+        return (
+          <StepDeliveryConfig
+            deliveryConfig={state.deliveryConfig}
+            setDeliveryConfig={(v) => set("deliveryConfig", v)}
+          />
+        );
+      case 3:
+        return (
+          <StepVisualCustomization
+            primaryColor={state.primaryColor} setPrimaryColor={(v) => set("primaryColor", v)}
+            fontFamily={state.fontFamily} setFontFamily={(v) => set("fontFamily", v)}
+            ctaConfig={state.ctaConfig} setCtaConfig={(v) => set("ctaConfig", v)}
+            scarcityConfig={state.scarcityConfig} setScarcityConfig={(v) => set("scarcityConfig", v)}
+            bannerImages={state.bannerImages} setBannerImages={(v) => set("bannerImages", v)}
+          />
+        );
+      case 4:
+        return (
+          <StepOrderBumpGeneral
+            orderBumpEnabled={state.orderBumpEnabled} setOrderBumpEnabled={(v) => set("orderBumpEnabled", v)}
+            upsellEnabled={state.upsellEnabled} setUpsellEnabled={(v) => set("upsellEnabled", v)}
+            bumps={state.bumps} setBumps={(v) => set("bumps", v)}
+          />
+        );
+      case 5:
+        return <StepPaymentConfig paymentConfig={state.paymentConfig} setPaymentConfig={(v) => set("paymentConfig", v)} />;
+      case 6:
+        return (
+          <StepTracking
+            pixelFacebook={state.pixelFacebook} setPixelFacebook={(v) => set("pixelFacebook", v)}
+            metaCapiToken={state.metaCapiToken} setMetaCapiToken={(v) => set("metaCapiToken", v)}
+            googleAdsId={state.googleAdsId} setGoogleAdsId={(v) => set("googleAdsId", v)}
+            googleConversionId={state.googleConversionId} setGoogleConversionId={(v) => set("googleConversionId", v)}
+            googleAnalyticsId={state.googleAnalyticsId} setGoogleAnalyticsId={(v) => set("googleAnalyticsId", v)}
+          />
+        );
+      case 7:
+        return (
+          <StepExtras
+            thankYouUrl={state.thankYouUrl} setThankYouUrl={(v) => set("thankYouUrl", v)}
+            downloadUrl={state.downloadUrl} setDownloadUrl={(v) => set("downloadUrl", v)}
+            whatsappSupport={state.whatsappSupport} setWhatsappSupport={(v) => set("whatsappSupport", v)}
+            customCss={state.customCss} setCustomCss={(v) => set("customCss", v)}
+            formName={state.formName} productType={state.productType}
+          />
+        );
+      default:
+        return null;
+    }
   }
 
   return (
@@ -136,7 +249,7 @@ export default function CheckoutWizardGeneral({ open, onClose, onSave, saving, e
 
         {/* Step indicators */}
         <div className="flex items-center gap-1.5 mb-2">
-          {stepLabels.map((_, i) => (
+          {displaySteps.map((_, i) => (
             <button
               key={i}
               onClick={() => setStep(i + 1)}
@@ -145,64 +258,16 @@ export default function CheckoutWizardGeneral({ open, onClose, onSave, saving, e
           ))}
         </div>
         <p className="text-xs text-muted-foreground mb-4">
-          Passo {step} de 6 — {stepLabels[step - 1]}
+          Passo {step} de {displayTotalSteps} — {displaySteps[step - 1]}
         </p>
 
-        {step === 1 && (
-          <StepProductType
-            productType={productType} setProductType={setProductType}
-            formName={formName} setFormName={setFormName}
-            productCoverUrl={productCoverUrl} setProductCoverUrl={setProductCoverUrl}
-            productPrice={productPrice} setProductPrice={setProductPrice}
-            productOfferPrice={productOfferPrice} setProductOfferPrice={setProductOfferPrice}
-            productDescription={productDescription} setProductDescription={setProductDescription}
-            selectedBumpIds={selectedBumpIds} setSelectedBumpIds={setSelectedBumpIds}
-            availableBumps={availableBumps}
-          />
-        )}
-        {step === 2 && (
-          <StepVisualCustomization
-            primaryColor={primaryColor} setPrimaryColor={setPrimaryColor}
-            fontFamily={fontFamily} setFontFamily={setFontFamily}
-            ctaConfig={ctaConfig} setCtaConfig={setCtaConfig}
-            scarcityConfig={scarcityConfig} setScarcityConfig={setScarcityConfig}
-            bannerImages={bannerImages} setBannerImages={setBannerImages}
-          />
-        )}
-        {step === 3 && (
-          <StepOrderBumpGeneral
-            orderBumpEnabled={orderBumpEnabled} setOrderBumpEnabled={setOrderBumpEnabled}
-            upsellEnabled={upsellEnabled} setUpsellEnabled={setUpsellEnabled}
-            bumps={bumps} setBumps={setBumps}
-          />
-        )}
-        {step === 4 && (
-          <StepPaymentConfig paymentConfig={paymentConfig} setPaymentConfig={setPaymentConfig} />
-        )}
-        {step === 5 && (
-          <StepTracking
-            pixelFacebook={pixelFacebook} setPixelFacebook={setPixelFacebook}
-            metaCapiToken={metaCapiToken} setMetaCapiToken={setMetaCapiToken}
-            googleAdsId={googleAdsId} setGoogleAdsId={setGoogleAdsId}
-            googleConversionId={googleConversionId} setGoogleConversionId={setGoogleConversionId}
-            googleAnalyticsId={googleAnalyticsId} setGoogleAnalyticsId={setGoogleAnalyticsId}
-          />
-        )}
-        {step === 6 && (
-          <StepExtras
-            thankYouUrl={thankYouUrl} setThankYouUrl={setThankYouUrl}
-            downloadUrl={downloadUrl} setDownloadUrl={setDownloadUrl}
-            whatsappSupport={whatsappSupport} setWhatsappSupport={setWhatsappSupport}
-            customCss={customCss} setCustomCss={setCustomCss}
-            formName={formName} productType={productType}
-          />
-        )}
+        {renderStep()}
 
         <div className="flex justify-between mt-6">
           <Button variant="ghost" onClick={() => step > 1 ? setStep(step - 1) : onClose()} className="text-muted-foreground">
             {step > 1 ? "Voltar" : "Cancelar"}
           </Button>
-          {step < 6 ? (
+          {step < displayTotalSteps ? (
             <Button onClick={() => setStep(step + 1)} className="gradient-primary text-primary-foreground">Próximo</Button>
           ) : (
             <Button onClick={handleSave} disabled={saving} className="gradient-primary text-primary-foreground">
