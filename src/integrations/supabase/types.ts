@@ -1671,7 +1671,8 @@ export type Database = {
           current_step: number
           enrolled_at: string
           id: string
-          order_id: string
+          lead_id: string | null
+          order_id: string | null
           status: string
           updated_at: string
           user_id: string
@@ -1684,7 +1685,8 @@ export type Database = {
           current_step?: number
           enrolled_at?: string
           id?: string
-          order_id: string
+          lead_id?: string | null
+          order_id?: string | null
           status?: string
           updated_at?: string
           user_id: string
@@ -1697,7 +1699,8 @@ export type Database = {
           current_step?: number
           enrolled_at?: string
           id?: string
-          order_id?: string
+          lead_id?: string | null
+          order_id?: string | null
           status?: string
           updated_at?: string
           user_id?: string
@@ -1708,6 +1711,13 @@ export type Database = {
             columns: ["campaign_id"]
             isOneToOne: false
             referencedRelation: "remarketing_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "remarketing_enrollments_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
             referencedColumns: ["id"]
           },
           {
