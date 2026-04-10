@@ -81,9 +81,10 @@ interface FlowBuilderModalProps {
   onClose: () => void;
   onSave: (data: any) => void;
   initialData?: any;
+  initialStep?: number;
 }
 
-export default function FlowBuilderModal({ open, onClose, onSave, initialData }: FlowBuilderModalProps) {
+export default function FlowBuilderModal({ open, onClose, onSave, initialData, initialStep }: FlowBuilderModalProps) {
   const [step, setStep] = useState(1);
   const [flowName, setFlowName] = useState(initialData?.name || "");
   const [flowEmoji, setFlowEmoji] = useState(initialData?.emoji || "⚡");
@@ -112,14 +113,14 @@ export default function FlowBuilderModal({ open, onClose, onSave, initialData }:
       setNodes(initialData.nodes?.length ? initialData.nodes : [defaultStartNode]);
       setEdges(initialData.edges?.length ? initialData.edges : []);
       nodeIdCounter.current = (initialData.nodes?.length || 0) + 1;
-      setStep(1);
+      setStep(initialStep || 1);
       setSelectedNode(null);
     } else if (open && !initialData) {
       setFlowName(""); setFlowEmoji("⚡"); setTriggerEvent(""); setFlowType("cod"); setApiType("evolution");
       setNodes([defaultStartNode]); setEdges([]);
-      nodeIdCounter.current = 1; setStep(1); setSelectedNode(null);
+      nodeIdCounter.current = 1; setStep(initialStep || 1); setSelectedNode(null);
     }
-  }, [open, initialData]);
+  }, [open, initialData, initialStep]);
 
   const onConnect = useCallback((params: Connection) => {
     setEdges((eds) => addEdge({ ...params, animated: true, style: { stroke: "hsl(160 84% 39%)" } }, eds));
