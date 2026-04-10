@@ -54,6 +54,7 @@ const Conversas = () => {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [selectedConv, setSelectedConv] = useState<Conversation | null>(null);
+  const [conversationTab, setConversationTab] = useState<"active" | "archived">("active");
   const [loading, setLoading] = useState(true);
   const [msgLoading, setMsgLoading] = useState(false);
   const [search, setSearch] = useState("");
@@ -240,8 +241,12 @@ const Conversas = () => {
   const updateConversationStatus = async (status: string) => {
     if (!selectedConv) return;
     await supabase.from("conversations").update({ status }).eq("id", selectedConv.id);
-    setSelectedConv({ ...selectedConv, status });
     setConversations(prev => prev.map(c => c.id === selectedConv.id ? { ...c, status } : c));
+    if (status === "archived") {
+      setSelectedConv(null);
+    } else {
+      setSelectedConv({ ...selectedConv, status });
+    }
     toast.success(status === "resolved" ? "Conversa resolvida!" : status === "archived" ? "Conversa arquivada!" : "Conversa reaberta!");
   };
 
@@ -602,7 +607,10 @@ const Conversas = () => {
   };
 
   const filtered = useMemo(() => {
-    let result = conversations;
+    // Base filter: separate active vs archived tab
+    let result = conversationTab === "archived"
+      ? conversations.filter(c => c.status === "archived")
+      : conversations.filter(c => c.status !== "archived");
 
     // Read filter
     if (readFilter === "unread") result = result.filter(c => (c.unread_count || 0) > 0);
@@ -660,7 +668,7 @@ const Conversas = () => {
       );
     }
     return result;
-  }, [conversations, readFilter, windowFilter, mediaFilter, dateFilter, statusFilter, search]);
+  }, [conversations, conversationTab, readFilter, windowFilter, mediaFilter, dateFilter, statusFilter, search]);
 
   // Group messages by date
   const groupedMessages = useMemo(() => {
