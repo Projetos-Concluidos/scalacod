@@ -742,7 +742,26 @@ const Conversas = () => {
       <div className="w-[320px] min-w-[320px] border-r border-border flex flex-col bg-card">
         <div className="p-4 border-b border-border">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-lg font-bold text-foreground">Conversas</h2>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setConversationTab("active")}
+                className={cn(
+                  "px-3 py-1.5 rounded-lg text-sm font-medium transition-colors",
+                  conversationTab === "active" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
+                )}
+              >
+                Conversas
+              </button>
+              <button
+                onClick={() => setConversationTab("archived")}
+                className={cn(
+                  "px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5",
+                  conversationTab === "archived" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
+                )}
+              >
+                <Archive className="h-3.5 w-3.5" /> Arquivadas
+              </button>
+            </div>
             <div className="flex items-center gap-1">
               <button
                 onClick={() => { setTestModalOpen(true); setTestMode("message"); }}
