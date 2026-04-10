@@ -250,7 +250,7 @@ const Pedidos = () => {
   // Delete order
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("orders").delete().eq("id", id);
+      const { error } = await supabase.rpc("delete_order_cascade", { p_order_id: id });
       if (error) throw error;
     },
     onSuccess: () => { toast.success("Pedido apagado"); queryClient.invalidateQueries({ queryKey: ["orders"] }); setDeleteTarget(null); if (selectedOrder && deleteTarget && selectedOrder.id === deleteTarget.id) setSelectedOrder(null); },
