@@ -1,27 +1,28 @@
 
 
-# Exibir Link da Oferta Logzz nos Pedidos
+# Corrigir Link de Afiliado Logzz nos Pedidos
 
-## Resumo
-Adicionar a exibição do **link de checkout da Logzz** (já importado via "Sincronizar Logzz") dentro do detalhe do pedido no Kanban, facilitando o fluxo de pedido manual pelo afiliado.
+## Problema
+O `scheduling_checkout_url` importado da API Logzz vem sem o código do afiliado:
+- **Atual (errado):** `https://entrega.logzz.com.br/pay/1-uni-organic-lizz-107`
+- **Correto:** `https://entrega.logzz.com.br/pay/{AFFILIATE_CODE}/1-uni-organic-lizz-107`
 
-## O que já existe
-- O campo `scheduling_checkout_url` já é importado da API Logzz e salvo na tabela `offers`
-- O `detailOffer` já é carregado no modal de detalhes do pedido (linha 212 do Pedidos.tsx)
-- Não é necessário nenhuma alteração no banco de dados ou edge functions
+O link sem o código do afiliado direciona a comissão para o produtor, não para o afiliado.
 
-## Plano de implementação
+## Plano
 
-### 1. Exibir link no modal de detalhes do pedido (Pedidos.tsx)
-Na aba **Logística** do modal de detalhes, logo após as informações existentes de Logzz/Coinzz, adicionar uma seção visível com:
-- Título: **"Link Pedido Manual"**
-- O link clicável (`scheduling_checkout_url` do `detailOffer`) com ícone de link externo
-- Botão de copiar ao lado para facilitar
-- Destaque visual (borda verde, fundo sutil) para chamar atenção
+### 1. Edge Function `logzz-list-products/index.ts`
+Quando `role === "affiliate"` e o `affiliate_code` foi identificado, reconstruir o `scheduling_checkout_url` injetando o código do afiliado na URL:
+- Detectar o padrão `/pay/SLUG` (sem afiliado) vs `/pay/AFF/SLUG` (com afiliado)
+- Se o URL não contém o afiliado, inserir o `affiliateCode` no caminho: `/pay/{affiliateCode}/{slug}`
+- Salvar a URL corrigida no campo `scheduling_checkout_url` retornado
 
-### 2. Exibir também na lista do Kanban (card do pedido)
-Adicionar um pequeno botão/ícone de link externo no card do pedido (quando `logistics_type === "logzz"` e o pedido ainda não foi enviado à Logzz) para acesso rápido sem abrir o modal.
+### 2. Exibição em `Pedidos.tsx`
+Adicionar lógica de fallback na renderização do link:
+- Se `detailOffer.affiliate_code` existe e o `scheduling_checkout_url` não contém o código, reconstruir a URL dinamicamente antes de exibir
+- Isso garante que mesmo ofertas já sincronizadas (com URL antiga) mostrem o link correto
 
 ### Arquivos modificados
-- `src/pages/Pedidos.tsx` — adicionar renderização do link na aba Logística e opcionalmente no card
+- `supabase/functions/logzz-list-products/index.ts` — reconstruir URL com affiliate_code
+- `src/pages/Pedidos.tsx` — fallback dinâmico na exibição do link
 
