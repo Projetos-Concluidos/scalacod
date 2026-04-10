@@ -41,6 +41,39 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_pixel_config: {
+        Row: {
+          custom_head_scripts: string | null
+          facebook_pixel_id: string | null
+          google_ads_id: string | null
+          google_analytics_id: string | null
+          google_conversion_id: string | null
+          id: string
+          tiktok_pixel_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          custom_head_scripts?: string | null
+          facebook_pixel_id?: string | null
+          google_ads_id?: string | null
+          google_analytics_id?: string | null
+          google_conversion_id?: string | null
+          id?: string
+          tiktok_pixel_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          custom_head_scripts?: string | null
+          facebook_pixel_id?: string | null
+          google_ads_id?: string | null
+          google_analytics_id?: string | null
+          google_conversion_id?: string | null
+          id?: string
+          tiktok_pixel_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       api_tokens: {
         Row: {
           created_at: string | null
@@ -1933,6 +1966,77 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      support_messages: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          is_admin: boolean
+          sender_id: string
+          ticket_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          is_admin?: boolean
+          sender_id: string
+          ticket_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          is_admin?: boolean
+          sender_id?: string
+          ticket_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_messages_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "support_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      support_tickets: {
+        Row: {
+          category: string
+          created_at: string
+          description: string
+          id: string
+          priority: string
+          status: string
+          subject: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          description: string
+          id?: string
+          priority?: string
+          status?: string
+          subject: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string
+          id?: string
+          priority?: string
+          status?: string
+          subject?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       system_config: {
         Row: {
