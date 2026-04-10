@@ -53,6 +53,7 @@ const LogzzTab = () => {
         setAffiliateId(config?.affiliate_id || "");
         setAffiliateEmail(config?.affiliate_email || "");
         setLogzzWebhookUrl(config?.logzz_webhook_url || "");
+        setSendOrdersEnabled(config?.send_orders_enabled !== false);
         setIsActive(data.is_active ?? false);
       }
     };
