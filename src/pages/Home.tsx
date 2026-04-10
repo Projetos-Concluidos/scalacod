@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useHomeSettings } from "@/hooks/useHomeSettings";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,6 +10,7 @@ import { HeroAccordion } from "@/components/home/HeroAccordion";
 import { motion, AnimatePresence } from "framer-motion";
 import ScalaCODLogo, { ScalaCODBrandName } from "@/components/ScalaCODLogo";
 import PublicFooter from "@/components/PublicFooter";
+import { FacebookPixel, GoogleAds } from "@/lib/pixel";
 
 function FAQ({ q, a }: { q: string; a: string }) {
   const [open, setOpen] = useState(false);
@@ -37,8 +38,34 @@ export default function Home() {
   const [plans, setPlans] = useState<any[]>([]);
   const [billing, setBilling] = useState<"monthly" | "yearly">("monthly");
 
+  const pixelsInitialized = useRef(false);
+
   useEffect(() => {
     supabase.from("plans").select("*").eq("is_active", true).order("sort_order").then(({ data }) => { if (data) setPlans(data); });
+  }, []);
+
+  // Initialize admin pixels
+  useEffect(() => {
+    if (pixelsInitialized.current) return;
+    pixelsInitialized.current = true;
+    supabase
+      .from("admin_pixel_config" as any)
+      .select("*")
+      .limit(1)
+      .maybeSingle()
+      .then(({ data }: any) => {
+        if (!data) return;
+        if (data.facebook_pixel_id) {
+          const fb = new FacebookPixel(data.facebook_pixel_id);
+          fb.init();
+          fb.pageView();
+        }
+        if (data.google_analytics_id) {
+          const ga = new GoogleAds(data.google_analytics_id, data.google_conversion_id || "");
+          ga.init();
+          ga.pageView();
+        }
+      });
   }, []);
 
   useEffect(() => {

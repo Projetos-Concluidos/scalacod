@@ -52,6 +52,8 @@ const AdminTokens = lazyWithRetry(() => import("@/pages/admin/AdminTokens"));
 const AdminIntegracoes = lazyWithRetry(() => import("@/pages/admin/AdminIntegracoes"));
 const AdminLogs = lazyWithRetry(() => import("@/pages/admin/AdminLogs"));
 const AdminHome = lazyWithRetry(() => import("@/pages/admin/AdminHome"));
+const AdminPixel = lazyWithRetry(() => import("@/pages/admin/AdminPixel"));
+const AdminTickets = lazyWithRetry(() => import("@/pages/admin/AdminTickets"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -112,6 +114,8 @@ const App = () => (
                 <Route path="/admin/tokens" element={<AdminTokens />} />
                 <Route path="/admin/integracoes" element={<AdminIntegracoes />} />
                 <Route path="/admin/home" element={<AdminHome />} />
+                <Route path="/admin/pixel" element={<AdminPixel />} />
+                <Route path="/admin/tickets" element={<AdminTickets />} />
                 <Route path="/admin/logs" element={<AdminLogs />} />
               </Route>
               <Route path="*" element={<NotFound />} />

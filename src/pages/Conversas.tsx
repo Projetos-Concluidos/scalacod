@@ -76,6 +76,22 @@ const Conversas = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { play: playNotification, requestPermission } = useNotificationSound();
 
+  // Fetch notification preferences to respect user settings
+  const { data: notifPrefs } = useQuery({
+    queryKey: ["notif-prefs-conversas", user?.id],
+    queryFn: async () => {
+      if (!user) return null;
+      const { data } = await supabase
+        .from("notification_preferences")
+        .select("push_enabled, push_new_lead")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!user,
+    staleTime: 1000 * 60 * 10,
+  });
+
   // Quick replies
   const [showQuickReplies, setShowQuickReplies] = useState(false);
   const [editingQuickReplies, setEditingQuickReplies] = useState(false);
@@ -366,7 +382,11 @@ const Conversas = () => {
           setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
         }
         if (msg.direction === "inbound") {
-          playNotification();
+          // Only play sound if user has push_enabled AND push_new_lead enabled
+          const shouldPlay = notifPrefs?.push_enabled !== false && notifPrefs?.push_new_lead !== false;
+          if (shouldPlay) {
+            playNotification();
+          }
         }
         setConversations(prev => prev.map(c =>
           c.id === msg.conversation_id
