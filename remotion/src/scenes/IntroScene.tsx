@@ -7,30 +7,55 @@ export const IntroScene: React.FC = () => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
-  // Background pulse
-  const bgPulse = interpolate(frame, [0, 240], [0, 360], { extrapolateRight: "clamp" });
-
-  // Cart icon scale in
-  const iconScale = spring({ frame: frame - 20, fps, config: { damping: 12, stiffness: 100 } });
-  const iconOpacity = interpolate(frame, [20, 40], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-
-  // "Scala" text
-  const scalaX = spring({ frame: frame - 50, fps, config: { damping: 20, stiffness: 150 } });
-  const scalaOpacity = interpolate(frame, [50, 70], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-
-  // "COD" text with glow
-  const codX = spring({ frame: frame - 70, fps, config: { damping: 15, stiffness: 120 } });
-  const codOpacity = interpolate(frame, [70, 90], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-
-  // Subtitle
-  const subOpacity = interpolate(frame, [110, 140], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-  const subY = interpolate(frame, [110, 140], [20, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-
   // Glow pulse
-  const glowIntensity = interpolate(Math.sin(frame * 0.05), [-1, 1], [0.3, 0.8]);
+  const glowIntensity = interpolate(Math.sin(frame * 0.04), [-1, 1], [0.3, 0.9]);
 
-  // Fade out at end
-  const fadeOut = interpolate(frame, [200, 240], [1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  // Icon
+  const iconScale = spring({ frame: frame - 30, fps, config: { damping: 12, stiffness: 100 } });
+  const iconOpacity = interpolate(frame, [30, 55], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+
+  // "Scala"
+  const scalaX = spring({ frame: frame - 60, fps, config: { damping: 20, stiffness: 150 } });
+  const scalaOpacity = interpolate(frame, [60, 85], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+
+  // "COD"
+  const codX = spring({ frame: frame - 80, fps, config: { damping: 15, stiffness: 120 } });
+  const codOpacity = interpolate(frame, [80, 105], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+
+  // Tagline
+  const tagOpacity = interpolate(frame, [130, 160], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  const tagY = interpolate(frame, [130, 160], [15, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+
+  // Subtitle line
+  const subOpacity = interpolate(frame, [170, 200], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  const subY = interpolate(frame, [170, 200], [10, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+
+  // Fade out
+  const fadeOut = interpolate(frame, [260, 300], [1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+
+  // Particles
+  const particles = [...Array(12)].map((_, i) => {
+    const angle = (i / 12) * Math.PI * 2 + frame * 0.006;
+    const radius = 220 + Math.sin(frame * 0.015 + i * 1.5) * 50;
+    const x = Math.cos(angle) * radius;
+    const y = Math.sin(angle) * radius;
+    const pOpacity = interpolate(frame, [40, 80], [0, 0.35], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+    return (
+      <div
+        key={i}
+        style={{
+          position: "absolute",
+          width: 3 + (i % 3),
+          height: 3 + (i % 3),
+          borderRadius: "50%",
+          backgroundColor: "#10B981",
+          opacity: pOpacity * fadeOut,
+          top: `calc(50% + ${y}px)`,
+          left: `calc(50% + ${x}px)`,
+        }}
+      />
+    );
+  });
 
   return (
     <AbsoluteFill
@@ -43,63 +68,32 @@ export const IntroScene: React.FC = () => {
         opacity: fadeOut,
       }}
     >
-      {/* Radial glow background */}
+      {/* Radial glow */}
       <div
         style={{
           position: "absolute",
-          width: 600,
-          height: 600,
+          width: 700,
+          height: 700,
           borderRadius: "50%",
-          background: `radial-gradient(circle, rgba(16,185,129,${glowIntensity * 0.15}) 0%, transparent 70%)`,
+          background: `radial-gradient(circle, rgba(16,185,129,${glowIntensity * 0.14}) 0%, transparent 70%)`,
           top: "50%",
           left: "50%",
           transform: "translate(-50%, -50%)",
         }}
       />
 
-      {/* Floating particles */}
-      {[...Array(8)].map((_, i) => {
-        const angle = (i / 8) * Math.PI * 2 + frame * 0.008;
-        const radius = 200 + Math.sin(frame * 0.02 + i) * 40;
-        const x = Math.cos(angle) * radius;
-        const y = Math.sin(angle) * radius;
-        const particleOpacity = interpolate(frame, [30, 60], [0, 0.4], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-        return (
-          <div
-            key={i}
-            style={{
-              position: "absolute",
-              width: 4,
-              height: 4,
-              borderRadius: "50%",
-              backgroundColor: "#10B981",
-              opacity: particleOpacity,
-              top: `calc(50% + ${y}px)`,
-              left: `calc(50% + ${x}px)`,
-            }}
-          />
-        );
-      })}
+      {particles}
 
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 20 }}>
         {/* Logo row */}
         <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
-          {/* Cart icon */}
-          <div
-            style={{
-              opacity: iconOpacity,
-              transform: `scale(${iconScale})`,
-              fontSize: 64,
-            }}
-          >
+          <div style={{ opacity: iconOpacity, transform: `scale(${iconScale})` }}>
             <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#10B981" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="8" cy="21" r="1" />
               <circle cx="19" cy="21" r="1" />
               <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12" />
             </svg>
           </div>
-
-          {/* Brand text */}
           <div style={{ display: "flex", alignItems: "baseline" }}>
             <span
               style={{
@@ -129,19 +123,34 @@ export const IntroScene: React.FC = () => {
           </div>
         </div>
 
+        {/* Tagline */}
+        <div
+          style={{
+            opacity: tagOpacity,
+            transform: `translateY(${tagY}px)`,
+            fontSize: 22,
+            fontWeight: 600,
+            color: "rgba(255,255,255,0.7)",
+            letterSpacing: "5px",
+            textTransform: "uppercase",
+          }}
+        >
+          ESCALA, CONTROLE E AUTOMAÇÃO
+        </div>
+
         {/* Subtitle */}
         <div
           style={{
             opacity: subOpacity,
             transform: `translateY(${subY}px)`,
-            fontSize: 22,
+            fontSize: 16,
             fontWeight: 400,
-            color: "rgba(255,255,255,0.5)",
-            letterSpacing: "6px",
+            color: "rgba(255,255,255,0.35)",
+            letterSpacing: "3px",
             textTransform: "uppercase",
           }}
         >
-          AFILIADO PRO
+          EM UMA ÚNICA PLATAFORMA
         </div>
       </div>
     </AbsoluteFill>
