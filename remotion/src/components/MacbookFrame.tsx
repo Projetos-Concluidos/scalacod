@@ -1,12 +1,13 @@
 import React from "react";
-import { Img, staticFile } from "remotion";
+import { Img } from "remotion";
 
 interface MacbookFrameProps {
   screenSrc: string;
   style?: React.CSSProperties;
+  scrollPercent?: number; // 0-100, simulates vertical scroll via object-position
 }
 
-export const MacbookFrame: React.FC<MacbookFrameProps> = ({ screenSrc, style }) => {
+export const MacbookFrame: React.FC<MacbookFrameProps> = ({ screenSrc, style, scrollPercent = 0 }) => {
   return (
     <div
       style={{
@@ -25,13 +26,7 @@ export const MacbookFrame: React.FC<MacbookFrameProps> = ({ screenSrc, style }) 
         }}
       >
         {/* Camera notch */}
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "center",
-            paddingBottom: 6,
-          }}
-        >
+        <div style={{ display: "flex", justifyContent: "center", paddingBottom: 6 }}>
           <div
             style={{
               width: 8,
@@ -49,6 +44,7 @@ export const MacbookFrame: React.FC<MacbookFrameProps> = ({ screenSrc, style }) 
             borderRadius: "4px 4px 0 0",
             overflow: "hidden",
             position: "relative",
+            height: 810, // Fixed screen height for scroll simulation
           }}
         >
           <Img
@@ -56,6 +52,11 @@ export const MacbookFrame: React.FC<MacbookFrameProps> = ({ screenSrc, style }) 
             style={{
               width: "100%",
               display: "block",
+              position: "absolute",
+              top: 0,
+              left: 0,
+              // Use transform to simulate scroll
+              transform: `translateY(-${scrollPercent * 2}px)`,
             }}
           />
           {/* Screen glare */}
@@ -67,14 +68,14 @@ export const MacbookFrame: React.FC<MacbookFrameProps> = ({ screenSrc, style }) 
               right: 0,
               bottom: 0,
               background:
-                "linear-gradient(135deg, rgba(255,255,255,0.03) 0%, transparent 40%, transparent 60%, rgba(255,255,255,0.015) 100%)",
+                "linear-gradient(135deg, rgba(255,255,255,0.025) 0%, transparent 40%, transparent 60%, rgba(255,255,255,0.01) 100%)",
               pointerEvents: "none",
             }}
           />
         </div>
       </div>
 
-      {/* MacBook bottom hinge */}
+      {/* Hinge */}
       <div
         style={{
           height: 14,
@@ -98,7 +99,7 @@ export const MacbookFrame: React.FC<MacbookFrameProps> = ({ screenSrc, style }) 
         />
       </div>
 
-      {/* Bottom base */}
+      {/* Base */}
       <div
         style={{
           height: 6,

@@ -27,16 +27,16 @@ const composition = await selectComposition({
   puppeteerInstance: browser,
 });
 
-console.log(`Rendering ${composition.durationInFrames} frames at ${composition.fps}fps...`);
+console.log(`Rendering ${composition.durationInFrames} frames at ${composition.fps}fps (${composition.durationInFrames / composition.fps}s)...`);
 await renderMedia({
   composition,
   serveUrl: bundled,
   codec: "h264",
-  outputLocation: "/mnt/documents/scalacod-demo.mp4",
+  outputLocation: "/mnt/documents/scalacod-vsl-60s.mp4",
   puppeteerInstance: browser,
   muted: true,
   concurrency: 1,
 });
 
-console.log("Done! Output: /mnt/documents/scalacod-demo.mp4");
+console.log("Done! Output: /mnt/documents/scalacod-vsl-60s.mp4");
 await browser.close({ silent: false });
