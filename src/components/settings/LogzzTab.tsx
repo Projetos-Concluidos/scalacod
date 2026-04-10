@@ -26,6 +26,7 @@ const LogzzTab = () => {
   const [isActive, setIsActive] = useState(false);
   const [testing, setTesting] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [sendOrdersEnabled, setSendOrdersEnabled] = useState(true);
   const [cep, setCep] = useState("");
   const [checkingCep, setCheckingCep] = useState(false);
   const [cepResult, setCepResult] = useState<CepResult | null>(null);
@@ -52,6 +53,7 @@ const LogzzTab = () => {
         setAffiliateId(config?.affiliate_id || "");
         setAffiliateEmail(config?.affiliate_email || "");
         setLogzzWebhookUrl(config?.logzz_webhook_url || "");
+        setSendOrdersEnabled(config?.send_orders_enabled !== false);
         setIsActive(data.is_active ?? false);
       }
     };
@@ -142,7 +144,7 @@ const LogzzTab = () => {
       const payload = {
         user_id: user.id,
         type: "logzz" as const,
-        config: { bearer_token: token, logzz_webhook_url: logzzWebhookUrl, affiliate_id: affiliateId || null, affiliate_email: affiliateEmail || null } as any,
+        config: { bearer_token: token, logzz_webhook_url: logzzWebhookUrl, affiliate_id: affiliateId || null, affiliate_email: affiliateEmail || null, send_orders_enabled: sendOrdersEnabled } as any,
         is_active: finalActive,
       };
 
@@ -309,6 +311,28 @@ const LogzzTab = () => {
           <p className="mt-1 text-xs text-muted-foreground">
             Email da sua conta de afiliado na Logzz. A Logzz usa este email para atribuir comissões ao afiliado nos pedidos importados via webhook.
           </p>
+        </div>
+
+        {/* Toggle Envio de Pedidos */}
+        <div className="mb-4 max-w-xl rounded-lg border border-warning/30 bg-warning/5 p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <Truck className="h-4 w-4 text-warning" />
+                <label className="text-sm font-medium text-foreground">Enviar pedidos para a Logzz</label>
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Quando ativado, os pedidos finalizados no checkout serão enviados automaticamente para a Logzz. 
+                Desative se preferir criar os pedidos manualmente na Logzz.
+              </p>
+              {!sendOrdersEnabled && (
+                <p className="mt-2 text-xs text-warning font-medium">
+                  ⚠️ Envio desativado — os pedidos aparecerão no Kanban mas NÃO serão enviados à Logzz automaticamente.
+                </p>
+              )}
+            </div>
+            <Switch checked={sendOrdersEnabled} onCheckedChange={setSendOrdersEnabled} />
+          </div>
         </div>
 
         {testResult && (

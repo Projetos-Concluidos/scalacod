@@ -152,6 +152,15 @@ Deno.serve(async (req) => {
       });
     }
 
+    // 3.5 Check if send_orders_enabled is disabled
+    if (logzzCfg?.send_orders_enabled === false) {
+      console.log("[logzz-create-order] Send orders DISABLED by user config. Skipping.");
+      return new Response(
+        JSON.stringify({ skipped: true, reason: "send_orders_enabled is disabled in integration config" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // 4. Determine webhook URL
     const webhookUrl = logzzCfg?.logzz_webhook_url || DEFAULT_LOGZZ_WEBHOOK_URL;
     console.log("[logzz-create-order] Webhook URL:", webhookUrl);
