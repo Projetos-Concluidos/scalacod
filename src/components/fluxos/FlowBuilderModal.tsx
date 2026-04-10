@@ -22,7 +22,8 @@ import { Switch } from "@/components/ui/switch";
 import {
   MessageCircle, Image, Mic, MousePointer, List, Clock, GitBranch, XCircle,
   Plus, ArrowLeft, ArrowRight, Check, Zap, RefreshCw, Video, FileText,
-  LayoutTemplate, Settings2, Eye, Type, FileImage, FileAudio, ListOrdered
+  LayoutTemplate, Settings2, Eye, Type, FileImage, FileAudio, ListOrdered,
+  Maximize2, Minimize2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -92,6 +93,7 @@ export default function FlowBuilderModal({ open, onClose, onSave, initialData, i
   const [flowType, setFlowType] = useState(initialData?.flow_type || "cod");
   const [apiType, setApiType] = useState(initialData?.is_official ? "official" : "evolution");
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
+  const [isMaximized, setIsMaximized] = useState(false);
 
   const defaultStartNode: Node = {
     id: "start", position: { x: 250, y: 50 },
@@ -524,13 +526,26 @@ export default function FlowBuilderModal({ open, onClose, onSave, initialData, i
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-5xl h-[85vh] flex flex-col bg-card border-border p-0 gap-0">
-        <DialogHeader className="p-6 pb-4 border-b border-border">
-          <DialogTitle className="text-foreground flex items-center gap-2">
-            {step === 1 && "Configurações do Fluxo"}
-            {step === 2 && "Builder de Nós"}
-            {step === 3 && "Revisão"}
+      <DialogContent className={cn(
+        "flex flex-col bg-card border-border p-0 gap-0 transition-all duration-200",
+        isMaximized ? "max-w-[100vw] w-[100vw] h-[100vh] rounded-none" : "max-w-5xl h-[85vh]"
+      )}>
+        <DialogHeader className="p-4 pb-3 border-b border-border flex flex-row items-center justify-between">
+          <DialogTitle className="text-foreground flex items-center gap-2 text-sm">
+            {flowEmoji && <span className="text-base">{flowEmoji}</span>}
+            {flowName ? (
+              <span>{flowName} <span className="text-muted-foreground font-normal">— {step === 1 ? "Configurações" : step === 2 ? "Builder de Nós" : "Revisão"}</span></span>
+            ) : (
+              <>
+                {step === 1 && "Configurações do Fluxo"}
+                {step === 2 && "Builder de Nós"}
+                {step === 3 && "Revisão"}
+              </>
+            )}
           </DialogTitle>
+          <Button variant="ghost" size="icon" className="h-7 w-7 mr-6" onClick={() => setIsMaximized(prev => !prev)}>
+            {isMaximized ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+          </Button>
         </DialogHeader>
 
         {/* Step indicators */}
