@@ -26,6 +26,7 @@ const Fluxos = () => {
   const [builderOpen, setBuilderOpen] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
   const [editingFlow, setEditingFlow] = useState<Flow | null>(null);
+  const [builderInitialStep, setBuilderInitialStep] = useState<number | undefined>(undefined);
   const [subTab, setSubTab] = useState<"flows" | "templates" | "executions" | "tags" | "remarketing">("flows");
   const [executions, setExecutions] = useState<any[]>([]);
   const [execLoading, setExecLoading] = useState(false);
@@ -490,12 +491,15 @@ const Fluxos = () => {
                             <Zap className="mr-1 inline h-3 w-3" /> Enviar p/ aprovação
                           </button>
                         )}
-                        <button onClick={() => { setEditingFlow(flow); setBuilderOpen(true); }} className="text-muted-foreground hover:text-foreground"><Pencil className="h-4 w-4" /></button>
+                        <button onClick={() => { setEditingFlow(flow); setBuilderInitialStep(undefined); setBuilderOpen(true); }} className="text-muted-foreground hover:text-foreground"><Pencil className="h-4 w-4" /></button>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <button className="text-muted-foreground hover:text-foreground"><MoreHorizontal className="h-4 w-4" /></button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => { setEditingFlow(flow); setBuilderInitialStep(2); setBuilderOpen(true); }}>
+                              <MessageCircle className="h-4 w-4 mr-2" /> Editar Mensagens
+                            </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => duplicateFlow(flow)}>
                               <Copy className="h-4 w-4 mr-2" /> Duplicar
                             </DropdownMenuItem>
@@ -624,9 +628,10 @@ const Fluxos = () => {
       {/* Modals */}
       <FlowBuilderModal
         open={builderOpen}
-        onClose={() => { setBuilderOpen(false); setEditingFlow(null); }}
+        onClose={() => { setBuilderOpen(false); setEditingFlow(null); setBuilderInitialStep(undefined); }}
         onSave={handleSaveFlow}
         initialData={editingFlow}
+        initialStep={builderInitialStep}
       />
       <AIFlowModal
         open={aiOpen}
