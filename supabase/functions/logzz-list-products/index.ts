@@ -174,7 +174,7 @@ Deno.serve(async (req) => {
             });
           }
         } else {
-          const schUrl2 = product.scheduling_checkout_url || null;
+          let schUrl2 = product.scheduling_checkout_url || null;
           let affiliateCode2: string | null = null;
           if (role === "affiliate") {
             affiliateCode2 = configAffiliateId;
@@ -182,6 +182,18 @@ Deno.serve(async (req) => {
             if (!affiliateCode2 && schUrl2) {
               const payMatch2 = schUrl2.match(/\/pay\/([^/]+)\/[^/]+/);
               if (payMatch2) affiliateCode2 = payMatch2[1];
+            }
+            // Inject affiliate_code into URL if missing
+            if (affiliateCode2 && schUrl2) {
+              const m = schUrl2.match(/^(https?:\/\/[^/]+\/pay\/)([^/]+)$/);
+              if (m) {
+                schUrl2 = `${m[1]}${affiliateCode2}/${m[2]}`;
+              } else {
+                const m2 = schUrl2.match(/^(https?:\/\/[^/]+\/pay\/)([^/]+)\/(.+)$/);
+                if (m2 && m2[2] !== affiliateCode2) {
+                  schUrl2 = `${m2[1]}${affiliateCode2}/${m2[3]}`;
+                }
+              }
             }
           }
           offers.push({
