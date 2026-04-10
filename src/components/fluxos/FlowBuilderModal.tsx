@@ -189,9 +189,9 @@ export default function FlowBuilderModal({ open, onClose, onSave, onAutoSave, in
     }
   };
 
-  const handleSave = () => {
+  const buildSavePayload = useCallback(() => {
     const messageTypes = ["message", "media", "audio", "video", "document", "buttons", "list", "template"];
-    onSave({
+    return {
       name: flowName,
       trigger_event: triggerEvent,
       flow_type: flowType,
@@ -200,8 +200,44 @@ export default function FlowBuilderModal({ open, onClose, onSave, onAutoSave, in
       edges,
       node_count: nodes.length,
       message_count: nodes.filter(n => messageTypes.includes(n.data.type as string)).length,
-    });
+    };
+  }, [flowName, triggerEvent, flowType, apiType, nodes, edges]);
+
+  const handleSave = () => {
+    onSave(buildSavePayload());
   };
+
+  // Auto-save with debounce when nodes or edges change (only when editing existing flow)
+  const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isFirstRender = useRef(true);
+
+  useEffect(() => {
+    // Skip auto-save on initial load / when modal not open / when no onAutoSave / not on builder step
+    if (!open || !onAutoSave || !initialData?.id) return;
+
+    // Skip the first render to avoid saving on mount
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+
+    if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+
+    autoSaveTimer.current = setTimeout(() => {
+      onAutoSave(buildSavePayload());
+    }, 2000);
+
+    return () => {
+      if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+    };
+  }, [nodes, edges, flowName, triggerEvent, flowType, apiType, open, onAutoSave, initialData?.id, buildSavePayload]);
+
+  // Reset first-render flag when modal opens
+  useEffect(() => {
+    if (open) {
+      isFirstRender.current = true;
+    }
+  }, [open]);
 
   const renderNodeConfigPanel = () => {
     if (!selectedNode || selectedNode.data.type === "start") return null;
