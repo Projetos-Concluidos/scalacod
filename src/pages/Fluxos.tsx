@@ -658,6 +658,7 @@ const Fluxos = () => {
         open={builderOpen}
         onClose={() => { setBuilderOpen(false); setEditingFlow(null); setBuilderInitialStep(undefined); }}
         onSave={handleSaveFlow}
+        onAutoSave={handleAutoSave}
         initialData={editingFlow}
         initialStep={builderInitialStep}
       />
