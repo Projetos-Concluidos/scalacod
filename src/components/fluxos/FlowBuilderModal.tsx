@@ -81,11 +81,12 @@ interface FlowBuilderModalProps {
   open: boolean;
   onClose: () => void;
   onSave: (data: any) => void;
+  onAutoSave?: (data: any) => void;
   initialData?: any;
   initialStep?: number;
 }
 
-export default function FlowBuilderModal({ open, onClose, onSave, initialData, initialStep }: FlowBuilderModalProps) {
+export default function FlowBuilderModal({ open, onClose, onSave, onAutoSave, initialData, initialStep }: FlowBuilderModalProps) {
   const [step, setStep] = useState(1);
   const [flowName, setFlowName] = useState(initialData?.name || "");
   const [flowEmoji, setFlowEmoji] = useState(initialData?.emoji || "⚡");
