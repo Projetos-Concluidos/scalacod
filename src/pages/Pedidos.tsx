@@ -1047,6 +1047,31 @@ const Pedidos = () => {
                             </Button>
                           </div>
                         ) : null}
+
+                        {/* Link Pedido Manual — scheduling_checkout_url da oferta */}
+                        {detailOffer?.scheduling_checkout_url && (
+                          <div className="col-span-2 mt-2 rounded-lg border-2 border-emerald-500/40 bg-emerald-500/5 p-3">
+                            <h5 className="text-xs font-bold uppercase text-emerald-400 mb-2 flex items-center gap-1.5">
+                              🔗 Link Pedido Manual (Afiliado)
+                            </h5>
+                            <div className="flex items-center gap-2">
+                              <a
+                                href={detailOffer.scheduling_checkout_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-sm text-emerald-400 hover:underline font-medium truncate flex-1 inline-flex items-center gap-1"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                {detailOffer.scheduling_checkout_url}
+                                <ExternalLink className="h-3.5 w-3.5 shrink-0" />
+                              </a>
+                              <CopyBtn value={detailOffer.scheduling_checkout_url} label="Link pedido manual" />
+                            </div>
+                            <p className="text-[10px] text-muted-foreground mt-1.5">
+                              Use este link para criar o pedido manual na plataforma do afiliado.
+                            </p>
+                          </div>
+                        )}
                       </div>
                     </div>
                     {/* Labels */}
