@@ -99,7 +99,36 @@ export default function FlowBuilderModal({ open, onClose, onSave, initialData, i
     style: { background: "hsl(160 84% 39% / 0.15)", border: "1px solid hsl(160 84% 39% / 0.3)", borderRadius: 12, padding: 12, color: "hsl(160 84% 39%)", fontWeight: 600, fontSize: 13 },
   };
 
-  const [nodes, setNodes, onNodesChange] = useNodesState(initialData?.nodes?.length ? initialData.nodes : [defaultStartNode]);
+  // Normalize nodes loaded from DB to fix type mismatches
+  // Seed-created nodes store type at node.type ("text", "delay") instead of node.data.type
+  // ReactFlow doesn't have registered nodeTypes for "text"/"delay", causing blank rendering
+  const normalizeNodes = useCallback((rawNodes: any[]): Node[] => {
+    return rawNodes.map((n: any) => {
+      const nodeType = n.data?.type || n.type || "message";
+      // Map legacy "text" type to "message" for consistency with builder
+      const mappedType = nodeType === "text" ? "message" : nodeType;
+      const cfg = NODE_TYPES_CONFIG.find(c => c.type === mappedType);
+      const content = n.data?.content || n.data?.text || "";
+      const label = n.data?.label || cfg?.label || (content ? content.slice(0, 50) + "..." : mappedType);
+
+      return {
+        id: n.id,
+        position: n.position || { x: 250, y: 100 },
+        // Don't set node.type — let ReactFlow use the default renderer
+        data: {
+          ...n.data,
+          type: mappedType,
+          label,
+          content,
+          text: content,
+          messageType: n.data?.messageType || (["message", "text"].includes(nodeType) ? "text" : undefined),
+        },
+        style: n.style || getNodeStyle(mappedType),
+      };
+    });
+  }, []);
+
+  const [nodes, setNodes, onNodesChange] = useNodesState(initialData?.nodes?.length ? normalizeNodes(initialData.nodes) : [defaultStartNode]);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialData?.edges?.length ? initialData.edges : []);
   const nodeIdCounter = useRef(1);
 
@@ -110,7 +139,8 @@ export default function FlowBuilderModal({ open, onClose, onSave, initialData, i
       setTriggerEvent(initialData.trigger_event || "");
       setFlowType(initialData.flow_type || "cod");
       setApiType(initialData.is_official ? "official" : "evolution");
-      setNodes(initialData.nodes?.length ? initialData.nodes : [defaultStartNode]);
+      const normalized = initialData.nodes?.length ? normalizeNodes(initialData.nodes) : [defaultStartNode];
+      setNodes(normalized);
       setEdges(initialData.edges?.length ? initialData.edges : []);
       nodeIdCounter.current = (initialData.nodes?.length || 0) + 1;
       setStep(initialStep || 1);
