@@ -134,6 +134,34 @@ export default function FlowBuilderModal({ open, onClose, onSave, initialData, i
     });
   }, []);
 
+  const [nodes, setNodes, onNodesChange] = useNodesState(initialData?.nodes?.length ? normalizeNodes(initialData.nodes) : [defaultStartNode]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(initialData?.edges?.length ? initialData.edges : []);
+  const nodeIdCounter = useRef(1);
+
+  useEffect(() => {
+    if (open && initialData) {
+      setFlowName(initialData.name || "");
+      setFlowEmoji(initialData.emoji || "⚡");
+      setTriggerEvent(initialData.trigger_event || "");
+      setFlowType(initialData.flow_type || "cod");
+      setApiType(initialData.is_official ? "official" : "evolution");
+      const normalized = initialData.nodes?.length ? normalizeNodes(initialData.nodes) : [defaultStartNode];
+      setNodes(normalized);
+      setEdges(initialData.edges?.length ? initialData.edges : []);
+      nodeIdCounter.current = (initialData.nodes?.length || 0) + 1;
+      setStep(initialStep || 1);
+      setSelectedNode(null);
+    } else if (open && !initialData) {
+      setFlowName(""); setFlowEmoji("⚡"); setTriggerEvent(""); setFlowType("cod"); setApiType("evolution");
+      setNodes([defaultStartNode]); setEdges([]);
+      nodeIdCounter.current = 1; setStep(initialStep || 1); setSelectedNode(null);
+    }
+  }, [open, initialData, initialStep]);
+
+  const onConnect = useCallback((params: Connection) => {
+    setEdges((eds) => addEdge({ ...params, animated: true, style: { stroke: "hsl(160 84% 60%)", strokeWidth: 2 } }, eds));
+  }, [setEdges]);
+
   const addNode = (type: string) => {
     const id = `node_${nodeIdCounter.current++}`;
     const cfg = NODE_TYPES_CONFIG.find(n => n.type === type);
