@@ -96,7 +96,7 @@ export default function FlowBuilderModal({ open, onClose, onSave, initialData, i
   const defaultStartNode: Node = {
     id: "start", position: { x: 250, y: 50 },
     data: { label: "🚀 Início do Fluxo", type: "start" },
-    style: { background: "hsl(160 84% 39% / 0.15)", border: "1px solid hsl(160 84% 39% / 0.3)", borderRadius: 12, padding: 12, color: "hsl(160 84% 39%)", fontWeight: 600, fontSize: 13 },
+    style: { background: "hsl(160 84% 39% / 0.2)", border: "1px solid hsl(160 84% 39% / 0.5)", borderRadius: 12, padding: 12, color: "hsl(160 84% 60%)", fontWeight: 600, fontSize: 13, boxShadow: "0 2px 8px rgba(0,0,0,0.4)" },
   };
 
   // Normalize nodes loaded from DB to fix type mismatches
@@ -153,15 +153,16 @@ export default function FlowBuilderModal({ open, onClose, onSave, initialData, i
   }, [open, initialData, initialStep]);
 
   const onConnect = useCallback((params: Connection) => {
-    setEdges((eds) => addEdge({ ...params, animated: true, style: { stroke: "hsl(160 84% 39%)" } }, eds));
+    setEdges((eds) => addEdge({ ...params, animated: true, style: { stroke: "hsl(160 84% 60%)", strokeWidth: 2 } }, eds));
   }, [setEdges]);
 
   const getNodeStyle = (type: string) => {
-    if (type === "trigger" || type === "start") return { background: "hsl(160 84% 39% / 0.15)", border: "1px solid hsl(160 84% 39% / 0.3)", borderRadius: 12, padding: 12, color: "hsl(160 84% 39%)", fontWeight: 600, fontSize: 13 };
-    if (type === "action") return { background: "hsl(217 91% 60% / 0.1)", border: "1px solid hsl(217 91% 60% / 0.3)", borderRadius: 12, padding: 12, color: "hsl(217 91% 60%)", fontWeight: 600, fontSize: 13 };
-    if (type === "remarketing") return { background: "hsl(38 92% 50% / 0.1)", border: "1px solid hsl(38 92% 50% / 0.3)", borderRadius: 12, padding: 12, color: "hsl(38 92% 50%)", fontWeight: 600, fontSize: 13 };
-    if (type === "end") return { background: "hsl(0 84% 60% / 0.1)", border: "1px solid hsl(0 84% 60% / 0.3)", borderRadius: 12, padding: 12, color: "hsl(0 84% 60%)", fontWeight: 600, fontSize: 13 };
-    return { background: "#FFFFFF", border: "1px solid hsl(160 84% 39% / 0.2)", borderRadius: 12, padding: 12, color: "#111827", fontSize: 13, minWidth: 200 };
+    const base = { borderRadius: 12, padding: 12, fontWeight: 600, fontSize: 13, boxShadow: "0 2px 8px rgba(0,0,0,0.4)" };
+    if (type === "trigger" || type === "start") return { ...base, background: "hsl(160 84% 39% / 0.2)", border: "1px solid hsl(160 84% 39% / 0.5)", color: "hsl(160 84% 60%)" };
+    if (type === "action") return { ...base, background: "hsl(217 91% 60% / 0.15)", border: "1px solid hsl(217 91% 60% / 0.5)", color: "hsl(217 91% 75%)" };
+    if (type === "remarketing") return { ...base, background: "hsl(38 92% 50% / 0.15)", border: "1px solid hsl(38 92% 50% / 0.5)", color: "hsl(38 92% 70%)" };
+    if (type === "end") return { ...base, background: "hsl(0 84% 60% / 0.15)", border: "1px solid hsl(0 84% 60% / 0.5)", color: "hsl(0 84% 75%)" };
+    return { ...base, background: "hsl(220 10% 14%)", border: "1px solid hsl(160 84% 39% / 0.3)", color: "#e5e7eb", minWidth: 200 };
   };
 
   const addNode = (type: string) => {
@@ -635,11 +636,11 @@ export default function FlowBuilderModal({ open, onClose, onSave, initialData, i
                   onNodeClick={(_, node) => setSelectedNode(node)}
                   fitView
                   proOptions={{ hideAttribution: true }}
-                  style={{ background: "#F8FFFE" }}
+                  style={{ background: "#0a0a0a" }}
                 >
-                  <Controls style={{ background: "#FFFFFF", borderColor: "hsl(160 84% 39% / 0.2)" }} />
-                  <MiniMap style={{ background: "#FFFFFF" }} nodeColor="hsl(160 84% 39% / 0.3)" />
-                  <Background color="hsl(160 84% 39% / 0.08)" gap={20} />
+                  <Controls style={{ background: "#1a1a1a", borderColor: "#333", color: "#aaa" }} />
+                  <MiniMap style={{ background: "#111" }} nodeColor="hsl(160 84% 39% / 0.4)" maskColor="rgba(0,0,0,0.7)" />
+                  <Background color="#252525" gap={20} size={1} />
                 </ReactFlow>
               </div>
 
