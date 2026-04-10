@@ -1047,7 +1047,6 @@ const Pedidos = () => {
                             </Button>
                           </div>
                         ) : null}
-                      </div>
 
                         {/* Link Pedido Manual — scheduling_checkout_url da oferta */}
                         {detailOffer?.scheduling_checkout_url && (
