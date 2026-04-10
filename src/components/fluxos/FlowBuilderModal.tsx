@@ -101,13 +101,18 @@ export default function FlowBuilderModal({ open, onClose, onSave, initialData, i
     style: { background: "hsl(160 84% 39% / 0.2)", border: "1px solid hsl(160 84% 39% / 0.5)", borderRadius: 12, padding: 12, color: "hsl(160 84% 60%)", fontWeight: 600, fontSize: 13, boxShadow: "0 2px 8px rgba(0,0,0,0.4)" },
   };
 
-  // Normalize nodes loaded from DB to fix type mismatches
-  // Seed-created nodes store type at node.type ("text", "delay") instead of node.data.type
-  // ReactFlow doesn't have registered nodeTypes for "text"/"delay", causing blank rendering
+  const getNodeStyle = (type: string) => {
+    const base = { borderRadius: 12, padding: 12, fontWeight: 600, fontSize: 13, boxShadow: "0 2px 8px rgba(0,0,0,0.4)" };
+    if (type === "trigger" || type === "start") return { ...base, background: "hsl(160 84% 39% / 0.2)", border: "1px solid hsl(160 84% 39% / 0.5)", color: "hsl(160 84% 60%)" };
+    if (type === "action") return { ...base, background: "hsl(217 91% 60% / 0.15)", border: "1px solid hsl(217 91% 60% / 0.5)", color: "hsl(217 91% 75%)" };
+    if (type === "remarketing") return { ...base, background: "hsl(38 92% 50% / 0.15)", border: "1px solid hsl(38 92% 50% / 0.5)", color: "hsl(38 92% 70%)" };
+    if (type === "end") return { ...base, background: "hsl(0 84% 60% / 0.15)", border: "1px solid hsl(0 84% 60% / 0.5)", color: "hsl(0 84% 75%)" };
+    return { ...base, background: "hsl(220 10% 14%)", border: "1px solid hsl(160 84% 39% / 0.3)", color: "#e5e7eb", minWidth: 200 };
+  };
+
   const normalizeNodes = useCallback((rawNodes: any[]): Node[] => {
     return rawNodes.map((n: any) => {
       const nodeType = n.data?.type || n.type || "message";
-      // Map legacy "text" type to "message" for consistency with builder
       const mappedType = nodeType === "text" ? "message" : nodeType;
       const cfg = NODE_TYPES_CONFIG.find(c => c.type === mappedType);
       const content = n.data?.content || n.data?.text || "";
@@ -116,7 +121,6 @@ export default function FlowBuilderModal({ open, onClose, onSave, initialData, i
       return {
         id: n.id,
         position: n.position || { x: 250, y: 100 },
-        // Don't set node.type — let ReactFlow use the default renderer
         data: {
           ...n.data,
           type: mappedType,
@@ -129,43 +133,6 @@ export default function FlowBuilderModal({ open, onClose, onSave, initialData, i
       };
     });
   }, []);
-
-  const [nodes, setNodes, onNodesChange] = useNodesState(initialData?.nodes?.length ? normalizeNodes(initialData.nodes) : [defaultStartNode]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initialData?.edges?.length ? initialData.edges : []);
-  const nodeIdCounter = useRef(1);
-
-  useEffect(() => {
-    if (open && initialData) {
-      setFlowName(initialData.name || "");
-      setFlowEmoji(initialData.emoji || "⚡");
-      setTriggerEvent(initialData.trigger_event || "");
-      setFlowType(initialData.flow_type || "cod");
-      setApiType(initialData.is_official ? "official" : "evolution");
-      const normalized = initialData.nodes?.length ? normalizeNodes(initialData.nodes) : [defaultStartNode];
-      setNodes(normalized);
-      setEdges(initialData.edges?.length ? initialData.edges : []);
-      nodeIdCounter.current = (initialData.nodes?.length || 0) + 1;
-      setStep(initialStep || 1);
-      setSelectedNode(null);
-    } else if (open && !initialData) {
-      setFlowName(""); setFlowEmoji("⚡"); setTriggerEvent(""); setFlowType("cod"); setApiType("evolution");
-      setNodes([defaultStartNode]); setEdges([]);
-      nodeIdCounter.current = 1; setStep(initialStep || 1); setSelectedNode(null);
-    }
-  }, [open, initialData, initialStep]);
-
-  const onConnect = useCallback((params: Connection) => {
-    setEdges((eds) => addEdge({ ...params, animated: true, style: { stroke: "hsl(160 84% 60%)", strokeWidth: 2 } }, eds));
-  }, [setEdges]);
-
-  const getNodeStyle = (type: string) => {
-    const base = { borderRadius: 12, padding: 12, fontWeight: 600, fontSize: 13, boxShadow: "0 2px 8px rgba(0,0,0,0.4)" };
-    if (type === "trigger" || type === "start") return { ...base, background: "hsl(160 84% 39% / 0.2)", border: "1px solid hsl(160 84% 39% / 0.5)", color: "hsl(160 84% 60%)" };
-    if (type === "action") return { ...base, background: "hsl(217 91% 60% / 0.15)", border: "1px solid hsl(217 91% 60% / 0.5)", color: "hsl(217 91% 75%)" };
-    if (type === "remarketing") return { ...base, background: "hsl(38 92% 50% / 0.15)", border: "1px solid hsl(38 92% 50% / 0.5)", color: "hsl(38 92% 70%)" };
-    if (type === "end") return { ...base, background: "hsl(0 84% 60% / 0.15)", border: "1px solid hsl(0 84% 60% / 0.5)", color: "hsl(0 84% 75%)" };
-    return { ...base, background: "hsl(220 10% 14%)", border: "1px solid hsl(160 84% 39% / 0.3)", color: "#e5e7eb", minWidth: 200 };
-  };
 
   const addNode = (type: string) => {
     const id = `node_${nodeIdCounter.current++}`;
