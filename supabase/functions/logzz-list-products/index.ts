@@ -128,17 +128,28 @@ Deno.serve(async (req) => {
 
         if (Array.isArray(productOffers)) {
           for (const offer of productOffers) {
-            const schUrl = offer.scheduling_checkout_url || null;
+            let schUrl = offer.scheduling_checkout_url || null;
             let affiliateCode: string | null = null;
             if (role === "affiliate") {
-              // Primary: use affiliate_id from integration config
               affiliateCode = configAffiliateId;
-              // Fallback: try direct fields from API
               if (!affiliateCode) affiliateCode = offer.affiliate_code || offer.affiliate_hash || product.affiliate_code || product.affiliate_hash || null;
-              // Fallback: extract from scheduling_checkout_url
               if (!affiliateCode && schUrl) {
                 const payMatch = schUrl.match(/\/pay\/([^/]+)\/[^/]+/);
                 if (payMatch) affiliateCode = payMatch[1];
+              }
+              // Inject affiliate_code into URL if missing
+              if (affiliateCode && schUrl) {
+                const m = schUrl.match(/^(https?:\/\/[^/]+\/pay\/)([^/]+)$/);
+                if (m) {
+                  // URL is /pay/SLUG (no affiliate) → inject
+                  schUrl = `${m[1]}${affiliateCode}/${m[2]}`;
+                } else {
+                  // URL is /pay/X/SLUG — verify X matches affiliate
+                  const m2 = schUrl.match(/^(https?:\/\/[^/]+\/pay\/)([^/]+)\/(.+)$/);
+                  if (m2 && m2[2] !== affiliateCode) {
+                    schUrl = `${m2[1]}${affiliateCode}/${m2[3]}`;
+                  }
+                }
               }
             }
             offers.push({

@@ -1049,29 +1049,46 @@ const Pedidos = () => {
                         ) : null}
 
                         {/* Link Pedido Manual — scheduling_checkout_url da oferta */}
-                        {detailOffer?.scheduling_checkout_url && (
-                          <div className="col-span-2 mt-2 rounded-lg border-2 border-emerald-500/40 bg-emerald-500/5 p-3">
-                            <h5 className="text-xs font-bold uppercase text-emerald-400 mb-2 flex items-center gap-1.5">
-                              🔗 Link Pedido Manual (Afiliado)
-                            </h5>
-                            <div className="flex items-center gap-2">
-                              <a
-                                href={detailOffer.scheduling_checkout_url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-sm text-emerald-400 hover:underline font-medium truncate flex-1 inline-flex items-center gap-1"
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                {detailOffer.scheduling_checkout_url}
-                                <ExternalLink className="h-3.5 w-3.5 shrink-0" />
-                              </a>
-                              <CopyBtn value={detailOffer.scheduling_checkout_url} label="Link pedido manual" />
+                        {(() => {
+                          let manualUrl = detailOffer?.scheduling_checkout_url || null;
+                          const affCode = detailOffer?.affiliate_code || null;
+                          // Dynamic fallback: inject affiliate_code if URL is missing it
+                          if (manualUrl && affCode) {
+                            const mSingle = manualUrl.match(/^(https?:\/\/[^/]+\/pay\/)([^/]+)$/);
+                            if (mSingle) {
+                              manualUrl = `${mSingle[1]}${affCode}/${mSingle[2]}`;
+                            } else {
+                              const mDouble = manualUrl.match(/^(https?:\/\/[^/]+\/pay\/)([^/]+)\/(.+)$/);
+                              if (mDouble && mDouble[2] !== affCode) {
+                                manualUrl = `${mDouble[1]}${affCode}/${mDouble[3]}`;
+                              }
+                            }
+                          }
+                          if (!manualUrl) return null;
+                          return (
+                            <div className="col-span-2 mt-2 rounded-lg border-2 border-emerald-500/40 bg-emerald-500/5 p-3">
+                              <h5 className="text-xs font-bold uppercase text-emerald-400 mb-2 flex items-center gap-1.5">
+                                🔗 Link Pedido Manual (Afiliado)
+                              </h5>
+                              <div className="flex items-center gap-2">
+                                <a
+                                  href={manualUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-sm text-emerald-400 hover:underline font-medium truncate flex-1 inline-flex items-center gap-1"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  {manualUrl}
+                                  <ExternalLink className="h-3.5 w-3.5 shrink-0" />
+                                </a>
+                                <CopyBtn value={manualUrl} label="Link pedido manual" />
+                              </div>
+                              <p className="text-[10px] text-muted-foreground mt-1.5">
+                                Use este link para criar o pedido manual na plataforma do afiliado.
+                              </p>
                             </div>
-                            <p className="text-[10px] text-muted-foreground mt-1.5">
-                              Use este link para criar o pedido manual na plataforma do afiliado.
-                            </p>
-                          </div>
-                        )}
+                          );
+                        })()}
                       </div>
                     </div>
                     {/* Labels */}
