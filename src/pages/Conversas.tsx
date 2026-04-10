@@ -240,7 +240,15 @@ const Conversas = () => {
   // Resolve/archive conversation
   const updateConversationStatus = async (status: string) => {
     if (!selectedConv) return;
-    await supabase.from("conversations").update({ status }).eq("id", selectedConv.id);
+    const { error } = await supabase
+      .from("conversations")
+      .update({ status, updated_at: new Date().toISOString() })
+      .eq("id", selectedConv.id);
+    if (error) {
+      console.error("Failed to update conversation status:", error);
+      toast.error("Erro ao atualizar status da conversa");
+      return;
+    }
     setConversations(prev => prev.map(c => c.id === selectedConv.id ? { ...c, status } : c));
     if (status === "archived") {
       setSelectedConv(null);
