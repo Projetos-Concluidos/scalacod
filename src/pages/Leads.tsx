@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { Users, Heart, MessageSquare, DollarSign, Upload, Search, LayoutGrid, List, Phone, Mail, Eye, MoreHorizontal, X, FileText, Plus, Tag, Send, Download } from "lucide-react";
+import { Users, Heart, MessageSquare, DollarSign, Upload, Search, LayoutGrid, List, Phone, Mail, Eye, X, FileText, Plus, Tag, Send, Download, Trash2, Edit2, Save, Megaphone, MapPin, CheckSquare } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTeamContext } from "@/hooks/useTeamContext";
@@ -11,10 +11,14 @@ import StatCard from "@/components/StatCard";
 import EmptyState from "@/components/EmptyState";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from "@/components/ui/table";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { Tables } from "@/integrations/supabase/types";
 
 type Lead = Tables<"leads">;
@@ -26,7 +30,6 @@ const statusConfig: Record<string, { label: string; color: string }> = {
 };
 
 const getInitials = (name: string) => name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase();
-
 const formatCurrency = (v: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
 
 const Leads = () => {
@@ -43,6 +46,28 @@ const Leads = () => {
   const [importing, setImporting] = useState(false);
   const [leadOrders, setLeadOrders] = useState<any[]>([]);
   const [newTag, setNewTag] = useState("");
+
+  // Multi-select
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  // Edit mode
+  const [editing, setEditing] = useState(false);
+  const [editForm, setEditForm] = useState({ name: "", phone: "", email: "", document: "", status: "" });
+
+  // Delete
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  // Remarketing
+  const [showRemarketingModal, setShowRemarketingModal] = useState(false);
+  const [remarketingCampaigns, setRemarketingCampaigns] = useState<any[]>([]);
+  const [selectedCampaignId, setSelectedCampaignId] = useState<string>("");
+  const [enrolling, setEnrolling] = useState(false);
+  const [remarketingLeadIds, setRemarketingLeadIds] = useState<string[]>([]);
+
+  // Address from latest order
+  const [leadAddress, setLeadAddress] = useState<any>(null);
 
   const fetchLeads = async () => {
     if (!user) return;
@@ -66,6 +91,9 @@ const Leads = () => {
     }
     return result;
   }, [leads, activeTab, search]);
+
+  // Clear selection when filter changes
+  useEffect(() => { setSelectedIds(new Set()); }, [activeTab, search]);
 
   const stats = useMemo(() => ({
     total: leads.length,
@@ -93,13 +121,11 @@ const Leads = () => {
     const nameIdx = headers.findIndex(h => h.includes("nome") || h.includes("name"));
     const phoneIdx = headers.findIndex(h => h.includes("telefone") || h.includes("phone") || h.includes("cel"));
     const emailIdx = headers.findIndex(h => h.includes("email"));
-
     if (nameIdx === -1 || phoneIdx === -1) {
       toast.error("CSV precisa ter colunas 'nome' e 'telefone'");
       setImporting(false);
       return;
     }
-
     const rows = csvData.slice(1).filter(r => r[nameIdx] && r[phoneIdx]);
     const inserts = rows.map(r => ({
       user_id: user.id,
@@ -108,7 +134,6 @@ const Leads = () => {
       email: emailIdx >= 0 ? r[emailIdx] || null : null,
       status: "Em Aguardo" as string,
     }));
-
     const { error } = await supabase.from("leads").insert(inserts);
     if (error) toast.error("Erro ao importar: " + error.message);
     else { toast.success(`${inserts.length} leads importados!`); setShowImport(false); setCsvData([]); fetchLeads(); }
@@ -117,12 +142,80 @@ const Leads = () => {
 
   const openLeadDetail = async (lead: Lead) => {
     setSelectedLead(lead);
+    setEditing(false);
+    setLeadAddress(null);
     if (user) {
       const { data } = await supabase.from("orders").select("*").eq("client_phone", lead.phone).order("created_at", { ascending: false }).limit(10);
       setLeadOrders(data || []);
+      if (data && data.length > 0) {
+        const latest = data[0];
+        setLeadAddress({
+          address: latest.client_address,
+          number: latest.client_address_number,
+          comp: latest.client_address_comp,
+          district: latest.client_address_district,
+          city: latest.client_address_city,
+          state: latest.client_address_state,
+          zip: latest.client_zip_code,
+          country: latest.client_address_country,
+        });
+      }
     }
   };
 
+  // Edit lead
+  const startEditing = () => {
+    if (!selectedLead) return;
+    setEditForm({
+      name: selectedLead.name,
+      phone: selectedLead.phone,
+      email: selectedLead.email || "",
+      document: selectedLead.document || "",
+      status: selectedLead.status || "Em Aguardo",
+    });
+    setEditing(true);
+  };
+
+  const saveEdit = async () => {
+    if (!selectedLead) return;
+    const { error } = await supabase.from("leads").update({
+      name: editForm.name,
+      phone: editForm.phone,
+      email: editForm.email || null,
+      document: editForm.document || null,
+      status: editForm.status,
+    }).eq("id", selectedLead.id);
+    if (error) { toast.error("Erro ao salvar: " + error.message); return; }
+    toast.success("Lead atualizado!");
+    setEditing(false);
+    const updated = { ...selectedLead, ...editForm, email: editForm.email || null, document: editForm.document || null };
+    setSelectedLead(updated as Lead);
+    fetchLeads();
+  };
+
+  // Delete single
+  const deleteLead = async () => {
+    if (!selectedLead) return;
+    setDeleting(true);
+    const { error } = await supabase.from("leads").delete().eq("id", selectedLead.id);
+    if (error) { toast.error("Erro ao excluir: " + error.message); }
+    else { toast.success("Lead excluído!"); setSelectedLead(null); fetchLeads(); }
+    setDeleting(false);
+    setShowDeleteConfirm(false);
+  };
+
+  // Bulk delete
+  const bulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    setDeleting(true);
+    const { error } = await supabase.from("leads").delete().in("id", Array.from(selectedIds));
+    if (error) { toast.error("Erro ao excluir: " + error.message); }
+    else { toast.success(`${selectedIds.size} leads excluídos!`); setSelectedIds(new Set()); fetchLeads(); }
+    setDeleting(false);
+    setShowBulkDeleteConfirm(false);
+  };
+
+  // Tags
   const addTag = async () => {
     if (!selectedLead || !newTag.trim()) return;
     const currentTags = (selectedLead.tags as string[]) || [];
@@ -143,15 +236,12 @@ const Leads = () => {
     fetchLeads();
   };
 
+  // CSV Export
   const exportCSV = useCallback(() => {
     if (filtered.length === 0) { toast.error("Nenhum lead para exportar"); return; }
     const headers = ["Nome", "Telefone", "Email", "Status", "Receita", "Tags", "Criado em"];
     const rows = filtered.map(l => [
-      l.name,
-      l.phone,
-      l.email || "",
-      l.status || "",
-      String(l.accumulated_revenue || 0),
+      l.name, l.phone, l.email || "", l.status || "", String(l.accumulated_revenue || 0),
       ((l.tags as string[]) || []).join("; "),
       l.created_at ? format(new Date(l.created_at), "dd/MM/yyyy HH:mm") : "",
     ]);
@@ -163,6 +253,50 @@ const Leads = () => {
     a.click(); URL.revokeObjectURL(url);
     toast.success(`${filtered.length} leads exportados!`);
   }, [filtered]);
+
+  // Remarketing
+  const openRemarketingModal = async (leadIds: string[]) => {
+    setRemarketingLeadIds(leadIds);
+    const { data } = await supabase.from("remarketing_campaigns").select("id, name, is_active").eq("is_active", true);
+    setRemarketingCampaigns(data || []);
+    setSelectedCampaignId("");
+    setShowRemarketingModal(true);
+  };
+
+  const enrollInRemarketing = async () => {
+    if (!selectedCampaignId || remarketingLeadIds.length === 0 || !user) return;
+    setEnrolling(true);
+    const inserts = remarketingLeadIds.map(leadId => ({
+      campaign_id: selectedCampaignId,
+      user_id: user.id,
+      lead_id: leadId,
+      status: "active",
+      enrolled_at: new Date().toISOString(),
+    }));
+    const { error } = await supabase.from("remarketing_enrollments").insert(inserts as any);
+    if (error) { toast.error("Erro ao adicionar: " + error.message); }
+    else { toast.success(`${remarketingLeadIds.length} lead(s) adicionados à campanha!`); setShowRemarketingModal(false); setSelectedIds(new Set()); }
+    setEnrolling(false);
+  };
+
+  // Selection helpers
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === filtered.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filtered.map(l => l.id)));
+    }
+  };
+
+  const allSelected = filtered.length > 0 && selectedIds.size === filtered.length;
 
   const tabs = ["Todos", "Confirmados", "Em Aguardo", "Cancelados"];
 
@@ -184,12 +318,8 @@ const Leads = () => {
         subtitle="Gerencie seus contatos e funil de vendas em tempo real."
         actions={
           <div className="flex gap-2">
-            <Button variant="outline" className="gap-2" onClick={exportCSV}>
-              <Download className="h-4 w-4" /> Exportar CSV
-            </Button>
-            <Button variant="outline" className="gap-2" onClick={() => setShowImport(true)}>
-              <Upload className="h-4 w-4" /> Importar
-            </Button>
+            <Button variant="outline" className="gap-2" onClick={exportCSV}><Download className="h-4 w-4" /> Exportar CSV</Button>
+            <Button variant="outline" className="gap-2" onClick={() => setShowImport(true)}><Upload className="h-4 w-4" /> Importar</Button>
           </div>
         }
       />
@@ -202,62 +332,60 @@ const Leads = () => {
         <StatCard label="Receita Acumulada" value={formatCurrency(stats.revenue)} icon={<DollarSign className="h-6 w-6 text-primary" />} iconBg="bg-primary/10" />
       </div>
 
+      {/* Floating Action Bar */}
+      {selectedIds.size > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 rounded-xl border border-border bg-card px-5 py-3 shadow-2xl shadow-black/20">
+          <CheckSquare className="h-5 w-5 text-primary" />
+          <span className="text-sm font-semibold text-foreground">{selectedIds.size} selecionado(s)</span>
+          <div className="h-5 w-px bg-border" />
+          <Button size="sm" variant="outline" className="gap-1.5 text-destructive border-destructive/30 hover:bg-destructive/10" onClick={() => setShowBulkDeleteConfirm(true)}>
+            <Trash2 className="h-3.5 w-3.5" /> Excluir
+          </Button>
+          <Button size="sm" variant="outline" className="gap-1.5" onClick={() => openRemarketingModal(Array.from(selectedIds))}>
+            <Megaphone className="h-3.5 w-3.5" /> Remarketing
+          </Button>
+          <button onClick={() => setSelectedIds(new Set())} className="ml-1 flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+
       {/* Filters */}
       <div className="ninja-card">
         <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3 flex-wrap">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <input
-                type="text"
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                placeholder="Buscar por nome, email ou telefone"
-                className="h-9 w-64 rounded-lg border border-border bg-input pl-9 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
-              />
+              <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar por nome, email ou telefone"
+                className="h-9 w-64 rounded-lg border border-border bg-input pl-9 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30" />
             </div>
             <Tabs value={activeTab} onValueChange={setActiveTab}>
               <TabsList className="bg-card border border-border">
                 {tabs.map(tab => (
-                  <TabsTrigger key={tab} value={tab} className="text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                    {tab}
-                  </TabsTrigger>
+                  <TabsTrigger key={tab} value={tab} className="text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">{tab}</TabsTrigger>
                 ))}
               </TabsList>
             </Tabs>
           </div>
           <div className="flex items-center gap-1">
-            <button onClick={() => setViewMode("grid")} className={`flex h-8 w-8 items-center justify-center rounded-lg ${viewMode === "grid" ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}>
-              <LayoutGrid className="h-4 w-4" />
-            </button>
-            <button onClick={() => setViewMode("table")} className={`flex h-8 w-8 items-center justify-center rounded-lg ${viewMode === "table" ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}>
-              <List className="h-4 w-4" />
-            </button>
+            <button onClick={() => setViewMode("grid")} className={`flex h-8 w-8 items-center justify-center rounded-lg ${viewMode === "grid" ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}><LayoutGrid className="h-4 w-4" /></button>
+            <button onClick={() => setViewMode("table")} className={`flex h-8 w-8 items-center justify-center rounded-lg ${viewMode === "table" ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}><List className="h-4 w-4" /></button>
           </div>
         </div>
 
-        {/* Loading */}
         {loading ? (
-          <div className="space-y-3">
-            {[...Array(5)].map((_, i) => <div key={i} className="h-16 animate-pulse rounded-lg bg-muted" />)}
-          </div>
+          <div className="space-y-3">{[...Array(5)].map((_, i) => <div key={i} className="h-16 animate-pulse rounded-lg bg-muted" />)}</div>
         ) : filtered.length === 0 ? (
-          <EmptyState
-            icon={<Users className="h-12 w-12" />}
-            title="Nenhum lead encontrado"
-            description="Leads aparecerão quando houver pedidos"
-            action={
-              <Button variant="outline" className="gap-2" onClick={() => setShowImport(true)}>
-                <Upload className="h-4 w-4" /> Importar leads
-              </Button>
-            }
-          />
+          <EmptyState icon={<Users className="h-12 w-12" />} title="Nenhum lead encontrado" description="Leads aparecerão quando houver pedidos"
+            action={<Button variant="outline" className="gap-2" onClick={() => setShowImport(true)}><Upload className="h-4 w-4" /> Importar leads</Button>} />
         ) : viewMode === "table" ? (
-          /* TABLE VIEW */
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow className="border-border">
+                  <TableHead className="w-10">
+                    <Checkbox checked={allSelected} onCheckedChange={toggleSelectAll} />
+                  </TableHead>
                   <TableHead>Nome</TableHead>
                   <TableHead>Telefone</TableHead>
                   <TableHead>Email</TableHead>
@@ -270,6 +398,9 @@ const Leads = () => {
               <TableBody>
                 {filtered.map(lead => (
                   <TableRow key={lead.id} className="border-border hover:bg-muted/30 cursor-pointer" onClick={() => openLeadDetail(lead)}>
+                    <TableCell onClick={e => e.stopPropagation()}>
+                      <Checkbox checked={selectedIds.has(lead.id)} onCheckedChange={() => toggleSelect(lead.id)} />
+                    </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-3">
                         <LeadAvatar name={lead.name} className="h-8 w-8" />
@@ -283,12 +414,8 @@ const Leads = () => {
                     <TableCell className="text-muted-foreground">{format(new Date(lead.created_at!), "dd/MM/yy", { locale: ptBR })}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1" onClick={e => e.stopPropagation()}>
-                        <a href={`https://wa.me/${lead.phone.replace(/\D/g, "")}`} target="_blank" rel="noreferrer" className="flex h-8 w-8 items-center justify-center rounded-lg text-success hover:bg-success/10">
-                          <Phone className="h-4 w-4" />
-                        </a>
-                        <button onClick={() => openLeadDetail(lead)} className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted">
-                          <Eye className="h-4 w-4" />
-                        </button>
+                        <a href={`https://wa.me/${lead.phone.replace(/\D/g, "")}`} target="_blank" rel="noreferrer" className="flex h-8 w-8 items-center justify-center rounded-lg text-success hover:bg-success/10"><Phone className="h-4 w-4" /></a>
+                        <button onClick={() => openLeadDetail(lead)} className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted"><Eye className="h-4 w-4" /></button>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -297,27 +424,31 @@ const Leads = () => {
             </Table>
           </div>
         ) : (
-          /* GRID VIEW */
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {filtered.map(lead => (
-              <div key={lead.id} onClick={() => openLeadDetail(lead)} className="cursor-pointer rounded-xl border border-border bg-card p-4 transition-all hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5">
-                <div className="flex items-center gap-3 mb-3">
-                  <LeadAvatar name={lead.name} className="h-10 w-10" />
-                  <div className="min-w-0">
-                    <p className="font-semibold text-foreground truncate">{lead.name}</p>
-                    <p className="text-xs text-muted-foreground">{lead.phone}</p>
-                  </div>
+              <div key={lead.id} className="relative cursor-pointer rounded-xl border border-border bg-card p-4 transition-all hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5">
+                <div className="absolute top-3 left-3" onClick={e => e.stopPropagation()}>
+                  <Checkbox checked={selectedIds.has(lead.id)} onCheckedChange={() => toggleSelect(lead.id)} />
                 </div>
-                <div className="mb-3"><StatusBadge status={lead.status} /></div>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Receita</span>
-                  <span className="font-bold text-foreground">{formatCurrency(Number(lead.accumulated_revenue) || 0)}</span>
+                <div onClick={() => openLeadDetail(lead)}>
+                  <div className="flex items-center gap-3 mb-3 pl-6">
+                    <LeadAvatar name={lead.name} className="h-10 w-10" />
+                    <div className="min-w-0">
+                      <p className="font-semibold text-foreground truncate">{lead.name}</p>
+                      <p className="text-xs text-muted-foreground">{lead.phone}</p>
+                    </div>
+                  </div>
+                  <div className="mb-3"><StatusBadge status={lead.status} /></div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Receita</span>
+                    <span className="font-bold text-foreground">{formatCurrency(Number(lead.accumulated_revenue) || 0)}</span>
+                  </div>
                 </div>
                 <div className="mt-3 flex gap-2 border-t border-border pt-3">
                   <a href={`https://wa.me/${lead.phone.replace(/\D/g, "")}`} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()} className="flex h-8 flex-1 items-center justify-center gap-1 rounded-lg bg-success/10 text-xs text-success hover:bg-success/20">
                     <Phone className="h-3 w-3" /> WhatsApp
                   </a>
-                  <button className="flex h-8 flex-1 items-center justify-center gap-1 rounded-lg bg-muted text-xs text-foreground hover:bg-muted/80">
+                  <button onClick={() => openLeadDetail(lead)} className="flex h-8 flex-1 items-center justify-center gap-1 rounded-lg bg-muted text-xs text-foreground hover:bg-muted/80">
                     <Eye className="h-3 w-3" /> Detalhes
                   </button>
                 </div>
@@ -330,9 +461,7 @@ const Leads = () => {
       {/* IMPORT MODAL */}
       <Dialog open={showImport} onOpenChange={setShowImport}>
         <DialogContent className="bg-card border-border max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="text-foreground">Importar Leads</DialogTitle>
-          </DialogHeader>
+          <DialogHeader><DialogTitle className="text-foreground">Importar Leads</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">Envie um arquivo CSV com colunas: <strong>nome</strong>, <strong>telefone</strong>, email (opcional)</p>
             <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-border p-8 hover:border-primary/50 transition-colors">
@@ -360,109 +489,226 @@ const Leads = () => {
       </Dialog>
 
       {/* LEAD DETAIL MODAL */}
-      <Dialog open={!!selectedLead} onOpenChange={() => setSelectedLead(null)}>
+      <Dialog open={!!selectedLead} onOpenChange={() => { setSelectedLead(null); setEditing(false); }}>
         <DialogContent className="bg-card border-border max-w-2xl max-h-[85vh] overflow-y-auto">
           {selectedLead && (
             <>
               <DialogHeader>
-                <div className="flex items-center gap-4">
-                  <LeadAvatar name={selectedLead.name} className="h-14 w-14" />
-                  <div>
-                    <DialogTitle className="text-foreground text-xl">{selectedLead.name}</DialogTitle>
-                    <div className="flex items-center gap-2 mt-1">
-                      <StatusBadge status={selectedLead.status} />
-                      <span className="text-sm text-muted-foreground">Criado em {format(new Date(selectedLead.created_at!), "dd/MM/yyyy", { locale: ptBR })}</span>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <LeadAvatar name={editing ? editForm.name : selectedLead.name} className="h-14 w-14" />
+                    <div>
+                      <DialogTitle className="text-foreground text-xl">{editing ? editForm.name : selectedLead.name}</DialogTitle>
+                      <div className="flex items-center gap-2 mt-1">
+                        <StatusBadge status={editing ? editForm.status : selectedLead.status} />
+                        <span className="text-sm text-muted-foreground">Criado em {format(new Date(selectedLead.created_at!), "dd/MM/yyyy", { locale: ptBR })}</span>
+                      </div>
                     </div>
+                  </div>
+                  <div className="flex gap-1">
+                    {!editing ? (
+                      <>
+                        <Button size="sm" variant="ghost" onClick={startEditing} className="gap-1 text-muted-foreground"><Edit2 className="h-3.5 w-3.5" /> Editar</Button>
+                        <Button size="sm" variant="ghost" onClick={() => setShowDeleteConfirm(true)} className="gap-1 text-destructive hover:text-destructive"><Trash2 className="h-3.5 w-3.5" /> Excluir</Button>
+                      </>
+                    ) : (
+                      <>
+                        <Button size="sm" variant="ghost" onClick={() => setEditing(false)} className="text-muted-foreground">Cancelar</Button>
+                        <Button size="sm" onClick={saveEdit} className="gap-1"><Save className="h-3.5 w-3.5" /> Salvar</Button>
+                      </>
+                    )}
                   </div>
                 </div>
               </DialogHeader>
 
               <div className="space-y-6 mt-4">
                 {/* Contact Info */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="flex items-center gap-3 rounded-lg border border-border p-3">
-                    <Phone className="h-4 w-4 text-primary" />
-                    <div>
-                      <p className="text-xs text-muted-foreground">Telefone</p>
-                      <p className="text-sm text-foreground font-medium">{selectedLead.phone}</p>
+                {editing ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-xs text-muted-foreground">Nome</label>
+                      <Input value={editForm.name} onChange={e => setEditForm(p => ({ ...p, name: e.target.value }))} />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs text-muted-foreground">Telefone</label>
+                      <Input value={editForm.phone} onChange={e => setEditForm(p => ({ ...p, phone: e.target.value }))} />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs text-muted-foreground">Email</label>
+                      <Input value={editForm.email} onChange={e => setEditForm(p => ({ ...p, email: e.target.value }))} />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs text-muted-foreground">Documento</label>
+                      <Input value={editForm.document} onChange={e => setEditForm(p => ({ ...p, document: e.target.value }))} />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs text-muted-foreground">Status</label>
+                      <Select value={editForm.status} onValueChange={v => setEditForm(p => ({ ...p, status: v }))}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Confirmado">Confirmado</SelectItem>
+                          <SelectItem value="Em Aguardo">Em Aguardo</SelectItem>
+                          <SelectItem value="Cancelado">Cancelado</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3 rounded-lg border border-border p-3">
-                    <Mail className="h-4 w-4 text-primary" />
-                    <div>
-                      <p className="text-xs text-muted-foreground">Email</p>
-                      <p className="text-sm text-foreground font-medium">{selectedLead.email || "—"}</p>
-                    </div>
-                  </div>
-                  {selectedLead.document && (
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="flex items-center gap-3 rounded-lg border border-border p-3">
-                      <FileText className="h-4 w-4 text-primary" />
-                      <div>
-                        <p className="text-xs text-muted-foreground">Documento</p>
-                        <p className="text-sm text-foreground font-medium">{selectedLead.document}</p>
-                      </div>
+                      <Phone className="h-4 w-4 text-primary" />
+                      <div><p className="text-xs text-muted-foreground">Telefone</p><p className="text-sm text-foreground font-medium">{selectedLead.phone}</p></div>
                     </div>
-                  )}
-                  <div className="flex items-center gap-3 rounded-lg border border-border p-3">
-                    <DollarSign className="h-4 w-4 text-success" />
-                    <div>
-                      <p className="text-xs text-muted-foreground">Receita Acumulada</p>
-                      <p className="text-sm text-foreground font-bold">{formatCurrency(Number(selectedLead.accumulated_revenue) || 0)}</p>
+                    <div className="flex items-center gap-3 rounded-lg border border-border p-3">
+                      <Mail className="h-4 w-4 text-primary" />
+                      <div><p className="text-xs text-muted-foreground">Email</p><p className="text-sm text-foreground font-medium">{selectedLead.email || "—"}</p></div>
+                    </div>
+                    {selectedLead.document && (
+                      <div className="flex items-center gap-3 rounded-lg border border-border p-3">
+                        <FileText className="h-4 w-4 text-primary" />
+                        <div><p className="text-xs text-muted-foreground">Documento</p><p className="text-sm text-foreground font-medium">{selectedLead.document}</p></div>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-3 rounded-lg border border-border p-3">
+                      <DollarSign className="h-4 w-4 text-success" />
+                      <div><p className="text-xs text-muted-foreground">Receita Acumulada</p><p className="text-sm text-foreground font-bold">{formatCurrency(Number(selectedLead.accumulated_revenue) || 0)}</p></div>
                     </div>
                   </div>
-                </div>
+                )}
+
+                {/* Address from orders */}
+                {leadAddress && !editing && (
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5" /> Endereço (último pedido)</p>
+                    <div className="rounded-lg border border-border p-3 text-sm text-foreground space-y-1">
+                      <p>{leadAddress.address}, {leadAddress.number}{leadAddress.comp ? ` - ${leadAddress.comp}` : ""}</p>
+                      <p>{leadAddress.district} — {leadAddress.city}/{leadAddress.state}</p>
+                      <p className="text-muted-foreground">CEP: {leadAddress.zip} • {leadAddress.country || "Brasil"}</p>
+                    </div>
+                  </div>
+                )}
 
                 {/* Tags */}
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Tags</p>
-                  <div className="flex flex-wrap gap-2 mb-2">
-                    {((selectedLead.tags as string[]) || []).map(tag => (
-                      <Badge key={tag} variant="secondary" className="gap-1 text-xs">
-                        {tag}
-                        <button onClick={() => removeTag(tag)} className="ml-1 hover:text-destructive"><X className="h-3 w-3" /></button>
-                      </Badge>
-                    ))}
-                  </div>
-                  <div className="flex gap-2">
-                    <input value={newTag} onChange={e => setNewTag(e.target.value)} onKeyDown={e => e.key === "Enter" && addTag()} placeholder="Nova tag..." className="h-8 flex-1 rounded-lg border border-border bg-input px-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none" />
-                    <Button size="sm" variant="outline" onClick={addTag} className="h-8"><Plus className="h-3 w-3" /></Button>
-                  </div>
-                </div>
-
-                {/* Orders History */}
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Histórico de Pedidos</p>
-                  {leadOrders.length === 0 ? (
-                    <p className="text-sm text-muted-foreground py-4 text-center">Nenhum pedido encontrado</p>
-                  ) : (
-                    <div className="space-y-2 max-h-48 overflow-y-auto">
-                      {leadOrders.map(order => (
-                        <div key={order.id} className="flex items-center justify-between rounded-lg border border-border p-3">
-                          <div>
-                            <p className="text-sm font-medium text-foreground">#{order.order_number || order.id.slice(0, 8)}</p>
-                            <p className="text-xs text-muted-foreground">{format(new Date(order.created_at), "dd/MM/yy HH:mm", { locale: ptBR })}</p>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-sm font-bold text-foreground">{formatCurrency(Number(order.order_final_price))}</p>
-                            <Badge variant="outline" className="text-xs">{order.status}</Badge>
-                          </div>
-                        </div>
+                {!editing && (
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Tags</p>
+                    <div className="flex flex-wrap gap-2 mb-2">
+                      {((selectedLead.tags as string[]) || []).map(tag => (
+                        <Badge key={tag} variant="secondary" className="gap-1 text-xs">
+                          {tag}
+                          <button onClick={() => removeTag(tag)} className="ml-1 hover:text-destructive"><X className="h-3 w-3" /></button>
+                        </Badge>
                       ))}
                     </div>
-                  )}
-                </div>
+                    <div className="flex gap-2">
+                      <input value={newTag} onChange={e => setNewTag(e.target.value)} onKeyDown={e => e.key === "Enter" && addTag()} placeholder="Nova tag..." className="h-8 flex-1 rounded-lg border border-border bg-input px-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none" />
+                      <Button size="sm" variant="outline" onClick={addTag} className="h-8"><Plus className="h-3 w-3" /></Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Orders History */}
+                {!editing && (
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Histórico de Pedidos</p>
+                    {leadOrders.length === 0 ? (
+                      <p className="text-sm text-muted-foreground py-4 text-center">Nenhum pedido encontrado</p>
+                    ) : (
+                      <div className="space-y-2 max-h-48 overflow-y-auto">
+                        {leadOrders.map(order => (
+                          <div key={order.id} className="flex items-center justify-between rounded-lg border border-border p-3">
+                            <div>
+                              <p className="text-sm font-medium text-foreground">#{order.order_number || order.id.slice(0, 8)}</p>
+                              <p className="text-xs text-muted-foreground">{format(new Date(order.created_at), "dd/MM/yy HH:mm", { locale: ptBR })}</p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-sm font-bold text-foreground">{formatCurrency(Number(order.order_final_price))}</p>
+                              <Badge variant="outline" className="text-xs">{order.status}</Badge>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Actions */}
-                <div className="flex gap-3">
-                  <a href={`https://wa.me/${selectedLead.phone.replace(/\D/g, "")}`} target="_blank" rel="noreferrer" className="flex-1">
-                    <Button className="w-full gap-2 bg-success/20 text-success hover:bg-success/30 border border-success/30">
-                      <Send className="h-4 w-4" /> Enviar WhatsApp
+                {!editing && (
+                  <div className="flex gap-3">
+                    <a href={`https://wa.me/${selectedLead.phone.replace(/\D/g, "")}`} target="_blank" rel="noreferrer" className="flex-1">
+                      <Button className="w-full gap-2 bg-success/20 text-success hover:bg-success/30 border border-success/30"><Send className="h-4 w-4" /> Enviar WhatsApp</Button>
+                    </a>
+                    <Button variant="outline" className="gap-2" onClick={() => openRemarketingModal([selectedLead.id])}>
+                      <Megaphone className="h-4 w-4" /> Remarketing
                     </Button>
-                  </a>
-                </div>
+                  </div>
+                )}
               </div>
             </>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* DELETE CONFIRM (single) */}
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent className="bg-card border-border">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir lead</AlertDialogTitle>
+            <AlertDialogDescription>Tem certeza que deseja excluir "{selectedLead?.name}"? Esta ação não pode ser desfeita.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={deleteLead} disabled={deleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {deleting ? "Excluindo..." : "Excluir"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* DELETE CONFIRM (bulk) */}
+      <AlertDialog open={showBulkDeleteConfirm} onOpenChange={setShowBulkDeleteConfirm}>
+        <AlertDialogContent className="bg-card border-border">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir {selectedIds.size} leads</AlertDialogTitle>
+            <AlertDialogDescription>Tem certeza que deseja excluir {selectedIds.size} leads selecionados? Esta ação não pode ser desfeita.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={bulkDelete} disabled={deleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {deleting ? "Excluindo..." : "Excluir todos"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* REMARKETING MODAL */}
+      <Dialog open={showRemarketingModal} onOpenChange={setShowRemarketingModal}>
+        <DialogContent className="bg-card border-border max-w-md">
+          <DialogHeader><DialogTitle>Adicionar ao Remarketing</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Selecione uma campanha para adicionar {remarketingLeadIds.length} lead(s).
+            </p>
+            {remarketingCampaigns.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">Nenhuma campanha ativa encontrada. Crie uma campanha de remarketing primeiro.</p>
+            ) : (
+              <Select value={selectedCampaignId} onValueChange={setSelectedCampaignId}>
+                <SelectTrigger><SelectValue placeholder="Selecione a campanha..." /></SelectTrigger>
+                <SelectContent>
+                  {remarketingCampaigns.map(c => (
+                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowRemarketingModal(false)}>Cancelar</Button>
+            <Button onClick={enrollInRemarketing} disabled={!selectedCampaignId || enrolling} className="gap-1.5">
+              <Megaphone className="h-4 w-4" />
+              {enrolling ? "Adicionando..." : "Adicionar"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
