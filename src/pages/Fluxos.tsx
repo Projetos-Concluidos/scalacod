@@ -231,6 +231,34 @@ const Fluxos = () => {
     }
   };
 
+  const handleAutoSave = async (data: any) => {
+    if (!user || !editingFlow?.id) return;
+    try {
+      const serializeNodes = (nodes: any[]) => (nodes || []).map((n: any) => ({
+        id: n.id, position: n.position, data: n.data, style: n.style, type: n.type,
+      }));
+      const serializeEdges = (edges: any[]) => (edges || []).map((e: any) => ({
+        id: e.id, source: e.source, target: e.target, sourceHandle: e.sourceHandle,
+        targetHandle: e.targetHandle, animated: e.animated, style: e.style, label: e.label,
+      }));
+      const { error } = await supabase.from("flows").update({
+        name: data.name,
+        trigger_event: data.trigger_event,
+        flow_type: data.flow_type,
+        is_official: data.is_official,
+        nodes: serializeNodes(data.nodes),
+        edges: serializeEdges(data.edges),
+        node_count: data.node_count,
+        message_count: data.message_count,
+      }).eq("id", editingFlow.id);
+      if (!error) {
+        console.log("[AutoSave] Fluxo salvo automaticamente");
+      }
+    } catch (e) {
+      console.error("[AutoSave] Erro:", e);
+    }
+  };
+
   const handleAIGenerated = (data: any) => {
     setEditingFlow({ ...data, id: "" } as any);
     setBuilderOpen(true);
@@ -630,6 +658,7 @@ const Fluxos = () => {
         open={builderOpen}
         onClose={() => { setBuilderOpen(false); setEditingFlow(null); setBuilderInitialStep(undefined); }}
         onSave={handleSaveFlow}
+        onAutoSave={handleAutoSave}
         initialData={editingFlow}
         initialStep={builderInitialStep}
       />
