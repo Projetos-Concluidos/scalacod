@@ -26,6 +26,7 @@ const LogzzTab = () => {
   const [isActive, setIsActive] = useState(false);
   const [testing, setTesting] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [sendOrdersEnabled, setSendOrdersEnabled] = useState(true);
   const [cep, setCep] = useState("");
   const [checkingCep, setCheckingCep] = useState(false);
   const [cepResult, setCepResult] = useState<CepResult | null>(null);
