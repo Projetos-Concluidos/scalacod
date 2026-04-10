@@ -382,7 +382,11 @@ const Conversas = () => {
           setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
         }
         if (msg.direction === "inbound") {
-          playNotification();
+          // Only play sound if user has push_enabled AND push_new_lead enabled
+          const shouldPlay = notifPrefs?.push_enabled !== false && notifPrefs?.push_new_lead !== false;
+          if (shouldPlay) {
+            playNotification();
+          }
         }
         setConversations(prev => prev.map(c =>
           c.id === msg.conversation_id
