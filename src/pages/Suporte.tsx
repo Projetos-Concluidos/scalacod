@@ -1,7 +1,19 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Search, ExternalLink, BookOpen, Lightbulb, CheckCircle2, HelpCircle } from "lucide-react";
+import { Search, ExternalLink, BookOpen, Lightbulb, CheckCircle2, HelpCircle, Plus, MessageSquare, Clock, Send, X } from "lucide-react";
 import PageHeader from "@/components/PageHeader";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 
 interface TutorialStep {
   title: string;
@@ -1545,9 +1557,126 @@ function TutorialContent({ section }: { section: TutorialSectionData }) {
   );
 }
 
+const statusColors: Record<string, string> = {
+  open: "bg-amber-500/10 text-amber-600 border-amber-500/30",
+  in_progress: "bg-blue-500/10 text-blue-600 border-blue-500/30",
+  resolved: "bg-emerald-500/10 text-emerald-600 border-emerald-500/30",
+  closed: "bg-muted text-muted-foreground border-border",
+};
+const statusLabels: Record<string, string> = {
+  open: "Aberto", in_progress: "Em andamento", resolved: "Resolvido", closed: "Fechado",
+};
+
 const Suporte = () => {
+  const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [activeSection, setActiveSection] = useState("inicio");
+  const [tab, setTab] = useState<"tutoriais" | "tickets">("tutoriais");
+
+  // Tickets state
+  const [tickets, setTickets] = useState<any[]>([]);
+  const [ticketsLoading, setTicketsLoading] = useState(false);
+  const [showNewTicket, setShowNewTicket] = useState(false);
+  const [newSubject, setNewSubject] = useState("");
+  const [newDescription, setNewDescription] = useState("");
+  const [newCategory, setNewCategory] = useState("geral");
+  const [newPriority, setNewPriority] = useState("normal");
+  const [creatingTicket, setCreatingTicket] = useState(false);
+
+  // Ticket detail
+  const [selectedTicket, setSelectedTicket] = useState<any>(null);
+  const [ticketMessages, setTicketMessages] = useState<any[]>([]);
+  const [ticketReply, setTicketReply] = useState("");
+  const [sendingReply, setSendingReply] = useState(false);
+
+  useEffect(() => {
+    if (tab === "tickets" && user) fetchTickets();
+  }, [tab, user]);
+
+  const fetchTickets = async () => {
+    if (!user) return;
+    setTicketsLoading(true);
+    const { data } = await supabase
+      .from("support_tickets" as any)
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false });
+    setTickets((data as any[]) || []);
+    setTicketsLoading(false);
+  };
+
+  const createTicket = async () => {
+    if (!user || !newSubject.trim() || !newDescription.trim()) return;
+    setCreatingTicket(true);
+    try {
+      const { data: ticket, error } = await supabase.from("support_tickets" as any).insert({
+        user_id: user.id,
+        subject: newSubject.trim(),
+        description: newDescription.trim(),
+        category: newCategory,
+        priority: newPriority,
+      } as any).select().single();
+
+      if (error) throw error;
+
+      // Notify admins — get superadmin user IDs
+      const { data: adminRoles } = await supabase
+        .from("user_roles" as any)
+        .select("user_id")
+        .eq("role", "superadmin");
+
+      if (adminRoles && adminRoles.length > 0) {
+        const notifications = (adminRoles as any[]).map((r: any) => ({
+          user_id: r.user_id,
+          title: `🎫 Novo ticket de suporte`,
+          body: `Assunto: ${newSubject.trim()} — Por: ${user.email}`,
+          type: "info",
+          metadata: { ticket_id: (ticket as any)?.id },
+        }));
+        await supabase.from("notifications").insert(notifications);
+      }
+
+      toast.success("Ticket criado com sucesso! Tempo de resposta: até 1h.");
+      setShowNewTicket(false);
+      setNewSubject("");
+      setNewDescription("");
+      setNewCategory("geral");
+      setNewPriority("normal");
+      fetchTickets();
+    } catch {
+      toast.error("Erro ao criar ticket");
+    }
+    setCreatingTicket(false);
+  };
+
+  const openTicketDetail = async (ticket: any) => {
+    setSelectedTicket(ticket);
+    const { data } = await supabase
+      .from("support_messages" as any)
+      .select("*")
+      .eq("ticket_id", ticket.id)
+      .order("created_at", { ascending: true });
+    setTicketMessages((data as any[]) || []);
+  };
+
+  const sendTicketReply = async () => {
+    if (!ticketReply.trim() || !selectedTicket || !user) return;
+    setSendingReply(true);
+    try {
+      await supabase.from("support_messages" as any).insert({
+        ticket_id: selectedTicket.id,
+        sender_id: user.id,
+        is_admin: false,
+        content: ticketReply.trim(),
+      } as any);
+      setTicketReply("");
+      openTicketDetail(selectedTicket);
+      toast.success("Mensagem enviada!");
+    } catch {
+      toast.error("Erro ao enviar mensagem");
+    }
+    setSendingReply(false);
+  };
 
   const filtered = useMemo(() => {
     if (!searchQuery.trim()) return TUTORIAL_SECTIONS;
@@ -1566,115 +1695,295 @@ const Suporte = () => {
 
   return (
     <div className="py-6">
-      <PageHeader title="Central de Suporte 🥷" subtitle={`${totalSections} tutoriais detalhados — aprenda tudo sobre o ScalaCOD`} />
+      <PageHeader title="Central de Suporte 🥷" subtitle="Tutoriais detalhados e tickets de suporte" />
 
-      {/* Stats bar */}
-      <div className="flex flex-wrap gap-3 mt-4 mb-6">
-        <div className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 text-primary rounded-full text-xs font-medium">
-          <BookOpen size={14} />
-          {totalSections} Tutoriais
-        </div>
-        <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 text-emerald-600 rounded-full text-xs font-medium">
-          <CheckCircle2 size={14} />
-          Auto-didático
-        </div>
-        <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-500/10 text-amber-600 rounded-full text-xs font-medium">
-          <Lightbulb size={14} />
-          Dicas incluídas
-        </div>
+      {/* Tabs */}
+      <div className="flex gap-2 mt-4 mb-6">
+        <Button
+          variant={tab === "tutoriais" ? "default" : "outline"}
+          size="sm"
+          onClick={() => setTab("tutoriais")}
+        >
+          <BookOpen className="h-4 w-4 mr-1" />
+          Tutoriais ({totalSections})
+        </Button>
+        <Button
+          variant={tab === "tickets" ? "default" : "outline"}
+          size="sm"
+          onClick={() => setTab("tickets")}
+        >
+          <MessageSquare className="h-4 w-4 mr-1" />
+          Meus Tickets {tickets.length > 0 && `(${tickets.length})`}
+        </Button>
       </div>
 
-      <div className="flex gap-6">
-        {/* Side nav */}
-        <aside className="w-56 flex-shrink-0 hidden lg:block">
-          <div className="bg-card rounded-xl border border-border p-4 sticky top-20">
-            <h3 className="font-semibold text-card-foreground mb-3 text-sm flex items-center gap-2">
+      {tab === "tutoriais" ? (
+        <>
+          {/* Stats bar */}
+          <div className="flex flex-wrap gap-3 mb-6">
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 text-primary rounded-full text-xs font-medium">
               <BookOpen size={14} />
-              Tutoriais
-            </h3>
-            <nav className="space-y-0.5 max-h-[70vh] overflow-y-auto">
-              {TUTORIAL_SECTIONS.map((section) => (
-                <a
-                  key={section.id}
-                  href={`#${section.id}`}
-                  onClick={() => setActiveSection(section.id)}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-all ${
-                    activeSection === section.id
-                      ? "bg-primary/10 text-primary font-medium"
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                  }`}
-                >
-                  <span>{section.icon}</span>
-                  <span className="truncate">{section.label}</span>
-                </a>
-              ))}
-            </nav>
-          </div>
-        </aside>
-
-        {/* Content — shows only the selected tutorial */}
-        <main className="flex-1 min-w-0 space-y-4">
-          <div className="relative max-w-md">
-            <Search size={18} className="absolute left-3 top-3 text-muted-foreground" />
-            <input
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Buscar tutorial... (ex: checkout, fluxo, pixel, equipe)"
-              className="w-full pl-10 pr-4 py-2.5 border border-border rounded-xl text-sm bg-card text-card-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all"
-            />
+              {totalSections} Tutoriais
+            </div>
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 text-emerald-600 rounded-full text-xs font-medium">
+              <CheckCircle2 size={14} />
+              Auto-didático
+            </div>
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-500/10 text-amber-600 rounded-full text-xs font-medium">
+              <Lightbulb size={14} />
+              Dicas incluídas
+            </div>
           </div>
 
-          {searchQuery.trim() ? (
-            filtered.length === 0 ? (
-              <div className="text-center py-12">
-                <HelpCircle size={40} className="mx-auto text-muted-foreground/50 mb-3" />
-                <p className="text-muted-foreground text-sm">Nenhum tutorial encontrado para "{searchQuery}"</p>
-                <p className="text-muted-foreground/70 text-xs mt-1">Tente buscar por palavras-chave como "checkout", "fluxo" ou "whatsapp"</p>
+          <div className="flex gap-6">
+            {/* Side nav */}
+            <aside className="w-56 flex-shrink-0 hidden lg:block">
+              <div className="bg-card rounded-xl border border-border p-4 sticky top-20">
+                <h3 className="font-semibold text-card-foreground mb-3 text-sm flex items-center gap-2">
+                  <BookOpen size={14} />
+                  Tutoriais
+                </h3>
+                <nav className="space-y-0.5 max-h-[70vh] overflow-y-auto">
+                  {TUTORIAL_SECTIONS.map((section) => (
+                    <a
+                      key={section.id}
+                      href={`#${section.id}`}
+                      onClick={() => setActiveSection(section.id)}
+                      className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-all ${
+                        activeSection === section.id
+                          ? "bg-primary/10 text-primary font-medium"
+                          : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                      }`}
+                    >
+                      <span>{section.icon}</span>
+                      <span className="truncate">{section.label}</span>
+                    </a>
+                  ))}
+                </nav>
               </div>
-            ) : (
-              <div className="space-y-2">
-                <p className="text-xs text-muted-foreground">{filtered.length} resultado(s)</p>
-                {filtered.map((section) => (
-                  <button
-                    key={section.id}
-                    onClick={() => { setActiveSection(section.id); setSearchQuery(""); }}
-                    className="w-full flex items-center gap-3 p-4 bg-card border border-border rounded-xl text-left hover:bg-muted/50 transition-colors"
-                  >
-                    <span className="text-2xl">{section.icon}</span>
-                    <div>
-                      <h3 className="text-sm font-semibold text-card-foreground">{section.title}</h3>
-                      <p className="text-xs text-muted-foreground">{section.label}</p>
-                    </div>
-                  </button>
-                ))}
+            </aside>
+
+            {/* Content */}
+            <main className="flex-1 min-w-0 space-y-4">
+              <div className="relative max-w-md">
+                <Search size={18} className="absolute left-3 top-3 text-muted-foreground" />
+                <input
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Buscar tutorial..."
+                  className="w-full pl-10 pr-4 py-2.5 border border-border rounded-xl text-sm bg-card text-card-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all"
+                />
               </div>
-            )
+
+              {searchQuery.trim() ? (
+                filtered.length === 0 ? (
+                  <div className="text-center py-12">
+                    <HelpCircle size={40} className="mx-auto text-muted-foreground/50 mb-3" />
+                    <p className="text-muted-foreground text-sm">Nenhum tutorial encontrado para "{searchQuery}"</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <p className="text-xs text-muted-foreground">{filtered.length} resultado(s)</p>
+                    {filtered.map((section) => (
+                      <button
+                        key={section.id}
+                        onClick={() => { setActiveSection(section.id); setSearchQuery(""); }}
+                        className="w-full flex items-center gap-3 p-4 bg-card border border-border rounded-xl text-left hover:bg-muted/50 transition-colors"
+                      >
+                        <span className="text-2xl">{section.icon}</span>
+                        <div>
+                          <h3 className="text-sm font-semibold text-card-foreground">{section.title}</h3>
+                          <p className="text-xs text-muted-foreground">{section.label}</p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )
+              ) : (
+                activeContent && <TutorialContent section={activeContent} />
+              )}
+
+              {/* Mobile topic selector */}
+              <div className="lg:hidden mt-6">
+                <label className="text-xs text-muted-foreground font-medium mb-2 block">Outros tutoriais</label>
+                <div className="flex flex-wrap gap-2">
+                  {TUTORIAL_SECTIONS.map((s) => (
+                    <button
+                      key={s.id}
+                      onClick={() => setActiveSection(s.id)}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-all ${
+                        activeSection === s.id
+                          ? "bg-primary/10 text-primary font-medium"
+                          : "bg-muted/50 text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      <span>{s.icon}</span>
+                      {s.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </main>
+          </div>
+        </>
+      ) : (
+        /* Tickets Tab */
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Clock className="h-3.5 w-3.5" />
+              Tempo de resposta: até 1h
+            </div>
+            <Button size="sm" onClick={() => setShowNewTicket(true)}>
+              <Plus className="h-4 w-4 mr-1" />
+              Novo Ticket
+            </Button>
+          </div>
+
+          {ticketsLoading ? (
+            <p className="text-muted-foreground text-sm">Carregando tickets...</p>
+          ) : tickets.length === 0 ? (
+            <div className="text-center py-16 bg-card border border-border rounded-xl">
+              <MessageSquare className="mx-auto h-10 w-10 text-muted-foreground/40 mb-3" />
+              <p className="text-muted-foreground text-sm">Nenhum ticket aberto</p>
+              <p className="text-muted-foreground/70 text-xs mt-1">Clique em "Novo Ticket" para abrir um chamado</p>
+            </div>
           ) : (
-            activeContent && <TutorialContent section={activeContent} />
-          )}
-
-          {/* Mobile topic selector */}
-          <div className="lg:hidden mt-6">
-            <label className="text-xs text-muted-foreground font-medium mb-2 block">Outros tutoriais</label>
-            <div className="flex flex-wrap gap-2">
-              {TUTORIAL_SECTIONS.map((s) => (
+            <div className="space-y-2">
+              {tickets.map((ticket: any) => (
                 <button
-                  key={s.id}
-                  onClick={() => setActiveSection(s.id)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-all ${
-                    activeSection === s.id
-                      ? "bg-primary/10 text-primary font-medium"
-                      : "bg-muted/50 text-muted-foreground hover:text-foreground"
-                  }`}
+                  key={ticket.id}
+                  onClick={() => openTicketDetail(ticket)}
+                  className="w-full flex items-center gap-4 p-4 bg-card border border-border rounded-xl text-left hover:bg-muted/50 transition-colors"
                 >
-                  <span>{s.icon}</span>
-                  {s.label}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className="text-sm font-semibold text-card-foreground truncate">{ticket.subject}</h3>
+                      <Badge variant="outline" className={statusColors[ticket.status]}>
+                        {statusLabels[ticket.status] || ticket.status}
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground truncate">{ticket.description}</p>
+                    <span className="text-xs text-muted-foreground mt-1 block">
+                      {format(new Date(ticket.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                    </span>
+                  </div>
                 </button>
               ))}
             </div>
-          </div>
-        </main>
-      </div>
+          )}
+
+          {/* New Ticket Dialog */}
+          <Dialog open={showNewTicket} onOpenChange={setShowNewTicket}>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>Abrir Novo Ticket</DialogTitle>
+                <DialogDescription>Preencha os dados abaixo. Tempo de resposta: até 1h.</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <Label>Assunto *</Label>
+                  <Input value={newSubject} onChange={(e) => setNewSubject(e.target.value)} placeholder="Resumo do problema" />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label>Categoria</Label>
+                    <Select value={newCategory} onValueChange={setNewCategory}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="geral">Geral</SelectItem>
+                        <SelectItem value="bug">Bug</SelectItem>
+                        <SelectItem value="duvida">Dúvida</SelectItem>
+                        <SelectItem value="financeiro">Financeiro</SelectItem>
+                        <SelectItem value="sugestao">Sugestão</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Prioridade</Label>
+                    <Select value={newPriority} onValueChange={setNewPriority}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="low">Baixa</SelectItem>
+                        <SelectItem value="normal">Normal</SelectItem>
+                        <SelectItem value="high">Alta</SelectItem>
+                        <SelectItem value="urgent">Urgente</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div>
+                  <Label>Descrição *</Label>
+                  <Textarea
+                    value={newDescription}
+                    onChange={(e) => setNewDescription(e.target.value)}
+                    placeholder="Descreva detalhadamente o problema ou dúvida..."
+                    rows={4}
+                  />
+                </div>
+                <Button onClick={createTicket} disabled={creatingTicket || !newSubject.trim() || !newDescription.trim()} className="w-full">
+                  {creatingTicket ? "Criando..." : "Criar Ticket"}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          {/* Ticket Detail Dialog */}
+          <Dialog open={!!selectedTicket} onOpenChange={() => setSelectedTicket(null)}>
+            <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+              {selectedTicket && (
+                <>
+                  <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2 text-base">
+                      {selectedTicket.subject}
+                      <Badge variant="outline" className={statusColors[selectedTicket.status]}>
+                        {statusLabels[selectedTicket.status]}
+                      </Badge>
+                    </DialogTitle>
+                    <DialogDescription>
+                      {format(new Date(selectedTicket.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })} — {selectedTicket.category}
+                    </DialogDescription>
+                  </DialogHeader>
+
+                  <div className="bg-muted/50 rounded-lg p-3 text-sm">{selectedTicket.description}</div>
+
+                  <div className="space-y-2 max-h-52 overflow-y-auto">
+                    {ticketMessages.map((msg: any) => (
+                      <div
+                        key={msg.id}
+                        className={`p-3 rounded-lg text-sm ${
+                          msg.is_admin ? "bg-primary/10 border border-primary/20 ml-6" : "bg-muted/50 mr-6"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-xs font-medium">{msg.is_admin ? "🛡️ Suporte" : "👤 Você"}</span>
+                          <span className="text-xs text-muted-foreground">{format(new Date(msg.created_at), "dd/MM HH:mm")}</span>
+                        </div>
+                        <p className="whitespace-pre-wrap">{msg.content}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  {selectedTicket.status !== "closed" && (
+                    <div className="flex gap-2 border-t border-border pt-3">
+                      <Textarea
+                        value={ticketReply}
+                        onChange={(e) => setTicketReply(e.target.value)}
+                        placeholder="Sua mensagem..."
+                        rows={2}
+                        className="flex-1"
+                      />
+                      <Button onClick={sendTicketReply} disabled={sendingReply || !ticketReply.trim()} size="sm" className="self-end">
+                        <Send className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  )}
+                </>
+              )}
+            </DialogContent>
+          </Dialog>
+        </div>
+      )}
     </div>
   );
 };

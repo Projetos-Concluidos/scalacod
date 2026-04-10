@@ -10,6 +10,8 @@ import {
   ArrowLeft,
   Shield,
   Home,
+  BarChart3,
+  MessageSquare,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -21,6 +23,8 @@ const links = [
   { to: "/admin/tokens", icon: Coins, label: "Tokens" },
   { to: "/admin/integracoes", icon: Settings2, label: "Integrações" },
   { to: "/admin/home", icon: Home, label: "Página Inicial" },
+  { to: "/admin/pixel", icon: BarChart3, label: "Pixel & Tracking" },
+  { to: "/admin/tickets", icon: MessageSquare, label: "Tickets" },
   { to: "/admin/logs", icon: ScrollText, label: "Logs" },
 ];
 
